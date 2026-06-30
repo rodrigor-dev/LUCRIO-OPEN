@@ -1,0 +1,1 @@
+# Supabase Configuration para LUCRIO SaaS
