@@ -26,9 +26,9 @@ import {
 
 const tabs = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { label: "Receitas", icon: TrendingUp, href: "/receitas" },
-  { label: "Despesas", icon: TrendingDown, href: "/despesas" },
-  { label: "Clientes", icon: Users, href: "/clientes" },
+  { label: "Receitas", icon: TrendingUp, href: "/dashboard/receitas" },
+  { label: "Despesas", icon: TrendingDown, href: "/dashboard/despesas" },
+  { label: "Clientes", icon: Users, href: "/dashboard/clientes" },
 ] as const;
 
 const moreItems = [
