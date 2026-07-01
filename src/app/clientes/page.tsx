@@ -99,40 +99,42 @@ export default function ClientesPage() {
 
   async function carregarClientes() {
     setCarregando(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      setCarregando(false);
-      return;
-    }
+      if (!user) {
+        return;
+      }
 
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
 
-    if (!negocio) {
-      setCarregando(false);
-      return;
-    }
+      if (!negocio) {
+        return;
+      }
 
-    const { data, error } = await supabase
-      .from("clientes")
-      .select("*")
-      .eq("negocio_id", negocio.id)
-      .order("nome");
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("negocio_id", negocio.id)
+        .order("nome");
 
-    if (error) {
+      if (error) {
+        toast.error("Erro ao carregar clientes.");
+        return;
+      }
+
+      setClientes(data || []);
+    } catch {
       toast.error("Erro ao carregar clientes.");
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    setClientes(data || []);
-    setCarregando(false);
   }
 
   const clientesFiltrados = useMemo(() => {
@@ -178,32 +180,51 @@ export default function ClientesPage() {
     e.preventDefault();
     setSalvando(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      toast.error("Sessão expirada. Faça login novamente.");
-      setSalvando(false);
-      return;
-    }
+      if (!user) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
 
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
 
-    if (!negocio) {
-      toast.error("Negócio não encontrado.");
-      setSalvando(false);
-      return;
-    }
+      if (!negocio) {
+        toast.error("Negócio não encontrado.");
+        return;
+      }
 
-    if (clienteEditando) {
-      const { error } = await supabase
-        .from("clientes")
-        .update({
+      if (clienteEditando) {
+        const { error } = await supabase
+          .from("clientes")
+          .update({
+            nome: form.nome,
+            telefone: form.telefone || null,
+            whatsapp: form.whatsapp || null,
+            email: form.email || null,
+            cpf_cnpj: form.cpf_cnpj || null,
+            endereco: form.endereco,
+            tipo: form.tipo,
+            observacoes: form.observacoes || null,
+          })
+          .eq("id", clienteEditando.id);
+
+        if (error) {
+          toast.error("Erro ao atualizar cliente.");
+          return;
+        }
+
+        toast.success("Cliente atualizado com sucesso!");
+      } else {
+        const { error } = await supabase.from("clientes").insert({
+          negocio_id: negocio.id,
           nome: form.nome,
           telefone: form.telefone || null,
           whatsapp: form.whatsapp || null,
@@ -212,59 +233,46 @@ export default function ClientesPage() {
           endereco: form.endereco,
           tipo: form.tipo,
           observacoes: form.observacoes || null,
-        })
-        .eq("id", clienteEditando.id);
+        });
 
-      if (error) {
-        toast.error("Erro ao atualizar cliente.");
-        setSalvando(false);
-        return;
+        if (error) {
+          toast.error("Erro ao criar cliente.");
+          return;
+        }
+
+        toast.success("Cliente criado com sucesso!");
       }
 
-      toast.success("Cliente atualizado com sucesso!");
-    } else {
-      const { error } = await supabase.from("clientes").insert({
-        negocio_id: negocio.id,
-        nome: form.nome,
-        telefone: form.telefone || null,
-        whatsapp: form.whatsapp || null,
-        email: form.email || null,
-        cpf_cnpj: form.cpf_cnpj || null,
-        endereco: form.endereco,
-        tipo: form.tipo,
-        observacoes: form.observacoes || null,
-      });
-
-      if (error) {
-        toast.error("Erro ao criar cliente.");
-        setSalvando(false);
-        return;
-      }
-
-      toast.success("Cliente criado com sucesso!");
+      fecharDialog();
+      carregarClientes();
+    } catch {
+      toast.error("Erro ao salvar cliente.");
+    } finally {
+      setSalvando(false);
     }
-
-    fecharDialog();
-    setSalvando(false);
-    carregarClientes();
   }
 
   async function excluirCliente() {
     if (!clienteDeletando) return;
 
-    const { error } = await supabase
-      .from("clientes")
-      .delete()
-      .eq("id", clienteDeletando.id);
+    try {
+      const { error } = await supabase
+        .from("clientes")
+        .delete()
+        .eq("id", clienteDeletando.id);
 
-    if (error) {
+      if (error) {
+        toast.error("Erro ao excluir cliente.");
+        return;
+      }
+
+      toast.success("Cliente excluído com sucesso!");
+      carregarClientes();
+    } catch {
       toast.error("Erro ao excluir cliente.");
-      return;
+    } finally {
+      setClienteDeletando(null);
     }
-
-    toast.success("Cliente excluído com sucesso!");
-    setClienteDeletando(null);
-    carregarClientes();
   }
 
   return (

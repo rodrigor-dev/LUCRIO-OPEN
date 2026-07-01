@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda, formatarData } from "@/utils";
 import {
@@ -120,6 +121,7 @@ function ChartSkeleton() {
 
 export default function DashboardPage() {
   const supabase = createClient();
+  const router = useRouter();
   const [metricas, setMetricas] = useState<Metricas>({
     receitaTotal: 0,
     despesaTotal: 0,
@@ -140,7 +142,7 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setCarregando(false);
+        router.push("/login");
         return;
       }
 
@@ -644,7 +646,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
               <Link
-                href="/receitas?novo=true"
+                href="/dashboard/receitas?novo=true"
                 className="flex items-center gap-3 rounded-lg border p-4 text-sm font-medium transition-colors hover:bg-green-50 hover:border-green-200 group"
               >
                 <div className="rounded-full bg-green-100 p-2 transition-colors group-hover:bg-green-200">
@@ -654,7 +656,7 @@ export default function DashboardPage() {
                 <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                href="/despesas?novo=true"
+                href="/dashboard/despesas?novo=true"
                 className="flex items-center gap-3 rounded-lg border p-4 text-sm font-medium transition-colors hover:bg-red-50 hover:border-red-200 group"
               >
                 <div className="rounded-full bg-red-100 p-2 transition-colors group-hover:bg-red-200">
@@ -664,7 +666,7 @@ export default function DashboardPage() {
                 <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                href="/clientes?novo=true"
+                href="/dashboard/clientes?novo=true"
                 className="flex items-center gap-3 rounded-lg border p-4 text-sm font-medium transition-colors hover:bg-purple-50 hover:border-purple-200 group"
               >
                 <div className="rounded-full bg-purple-100 p-2 transition-colors group-hover:bg-purple-200">
@@ -674,7 +676,7 @@ export default function DashboardPage() {
                 <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                href="/propostas?novo=true"
+                href="/dashboard/propostas?novo=true"
                 className="flex items-center gap-3 rounded-lg border p-4 text-sm font-medium transition-colors hover:bg-blue-50 hover:border-blue-200 group"
               >
                 <div className="rounded-full bg-blue-100 p-2 transition-colors group-hover:bg-blue-200">

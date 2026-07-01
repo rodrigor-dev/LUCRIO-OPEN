@@ -70,7 +70,8 @@ export async function atualizarProposta(
   if (error) throw error;
 
   if (itens) {
-    await supabase.from("itens_proposta").delete().eq("proposta_id", id);
+    const { error: deleteError } = await supabase.from("itens_proposta").delete().eq("proposta_id", id);
+    if (deleteError) throw deleteError;
 
     if (itens.length > 0) {
       const itensComProposta = itens.map((item) => ({
@@ -78,7 +79,8 @@ export async function atualizarProposta(
         proposta_id: id,
       }));
 
-      await supabase.from("itens_proposta").insert(itensComProposta);
+      const { error: insertError } = await supabase.from("itens_proposta").insert(itensComProposta);
+      if (insertError) throw insertError;
     }
   }
 

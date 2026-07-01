@@ -29,10 +29,11 @@ export async function atualizarNegocio(
   return data;
 }
 
-export async function listarNegocios(): Promise<Negocio[]> {
+export async function listarNegocios(usuarioId: string): Promise<Negocio[]> {
   const { data, error } = await supabase
     .from("negocios")
     .select("*")
+    .eq("usuario_id", usuarioId)
     .order("nome");
 
   if (error) throw error;

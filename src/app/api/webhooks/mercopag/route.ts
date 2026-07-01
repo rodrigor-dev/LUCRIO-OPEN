@@ -42,12 +42,14 @@ export async function POST(request: Request) {
     const assinatura = request.headers.get("x-signature");
     const secreto = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
 
-    if (secreto) {
-      const assinaturaValida = await verificarAssinatura(corpoRaw, assinatura, secreto);
-      if (!assinaturaValida) {
-        console.error("Assinatura do webhook MercadoPago inválida");
-        return NextResponse.json({ ok: false }, { status: 403 });
-      }
+    if (!secreto) {
+      return NextResponse.json({ erro: "Webhook secret não configurado" }, { status: 500 });
+    }
+
+    const assinaturaValida = await verificarAssinatura(corpoRaw, assinatura, secreto);
+    if (!assinaturaValida) {
+      console.error("Assinatura do webhook MercadoPago inválida");
+      return NextResponse.json({ ok: false }, { status: 403 });
     }
 
     const corpo = JSON.parse(corpoRaw);

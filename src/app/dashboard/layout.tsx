@@ -52,14 +52,14 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/servicos", label: "Serviços", icon: Wrench },
-  { href: "/receitas", label: "Receitas", icon: TrendingUp },
-  { href: "/despesas", label: "Despesas", icon: TrendingDown },
-  { href: "/fluxo-caixa", label: "Fluxo de Caixa", icon: Wallet },
-  { href: "/propostas", label: "Propostas", icon: FileText },
-  { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
-  { href: "/configuracoes", label: "Configurações", icon: Settings },
+  { href: "/dashboard/clientes", label: "Clientes", icon: Users },
+  { href: "/dashboard/servicos", label: "Serviços", icon: Wrench },
+  { href: "/dashboard/receitas", label: "Receitas", icon: TrendingUp },
+  { href: "/dashboard/despesas", label: "Despesas", icon: TrendingDown },
+  { href: "/dashboard/fluxo-caixa", label: "Fluxo de Caixa", icon: Wallet },
+  { href: "/dashboard/propostas", label: "Propostas", icon: FileText },
+  { href: "/dashboard/relatorios", label: "Relatórios", icon: BarChart3 },
+  { href: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 interface DashboardLayoutProps {
@@ -411,7 +411,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/configuracoes" className="flex items-center gap-2">
+                <Link href="/dashboard/configuracoes" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
                   Configurações
                 </Link>

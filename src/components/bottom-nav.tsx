@@ -32,11 +32,11 @@ const tabs = [
 ] as const;
 
 const moreItems = [
-  { label: "Serviços", icon: Wrench, href: "/servicos" },
-  { label: "Propostas", icon: FileText, href: "/propostas" },
-  { label: "Fluxo de Caixa", icon: Wallet, href: "/fluxo-caixa" },
-  { label: "Relatórios", icon: BarChart3, href: "/relatorios" },
-  { label: "Configurações", icon: Settings, href: "/configuracoes" },
+  { label: "Serviços", icon: Wrench, href: "/dashboard/servicos" },
+  { label: "Propostas", icon: FileText, href: "/dashboard/propostas" },
+  { label: "Fluxo de Caixa", icon: Wallet, href: "/dashboard/fluxo-caixa" },
+  { label: "Relatórios", icon: BarChart3, href: "/dashboard/relatorios" },
+  { label: "Configurações", icon: Settings, href: "/dashboard/configuracoes" },
 ] as const;
 
 export default function BottomNav() {

@@ -92,6 +92,7 @@ export default function DespesasPage() {
   const [dialogAberto, setDialogAberto] = useState(false);
   const [editando, setEditando] = useState<Despesa | null>(null);
   const [excluindo, setExcluindo] = useState<Despesa | null>(null);
+  const [excluindoBtn, setExcluindoBtn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState(FORM_DEFAULTS);
@@ -163,9 +164,15 @@ export default function DespesasPage() {
 
       if (!negocio) return;
 
+      const valorNum = parseFloat(form.valor);
+      if (isNaN(valorNum) || valorNum <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
       const payload = {
         descricao: form.descricao,
-        valor: parseFloat(form.valor),
+        valor: valorNum,
         data: form.data,
         status: form.status,
         forma_pagamento: form.forma_pagamento,
@@ -212,6 +219,7 @@ export default function DespesasPage() {
 
   async function handleExcluir() {
     if (!excluindo) return;
+    setExcluindoBtn(true);
 
     try {
       const { error } = await supabase.from("despesas").delete().eq("id", excluindo.id);
@@ -226,6 +234,8 @@ export default function DespesasPage() {
       carregarDados();
     } catch {
       toast.error("Erro ao excluir despesa");
+    } finally {
+      setExcluindoBtn(false);
     }
   }
 
@@ -720,9 +730,10 @@ export default function DespesasPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleExcluir}
+              disabled={excluindoBtn}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir
+              {excluindoBtn ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

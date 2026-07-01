@@ -94,6 +94,7 @@ export default function ServicosPage() {
   const [dialogAberto, setDialogAberto] = useState(false);
   const [editando, setEditando] = useState<Servico | null>(null);
   const [excluindo, setExcluindo] = useState<Servico | null>(null);
+  const [excluindoBtn, setExcluindoBtn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState(FORM_DEFAULTS);
@@ -165,11 +166,17 @@ export default function ServicosPage() {
 
       if (!negocio) return;
 
+      const valorNum = parseFloat(form.valor);
+      if (isNaN(valorNum) || valorNum <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
       const payload = {
         nome: form.nome,
         descricao: form.descricao,
         categoria: form.categoria,
-        valor: parseFloat(form.valor),
+        valor: valorNum,
         data: form.data,
         status: form.status,
         forma_pagamento: form.forma_pagamento,
@@ -216,6 +223,7 @@ export default function ServicosPage() {
 
   async function handleExcluir() {
     if (!excluindo) return;
+    setExcluindoBtn(true);
 
     try {
       const { error } = await supabase.from("servicos").delete().eq("id", excluindo.id);
@@ -230,6 +238,8 @@ export default function ServicosPage() {
       carregarDados();
     } catch {
       toast.error("Erro ao excluir serviço");
+    } finally {
+      setExcluindoBtn(false);
     }
   }
 
@@ -742,9 +752,10 @@ export default function ServicosPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleExcluir}
+              disabled={excluindoBtn}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir
+              {excluindoBtn ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

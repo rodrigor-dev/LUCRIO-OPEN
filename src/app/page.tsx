@@ -425,7 +425,7 @@ export default function Home() {
               <span className="text-lg font-bold text-slate-900">LUCRIO</span>
             </div>
             <p className="text-sm text-slate-500">
-              © 2024 LUCRIO. Todos os direitos reservados.
+              © {new Date().getFullYear()} LUCRIO. Todos os direitos reservados.
             </p>
           </div>
         </div>

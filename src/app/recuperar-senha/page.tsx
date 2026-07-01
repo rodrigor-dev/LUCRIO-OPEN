@@ -14,6 +14,7 @@ function RecuperarSenhaForm() {
   const [email, setEmail] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [erro, setErro] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,6 +23,7 @@ function RecuperarSenhaForm() {
     const resultado = await recuperarSenha(email);
 
     if (resultado.erro) {
+      setErro(resultado.erro);
       setCarregando(false);
       return;
     }
@@ -89,6 +91,10 @@ function RecuperarSenhaForm() {
                       />
                     </div>
                   </div>
+
+                  {erro && (
+                    <p className="text-sm text-red-500">{erro}</p>
+                  )}
 
                   <Button
                     type="submit"

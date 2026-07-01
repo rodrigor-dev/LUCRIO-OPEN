@@ -51,7 +51,9 @@ export async function criarConta(
     await criarTrial(data.user.id);
   }
 
-  return { usuario: data.user as unknown as Usuario };
+  const { data: usuario } = await supabase.from("usuarios").select("*").eq("id", data.user!.id).single();
+
+  return { usuario: (usuario as Usuario) || null };
 }
 
 export async function entrarComEmail(
