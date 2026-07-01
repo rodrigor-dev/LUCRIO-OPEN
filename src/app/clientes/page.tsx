@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/hooks/use-supabase";
 import { formatarTelefone, formatarCPFCNPJ } from "@/utils";
 import type { Cliente, Endereco } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ const emptyForm: FormState = {
 };
 
 export default function ClientesPage() {
-  const supabase = createClient();
+  const supabase = useSupabase();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");

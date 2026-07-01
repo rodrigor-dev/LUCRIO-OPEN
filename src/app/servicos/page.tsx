@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/hooks/use-supabase";
+import { FORMAS_PAGAMENTO, STATUS_LABELS, STATUS_VARIANTS } from "@/lib/constants";
+import type { Servico as ServicoDB } from "@/types/database";
 import { formatarMoeda } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,26 +62,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
-interface Cliente {
-  id: string;
-  nome: string;
-}
-
-interface Servico {
-  id: string;
-  nome: string;
-  descricao: string;
-  categoria: string;
-  valor: number;
-  data: string;
-  status: string;
-  forma_pagamento: string;
-  cliente_id: string | null;
-  observacoes: string;
+type Servico = ServicoDB & {
   cliente?: { nome: string } | null;
-  negocio_id: string;
-  criado_em: string;
-}
+};
 
 const FORM_DEFAULTS = {
   nome: "",
@@ -93,25 +78,6 @@ const FORM_DEFAULTS = {
   observacoes: "",
 };
 
-const FORMAS_PAGAMENTO: Record<string, string> = {
-  dinheiro: "Dinheiro",
-  cartao: "Cartão",
-  pix: "PIX",
-  transferencia: "Transferência",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pendente: "Pendente",
-  concluido: "Concluído",
-  cancelado: "Cancelado",
-};
-
-const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pendente: "secondary",
-  concluido: "default",
-  cancelado: "destructive",
-};
-
 const STATUS_ICONS: Record<string, React.ReactNode> = {
   pendente: <Clock className="h-3 w-3" />,
   concluido: <CheckCircle className="h-3 w-3" />,
@@ -119,9 +85,9 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function ServicosPage() {
-  const supabase = createClient();
+  const supabase = useSupabase();
   const [servicos, setServicos] = useState<Servico[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");

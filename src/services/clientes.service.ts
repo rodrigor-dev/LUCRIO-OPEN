@@ -40,7 +40,7 @@ export async function criarCliente(
 
 export async function atualizarCliente(
   id: string,
-  dados: Partial<Cliente>
+  dados: Omit<Cliente, "id" | "negocio_id" | "criado_em" | "atualizado_em">
 ): Promise<Cliente> {
   const { data, error } = await supabase
     .from("clientes")

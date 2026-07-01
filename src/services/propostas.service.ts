@@ -57,7 +57,7 @@ export async function criarProposta(
 
 export async function atualizarProposta(
   id: string,
-  dados: Partial<PropostaComercial>,
+  dados: Omit<PropostaComercial, "id" | "negocio_id" | "criado_em" | "atualizado_em">,
   itens?: Omit<ItemProposta, "id" | "proposta_id" | "criado_em">[]
 ): Promise<PropostaComercial> {
   const { data, error } = await supabase

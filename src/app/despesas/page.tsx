@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/hooks/use-supabase";
+import { FORMAS_PAGAMENTO, STATUS_LABELS, STATUS_VARIANTS } from "@/lib/constants";
+import type { Despesa as DespesaDB } from "@/types/database";
 import { formatarMoeda } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,26 +57,20 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
-interface Categoria {
+type Categoria = {
   id: string;
   nome: string;
-  icone: string;
-  cor: string;
-}
-
-interface Despesa {
-  id: string;
-  descricao: string;
-  valor: number;
-  data: string;
-  status: string;
-  forma_pagamento: string;
-  categoria_id: string | null;
-  observacoes: string;
-  categoria?: { nome: string; icone: string; cor: string } | null;
-  negocio_id: string;
+  icone: string | null;
+  cor: string | null;
+  negocio_id: string | null;
+  tipo: string;
+  is_ativo: boolean;
   criado_em: string;
-}
+};
+
+type Despesa = DespesaDB & {
+  categoria?: { nome: string; icone: string; cor: string } | null;
+};
 
 const FORM_DEFAULTS = {
   descricao: "",
@@ -86,27 +82,8 @@ const FORM_DEFAULTS = {
   observacoes: "",
 };
 
-const FORMAS_PAGAMENTO: Record<string, string> = {
-  dinheiro: "Dinheiro",
-  cartao: "Cartão",
-  pix: "PIX",
-  transferencia: "Transferência",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pendente: "Pendente",
-  pago: "Pago",
-  cancelado: "Cancelado",
-};
-
-const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pendente: "secondary",
-  pago: "default",
-  cancelado: "destructive",
-};
-
 export default function DespesasPage() {
-  const supabase = createClient();
+  const supabase = useSupabase();
   const [despesas, setDespesas] = useState<Despesa[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -153,7 +130,7 @@ export default function DespesasPage() {
       }
 
       setDespesas(despesasRes.data || []);
-      setCategorias(categoriasRes.data || []);
+      setCategorias((categoriasRes.data || []) as Categoria[]);
     } catch {
       toast.error("Erro ao carregar dados");
     } finally {
@@ -510,7 +487,7 @@ export default function DespesasPage() {
                               {new Intl.DateTimeFormat("pt-BR").format(new Date(despesa.data))}
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-muted-foreground">
-                              {FORMAS_PAGAMENTO[despesa.forma_pagamento] || despesa.forma_pagamento}
+                              {FORMAS_PAGAMENTO[despesa.forma_pagamento || ""] || despesa.forma_pagamento || "-"}
                             </TableCell>
                             <TableCell>
                               <Badge variant={STATUS_VARIANTS[despesa.status] || "outline"}>

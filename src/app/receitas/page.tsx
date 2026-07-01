@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/hooks/use-supabase";
+import { FORMAS_PAGAMENTO, STATUS_LABELS, STATUS_VARIANTS } from "@/lib/constants";
+import type { Receita as ReceitaDB } from "@/types/database";
 import { formatarMoeda } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,24 +58,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
-interface Cliente {
-  id: string;
-  nome: string;
-}
-
-interface Receita {
-  id: string;
-  descricao: string;
-  valor: number;
-  data: string;
-  status: string;
-  forma_pagamento: string;
-  cliente_id: string | null;
-  observacoes: string;
+type Receita = ReceitaDB & {
   cliente?: { nome: string } | null;
-  negocio_id: string;
-  criado_em: string;
-}
+};
 
 const FORM_DEFAULTS = {
   descricao: "",
@@ -85,29 +72,10 @@ const FORM_DEFAULTS = {
   observacoes: "",
 };
 
-const FORMAS_PAGAMENTO: Record<string, string> = {
-  dinheiro: "Dinheiro",
-  cartao: "Cartão",
-  pix: "PIX",
-  transferencia: "Transferência",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pendente: "Pendente",
-  pago: "Pago",
-  cancelado: "Cancelado",
-};
-
-const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pendente: "secondary",
-  pago: "default",
-  cancelado: "destructive",
-};
-
 export default function ReceitasPage() {
-  const supabase = createClient();
+  const supabase = useSupabase();
   const [receitas, setReceitas] = useState<Receita[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
@@ -530,7 +498,7 @@ export default function ReceitasPage() {
                               {new Intl.DateTimeFormat("pt-BR").format(new Date(receita.data))}
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-muted-foreground">
-                              {FORMAS_PAGAMENTO[receita.forma_pagamento] || receita.forma_pagamento}
+                              {FORMAS_PAGAMENTO[receita.forma_pagamento || ""] || receita.forma_pagamento || "-"}
                             </TableCell>
                             <TableCell>
                               <Badge variant={STATUS_VARIANTS[receita.status] || "outline"}>

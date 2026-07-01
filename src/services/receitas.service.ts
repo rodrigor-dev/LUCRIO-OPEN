@@ -54,7 +54,7 @@ export async function criarReceita(
 
 export async function atualizarReceita(
   id: string,
-  dados: Partial<Receita>
+  dados: Omit<Receita, "id" | "negocio_id" | "criado_em" | "atualizado_em">
 ): Promise<Receita> {
   const { data, error } = await supabase
     .from("receitas")
