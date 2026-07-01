@@ -454,96 +454,151 @@ export default function DespesasPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="hidden sm:table-cell">Categoria</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead className="hidden sm:table-cell">Data</TableHead>
-                      <TableHead className="hidden md:table-cell">Forma Pgto</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <AnimatePresence>
-                      {despesasFiltradas.map((despesa, index) => (
-                        <motion.tr
-                          key={despesa.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ delay: index * 0.03 }}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <TableCell>
-                            <p className="font-medium">{despesa.descricao}</p>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            {despesa.categoria ? (
-                              <Badge
-                                variant="outline"
-                                className="gap-1"
-                                style={{
-                                  borderColor: despesa.categoria.cor || undefined,
-                                  color: despesa.categoria.cor || undefined,
-                                }}
-                              >
-                                {despesa.categoria.icone && (
-                                  <span>{despesa.categoria.icone}</span>
-                                )}
-                                {despesa.categoria.nome}
+            <>
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="hidden sm:table-cell">Categoria</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="hidden sm:table-cell">Data</TableHead>
+                        <TableHead className="hidden md:table-cell">Forma Pgto</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <AnimatePresence>
+                        {despesasFiltradas.map((despesa, index) => (
+                          <motion.tr
+                            key={despesa.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="border-b transition-colors hover:bg-muted/50"
+                          >
+                            <TableCell>
+                              <p className="font-medium">{despesa.descricao}</p>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {despesa.categoria ? (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-1"
+                                  style={{
+                                    borderColor: despesa.categoria.cor || undefined,
+                                    color: despesa.categoria.cor || undefined,
+                                  }}
+                                >
+                                  {despesa.categoria.icone && (
+                                    <span>{despesa.categoria.icone}</span>
+                                  )}
+                                  {despesa.categoria.nome}
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">Sem categoria</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold text-red-600">
+                              -{formatarMoeda(despesa.valor)}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-muted-foreground">
+                              {new Intl.DateTimeFormat("pt-BR").format(new Date(despesa.data))}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-muted-foreground">
+                              {FORMAS_PAGAMENTO[despesa.forma_pagamento] || despesa.forma_pagamento}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={STATUS_VARIANTS[despesa.status] || "outline"}>
+                                {STATUS_LABELS[despesa.status] || despesa.status}
                               </Badge>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">Sem categoria</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-red-600">
-                            -{formatarMoeda(despesa.valor)}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-muted-foreground">
-                            {new Intl.DateTimeFormat("pt-BR").format(new Date(despesa.data))}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell text-muted-foreground">
-                            {FORMAS_PAGAMENTO[despesa.forma_pagamento] || despesa.forma_pagamento}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={STATUS_VARIANTS[despesa.status] || "outline"}>
-                              {STATUS_LABELS[despesa.status] || despesa.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => abrirEdicao(despesa)}
-                                title="Editar"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => setExcluindo(despesa)}
-                                title="Excluir"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11"
+                                  onClick={() => abrirEdicao(despesa)}
+                                  title="Editar"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11 text-destructive hover:text-destructive"
+                                  onClick={() => setExcluindo(despesa)}
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+            {/* Mobile Cards */}
+            <div className="grid gap-3 md:hidden">
+              {despesasFiltradas.map((despesa) => (
+                <motion.div
+                  key={despesa.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-lg border bg-card p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium">{despesa.descricao}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(despesa.data).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <p className="text-lg font-bold text-red-600">
+                      -{formatarMoeda(despesa.valor)}
+                    </p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={STATUS_VARIANTS[despesa.status as keyof typeof STATUS_VARIANTS]}>
+                        {STATUS_LABELS[despesa.status as keyof typeof STATUS_LABELS]}
+                      </Badge>
+                      {despesa.categoria && (
+                        <Badge
+                          variant="outline"
+                          className="gap-1"
+                          style={{
+                            borderColor: despesa.categoria.cor || undefined,
+                            color: despesa.categoria.cor || undefined,
+                          }}
+                        >
+                          {despesa.categoria.icone && <span>{despesa.categoria.icone}</span>}
+                          {despesa.categoria.nome}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => abrirEdicao(despesa)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setExcluindo(despesa)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            </>
           )}
         </motion.div>
       )}

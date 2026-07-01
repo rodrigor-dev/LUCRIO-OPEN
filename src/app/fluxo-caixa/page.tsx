@@ -323,69 +323,123 @@ export default function FluxoCaixaPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                        <TableHead className="hidden sm:table-cell text-right">Saldo</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {movimentacoesComSaldo.map((mov, index) => (
-                        <motion.tr
-                          key={mov.id}
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.02 }}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <TableCell className="text-muted-foreground">
-                            {new Intl.DateTimeFormat("pt-BR").format(new Date(mov.data))}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                                  mov.tipo === "entrada"
-                                    ? "bg-emerald-100 text-emerald-600"
-                                    : "bg-red-100 text-red-600"
-                                }`}
-                              >
-                                {mov.tipo === "entrada" ? (
-                                  <TrendingUp className="h-3.5 w-3.5" />
-                                ) : (
-                                  <TrendingDown className="h-3.5 w-3.5" />
-                                )}
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="text-right">Saldo</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {movimentacoesComSaldo.map((mov, index) => (
+                          <motion.tr
+                            key={mov.id}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.02 }}
+                            className="border-b transition-colors hover:bg-muted/50"
+                          >
+                            <TableCell className="text-muted-foreground">
+                              {new Intl.DateTimeFormat("pt-BR").format(new Date(mov.data))}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`flex h-7 w-7 items-center justify-center rounded-full ${
+                                    mov.tipo === "entrada"
+                                      ? "bg-emerald-100 text-emerald-600"
+                                      : "bg-red-100 text-red-600"
+                                  }`}
+                                >
+                                  {mov.tipo === "entrada" ? (
+                                    <TrendingUp className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <TrendingDown className="h-3.5 w-3.5" />
+                                  )}
+                                </div>
+                                <span className="font-medium">{mov.descricao}</span>
                               </div>
-                              <span className="font-medium">{mov.descricao}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={mov.tipo === "entrada" ? "default" : "destructive"}
-                            >
-                              {mov.tipo === "entrada" ? "Saque" : "Minus"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className={`text-right font-semibold ${mov.tipo === "entrada" ? "text-emerald-600" : "text-red-600"}`}>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={mov.tipo === "entrada" ? "default" : "destructive"}
+                              >
+                                {mov.tipo === "entrada" ? "Entrada" : "Saída"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={`text-right font-semibold ${mov.tipo === "entrada" ? "text-emerald-600" : "text-red-600"}`}>
+                              {mov.tipo === "entrada" ? "+" : "-"} {formatarMoeda(mov.valor)}
+                            </TableCell>
+                            <TableCell className={`text-right font-medium ${mov.saldoAcumulado >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                              {formatarMoeda(mov.saldoAcumulado)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={mov.status === "pago" ? "default" : "secondary"}>
+                                {mov.status === "pago" ? "Pago" : "Pendente"}
+                              </Badge>
+                            </TableCell>
+                          </motion.tr>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="grid gap-3 p-4 md:hidden">
+                    {movimentacoesComSaldo.map((mov, index) => (
+                      <motion.div
+                        key={mov.id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.04 }}
+                        className="rounded-lg border bg-card p-4 shadow-sm space-y-3"
+                      >
+                        <div className="flex items-start justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            {new Intl.DateTimeFormat("pt-BR").format(new Date(mov.data))}
+                          </span>
+                          <Badge
+                            variant={mov.tipo === "entrada" ? "default" : "destructive"}
+                          >
+                            {mov.tipo === "entrada" ? "Entrada" : "Saída"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                              mov.tipo === "entrada"
+                                ? "bg-emerald-100 text-emerald-600"
+                                : "bg-red-100 text-red-600"
+                            }`}
+                          >
+                            {mov.tipo === "entrada" ? (
+                              <TrendingUp className="h-4 w-4" />
+                            ) : (
+                              <TrendingDown className="h-4 w-4" />
+                            )}
+                          </div>
+                          <span className="font-medium">{mov.descricao}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t">
+                          <span className={`text-lg font-bold ${mov.tipo === "entrada" ? "text-emerald-600" : "text-red-600"}`}>
                             {mov.tipo === "entrada" ? "+" : "-"} {formatarMoeda(mov.valor)}
-                          </TableCell>
-                          <TableCell className={`hidden sm:table-cell text-right font-medium ${mov.saldoAcumulado >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                            {formatarMoeda(mov.saldoAcumulado)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={mov.status === "pago" ? "default" : "secondary"}>
-                              {mov.status === "pago" ? "Pago" : "Pendente"}
-                            </Badge>
-                          </TableCell>
-                        </motion.tr>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </span>
+                          <span className={`text-sm font-medium ${mov.saldoAcumulado >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                            Saldo: {formatarMoeda(mov.saldoAcumulado)}
+                          </span>
+                        </div>
+                        <div className="flex justify-end">
+                          <Badge variant={mov.status === "pago" ? "default" : "secondary"}>
+                            {mov.status === "pago" ? "Pago" : "Pendente"}
+                          </Badge>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}

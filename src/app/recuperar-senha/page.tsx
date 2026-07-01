@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { motion } from "framer-motion";
+import { Mail, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import { recuperarSenha } from "@/services/auth.service";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 
-export default function RecuperarSenhaPage() {
+function RecuperarSenhaForm() {
   const [email, setEmail] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [enviado, setEnviado] = useState(false);
@@ -17,7 +22,6 @@ export default function RecuperarSenhaPage() {
     const resultado = await recuperarSenha(email);
 
     if (resultado.erro) {
-      toast.error(resultado.erro);
       setCarregando(false);
       return;
     }
@@ -27,65 +31,92 @@ export default function RecuperarSenhaPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-emerald-50/20 p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-md space-y-8"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="text-center"
+        >
           <Link href="/" className="inline-block">
             <h1 className="text-4xl font-bold text-primary">LUCRIO</h1>
           </Link>
-          <p className="mt-2 text-muted-foreground">
-            Recupere sua senha
-          </p>
-        </div>
+          <p className="mt-2 text-muted-foreground">Recupere sua senha</p>
+        </motion.div>
 
-        <div className="rounded-lg border bg-card p-8 shadow-sm">
-          {enviado ? (
-            <div className="space-y-4 text-center">
-              <div className="text-4xl">📧</div>
-              <h2 className="text-xl font-semibold">E-mail enviado!</h2>
-              <p className="text-muted-foreground">
-                Verifique sua caixa de entrada e clique no link para redefinir
-                sua senha.
-              </p>
-              <Link
-                href="/login"
-                className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Voltar ao login
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  E-mail cadastrado
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <Card className="border-border/50 shadow-lg">
+            <CardContent className="p-8">
+              {enviado ? (
+                <div className="space-y-4 text-center">
+                  <CheckCircle className="mx-auto h-12 w-12 text-emerald-500" />
+                  <h2 className="text-xl font-semibold">E-mail enviado!</h2>
+                  <p className="text-muted-foreground">
+                    Verifique sua caixa de entrada e clique no link para redefinir
+                    sua senha.
+                  </p>
+                  <Link href="/login">
+                    <Button variant="outline" className="w-full" size="lg">
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Voltar ao login
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail cadastrado</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        required
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={carregando}
-                className="flex h-10 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {carregando ? "Enviando..." : "Enviar link de recuperação"}
-              </button>
-            </form>
-          )}
-        </div>
+                  <Button
+                    type="submit"
+                    disabled={carregando}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {carregando ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      "Enviar link"
+                    )}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+          className="text-center text-sm text-muted-foreground"
+        >
           Lembrou sua senha?{" "}
           <Link
             href="/login"
@@ -93,8 +124,22 @@ export default function RecuperarSenhaPage() {
           >
             Entrar
           </Link>
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </main>
+  );
+}
+
+export default function RecuperarSenhaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <RecuperarSenhaForm />
+    </Suspense>
   );
 }

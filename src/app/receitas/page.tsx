@@ -487,92 +487,132 @@ export default function ReceitasPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead className="hidden sm:table-cell">Data</TableHead>
-                      <TableHead className="hidden md:table-cell">Forma Pgto</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <AnimatePresence>
-                      {receitasFiltradas.map((receita, index) => (
-                        <motion.tr
-                          key={receita.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ delay: index * 0.03 }}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{receita.descricao}</p>
-                              {receita.cliente?.nome && (
-                                <p className="text-xs text-muted-foreground">
-                                  {receita.cliente.nome}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-emerald-600">
-                            {formatarMoeda(receita.valor)}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-muted-foreground">
-                            {new Intl.DateTimeFormat("pt-BR").format(new Date(receita.data))}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell text-muted-foreground">
-                            {FORMAS_PAGAMENTO[receita.forma_pagamento] || receita.forma_pagamento}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={STATUS_VARIANTS[receita.status] || "outline"}>
-                              {STATUS_LABELS[receita.status] || receita.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleDuplicar(receita)}
-                                title="Duplicar"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => abrirEdicao(receita)}
-                                title="Editar"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => setExcluindo(receita)}
-                                title="Excluir"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <>
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="hidden sm:table-cell">Data</TableHead>
+                        <TableHead className="hidden md:table-cell">Forma Pgto</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <AnimatePresence>
+                        {receitasFiltradas.map((receita, index) => (
+                          <motion.tr
+                            key={receita.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="border-b transition-colors hover:bg-muted/50"
+                          >
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{receita.descricao}</p>
+                                {receita.cliente?.nome && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {receita.cliente.nome}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold text-emerald-600">
+                              {formatarMoeda(receita.valor)}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-muted-foreground">
+                              {new Intl.DateTimeFormat("pt-BR").format(new Date(receita.data))}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-muted-foreground">
+                              {FORMAS_PAGAMENTO[receita.forma_pagamento] || receita.forma_pagamento}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={STATUS_VARIANTS[receita.status] || "outline"}>
+                                {STATUS_LABELS[receita.status] || receita.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11"
+                                  onClick={() => handleDuplicar(receita)}
+                                  title="Duplicar"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11"
+                                  onClick={() => abrirEdicao(receita)}
+                                  title="Editar"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11 text-destructive hover:text-destructive"
+                                  onClick={() => setExcluindo(receita)}
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+            {/* Mobile Cards */}
+            <div className="grid gap-3 md:hidden">
+              {receitasFiltradas.map((receita) => (
+                <motion.div
+                  key={receita.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-lg border bg-card p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium">{receita.descricao}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(receita.data).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <p className="text-lg font-bold text-green-600">
+                      {formatarMoeda(receita.valor)}
+                    </p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <Badge variant={STATUS_VARIANTS[receita.status as keyof typeof STATUS_VARIANTS]}>
+                      {STATUS_LABELS[receita.status as keyof typeof STATUS_LABELS]}
+                    </Badge>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => abrirEdicao(receita)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setExcluindo(receita)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            </>
           )}
         </motion.div>
       )}

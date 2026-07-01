@@ -470,86 +470,146 @@ export default function ServicosPage() {
           ) : (
             <Card>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead className="hidden sm:table-cell">Cliente</TableHead>
-                      <TableHead className="hidden md:table-cell">Categoria</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead className="hidden sm:table-cell">Data</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <AnimatePresence>
-                      {servicosFiltrados.map((servico, index) => (
-                        <motion.tr
-                          key={servico.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ delay: index * 0.03 }}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{servico.nome}</p>
-                              {servico.descricao && (
-                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                  {servico.descricao}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-muted-foreground">
-                            {servico.cliente?.nome || "—"}
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell text-muted-foreground">
-                            {servico.categoria || "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-blue-600">
-                            {formatarMoeda(servico.valor)}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-muted-foreground">
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <AnimatePresence>
+                        {servicosFiltrados.map((servico, index) => (
+                          <motion.tr
+                            key={servico.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="border-b transition-colors hover:bg-muted/50"
+                          >
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{servico.nome}</p>
+                                {servico.descricao && (
+                                  <p className="text-xs text-muted-foreground line-clamp-1">
+                                    {servico.descricao}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {servico.cliente?.nome || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {servico.categoria || "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold text-emerald-600">
+                              {formatarMoeda(servico.valor)}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Intl.DateTimeFormat("pt-BR").format(new Date(servico.data))}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={STATUS_VARIANTS[servico.status] || "outline"}>
+                                <span className="mr-1 inline-flex items-center gap-0.5">
+                                  {STATUS_ICONS[servico.status]}
+                                </span>
+                                {STATUS_LABELS[servico.status] || servico.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11"
+                                  onClick={() => abrirEdicao(servico)}
+                                  title="Editar"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11 text-destructive hover:text-destructive"
+                                  onClick={() => setExcluindo(servico)}
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="grid gap-3 p-4 md:hidden">
+                  <AnimatePresence>
+                    {servicosFiltrados.map((servico, index) => (
+                      <motion.div
+                        key={servico.id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ delay: index * 0.04 }}
+                        className="rounded-lg border bg-card p-4 shadow-sm space-y-3"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate">{servico.nome}</p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {servico.cliente?.nome || "Sem cliente"}
+                            </p>
+                          </div>
+                          <Badge variant={STATUS_VARIANTS[servico.status] || "outline"} className="ml-2 shrink-0">
+                            <span className="mr-1 inline-flex items-center gap-0.5">
+                              {STATUS_ICONS[servico.status]}
+                            </span>
+                            {STATUS_LABELS[servico.status] || servico.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">
                             {new Intl.DateTimeFormat("pt-BR").format(new Date(servico.data))}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={STATUS_VARIANTS[servico.status] || "outline"}>
-                              <span className="mr-1 inline-flex items-center gap-0.5">
-                                {STATUS_ICONS[servico.status]}
-                              </span>
-                              {STATUS_LABELS[servico.status] || servico.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => abrirEdicao(servico)}
-                                title="Editar"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => setExcluindo(servico)}
-                                title="Excluir"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </TableBody>
-                </Table>
+                          </span>
+                          <span className="text-lg font-bold text-emerald-600">
+                            {formatarMoeda(servico.valor)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-end gap-1 pt-1 border-t">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11"
+                            onClick={() => abrirEdicao(servico)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11 text-destructive hover:text-destructive"
+                            onClick={() => setExcluindo(servico)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               </CardContent>
             </Card>
           )}

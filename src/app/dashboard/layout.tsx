@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   X,
+  Search,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -24,6 +25,8 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import PWAUpdater from "@/components/pwa-updater";
 import InstallBanner from "@/components/install-banner";
+import BottomNav from "@/components/bottom-nav";
+import CommandPalette from "@/components/command-palette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -361,7 +364,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-lg lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -373,16 +376,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               LUCRIO
             </span>
           </Link>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex h-9 w-9 items-center justify-center rounded-full">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex h-11 w-11 items-center justify-center rounded-full">
                 <Avatar className="h-8 w-8 border-2 border-emerald-200 dark:border-emerald-800">
                   <AvatarFallback className="bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
               </button>
-            </DropdownMenuTrigger>
+              </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="px-2 py-1.5">
                 <p className="text-sm font-medium">{usuario?.nome || "Usuário"}</p>
@@ -405,17 +415,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </header>
 
         {/* Content */}
         <main className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6">
           {children}
         </main>
+        <BottomNav />
       </div>
 
       <PWAUpdater />
       <InstallBanner />
+      <CommandPalette />
     </div>
     </TooltipProvider>
   );
