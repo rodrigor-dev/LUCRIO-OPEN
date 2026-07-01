@@ -33,7 +33,10 @@ export default function DashboardPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        setCarregando(false);
+        return;
+      }
 
       const { data: negocio } = await supabase
         .from("negocios")
@@ -41,7 +44,10 @@ export default function DashboardPage() {
         .eq("usuario_id", user.id)
         .single();
 
-      if (!negocio) return;
+      if (!negocio) {
+        setCarregando(false);
+        return;
+      }
 
       const agora = new Date();
       const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
