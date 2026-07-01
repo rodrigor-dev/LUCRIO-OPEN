@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { entrarComEmail, entrarComGoogle } from "@/services/auth.service";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = searchParams?.get("redirect") || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    const erroAuth = searchParams.get("error");
+    const erroAuth = searchParams?.get("error");
     if (erroAuth) {
       setErro("Erro na autenticação. Tente novamente.");
     }
@@ -168,5 +168,13 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Carregando...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
