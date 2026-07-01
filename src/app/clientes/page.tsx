@@ -1,38 +1,112 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatarMoeda, formatarTelefone } from "@/utils";
-import type { Cliente } from "@/types/database";
+import { formatarTelefone, formatarCPFCNPJ } from "@/utils";
+import type { Cliente, Endereco } from "@/types/database";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search,
+  Plus,
+  Pencil,
+  Trash2,
+  Users,
+  Phone,
+  Mail,
+  FileText,
+} from "lucide-react";
+import { toast } from "sonner";
+
+type FormState = {
+  nome: string;
+  telefone: string;
+  whatsapp: string;
+  email: string;
+  cpf_cnpj: string;
+  endereco: Endereco;
+  tipo: "fixo" | "esporadico";
+  observacoes: string;
+};
+
+const emptyForm: FormState = {
+  nome: "",
+  telefone: "",
+  whatsapp: "",
+  email: "",
+  cpf_cnpj: "",
+  endereco: {},
+  tipo: "esporadico",
+  observacoes: "",
+};
 
 export default function ClientesPage() {
   const supabase = createClient();
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
-  const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(true);
-
-  const [form, setForm] = useState({
-    nome: "",
-    telefone: "",
-    whatsapp: "",
-    email: "",
-    cpf_cnpj: "",
-    tipo: "esporadico" as "fixo" | "esporadico",
-    observacoes: "",
-  });
+  const [busca, setBusca] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "fixo" | "esporadico">(
+    "todos"
+  );
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [salvando, setSalvando] = useState(false);
+  const [clienteDeletando, setClienteDeletando] = useState<Cliente | null>(null);
 
   useEffect(() => {
     carregarClientes();
   }, [supabase]);
 
   async function carregarClientes() {
+    setCarregando(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    if (!user) {
+      setCarregando(false);
+      return;
+    }
 
     const { data: negocio } = await supabase
       .from("negocios")
@@ -40,62 +114,46 @@ export default function ClientesPage() {
       .eq("usuario_id", user.id)
       .single();
 
-    if (!negocio) return;
+    if (!negocio) {
+      setCarregando(false);
+      return;
+    }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("clientes")
       .select("*")
       .eq("negocio_id", negocio.id)
       .order("nome");
 
+    if (error) {
+      toast.error("Erro ao carregar clientes.");
+      setCarregando(false);
+      return;
+    }
+
     setClientes(data || []);
     setCarregando(false);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
-
-    if (!negocio) return;
-
-    if (clienteEditando) {
-      await supabase
-        .from("clientes")
-        .update(form)
-        .eq("id", clienteEditando.id);
-    } else {
-      await supabase.from("clientes").insert({
-        negocio_id: negocio.id,
-        ...form,
-      });
-    }
-
-    setModalAberto(false);
-    setClienteEditando(null);
-    setForm({
-      nome: "",
-      telefone: "",
-      whatsapp: "",
-      email: "",
-      cpf_cnpj: "",
-      tipo: "esporadico",
-      observacoes: "",
+  const clientesFiltrados = useMemo(() => {
+    return clientes.filter((c) => {
+      const buscaMatch =
+        c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+        c.email?.toLowerCase().includes(busca.toLowerCase()) ||
+        c.telefone?.includes(busca) ||
+        c.cpf_cnpj?.includes(busca);
+      const tipoMatch = filtroTipo === "todos" || c.tipo === filtroTipo;
+      return buscaMatch && tipoMatch;
     });
-    carregarClientes();
+  }, [clientes, busca, filtroTipo]);
+
+  function abrirDialogNovo() {
+    setClienteEditando(null);
+    setForm(emptyForm);
+    setDialogAberto(true);
   }
 
-  function editarCliente(cliente: Cliente) {
+  function abrirDialogEditar(cliente: Cliente) {
     setClienteEditando(cliente);
     setForm({
       nome: cliente.nome,
@@ -103,286 +161,584 @@ export default function ClientesPage() {
       whatsapp: cliente.whatsapp || "",
       email: cliente.email || "",
       cpf_cnpj: cliente.cpf_cnpj || "",
+      endereco: cliente.endereco || {},
       tipo: cliente.tipo,
       observacoes: cliente.observacoes || "",
     });
-    setModalAberto(true);
+    setDialogAberto(true);
   }
 
-  async function excluirCliente(id: string) {
-    if (confirm("Tem certeza que deseja excluir este cliente?")) {
-      await supabase.from("clientes").delete().eq("id", id);
-      carregarClientes();
+  function fecharDialog() {
+    setDialogAberto(false);
+    setClienteEditando(null);
+    setForm(emptyForm);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSalvando(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      setSalvando(false);
+      return;
     }
+
+    const { data: negocio } = await supabase
+      .from("negocios")
+      .select("id")
+      .eq("usuario_id", user.id)
+      .single();
+
+    if (!negocio) {
+      toast.error("Negócio não encontrado.");
+      setSalvando(false);
+      return;
+    }
+
+    if (clienteEditando) {
+      const { error } = await supabase
+        .from("clientes")
+        .update({
+          nome: form.nome,
+          telefone: form.telefone || null,
+          whatsapp: form.whatsapp || null,
+          email: form.email || null,
+          cpf_cnpj: form.cpf_cnpj || null,
+          endereco: form.endereco,
+          tipo: form.tipo,
+          observacoes: form.observacoes || null,
+        })
+        .eq("id", clienteEditando.id);
+
+      if (error) {
+        toast.error("Erro ao atualizar cliente.");
+        setSalvando(false);
+        return;
+      }
+
+      toast.success("Cliente atualizado com sucesso!");
+    } else {
+      const { error } = await supabase.from("clientes").insert({
+        negocio_id: negocio.id,
+        nome: form.nome,
+        telefone: form.telefone || null,
+        whatsapp: form.whatsapp || null,
+        email: form.email || null,
+        cpf_cnpj: form.cpf_cnpj || null,
+        endereco: form.endereco,
+        tipo: form.tipo,
+        observacoes: form.observacoes || null,
+      });
+
+      if (error) {
+        toast.error("Erro ao criar cliente.");
+        setSalvando(false);
+        return;
+      }
+
+      toast.success("Cliente criado com sucesso!");
+    }
+
+    fecharDialog();
+    setSalvando(false);
+    carregarClientes();
   }
 
-  const clientesFiltrados = clientes.filter(
-    (c) =>
-      c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      c.email?.toLowerCase().includes(busca.toLowerCase()) ||
-      c.telefone?.includes(busca)
-  );
+  async function excluirCliente() {
+    if (!clienteDeletando) return;
+
+    const { error } = await supabase
+      .from("clientes")
+      .delete()
+      .eq("id", clienteDeletando.id);
+
+    if (error) {
+      toast.error("Erro ao excluir cliente.");
+      return;
+    }
+
+    toast.success("Cliente excluído com sucesso!");
+    setClienteDeletando(null);
+    carregarClientes();
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus clientes ({clientes.length})
+          <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
+          <p className="text-sm text-muted-foreground">
+            Gerencie seus {clientes.length} cliente
+            {clientes.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <button
-          onClick={() => {
-            setClienteEditando(null);
-            setForm({
-              nome: "",
-              telefone: "",
-              whatsapp: "",
-              email: "",
-              cpf_cnpj: "",
-              tipo: "esporadico",
-              observacoes: "",
-            });
-            setModalAberto(true);
-          }}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
+        <Button onClick={abrirDialogNovo} className="gap-2">
+          <Plus className="h-4 w-4" />
           Novo Cliente
-        </button>
+        </Button>
       </div>
 
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Buscar cliente..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm"
-        />
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          🔍
-        </span>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone, e-mail ou CPF/CNPJ..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select
+          value={filtroTipo}
+          onValueChange={(v) =>
+            setFiltroTipo(v as "todos" | "fixo" | "esporadico")
+          }
+        >
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="fixo">Fixo</SelectItem>
+            <SelectItem value="esporadico">Esporádico</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {carregando ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      ) : clientesFiltrados.length === 0 ? (
-        <div className="rounded-lg border bg-card p-12 text-center shadow-sm">
-          <div className="mb-4 text-4xl">👥</div>
-          <h3 className="mb-2 text-lg font-semibold">
-            {busca ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-          </h3>
-          <p className="mb-4 text-muted-foreground">
-            {busca
-              ? "Tente buscar com outros termos"
-              : "Adicione seu primeiro cliente"}
-          </p>
-          {!busca && (
-            <button
-              onClick={() => setModalAberto(true)}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Adicionar Cliente
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {clientesFiltrados.map((cliente) => (
-            <div
-              key={cliente.id}
-              className="rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
-            >
-              <div className="mb-3 flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    {cliente.nome.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-medium">{cliente.nome}</p>
-                    {cliente.email && (
-                      <p className="text-sm text-muted-foreground">
-                        {cliente.email}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    cliente.tipo === "fixo"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {cliente.tipo === "fixo" ? "Fixo" : "Esporádico"}
-                </span>
-              </div>
-
-              {cliente.telefone && (
-                <p className="mb-1 text-sm text-muted-foreground">
-                  📱 {formatarTelefone(cliente.telefone)}
-                </p>
-              )}
-
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => editarCliente(cliente)}
-                  className="flex-1 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-accent"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => excluirCliente(cliente.id)}
-                  className="rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
           ))}
         </div>
+      ) : clientesFiltrados.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />
+            <h3 className="mb-1 text-lg font-semibold">
+              Nenhum cliente encontrado
+            </h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {busca || filtroTipo !== "todos"
+                ? "Tente buscar com outros termos ou filtros."
+                : "Adicione seu primeiro cliente para começar."}
+            </p>
+            {!busca && filtroTipo === "todos" && (
+              <Button onClick={abrirDialogNovo} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Adicionar Cliente
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="hidden md:block">
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>WhatsApp</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <AnimatePresence>
+                    {clientesFiltrados.map((cliente) => (
+                      <motion.tr
+                        key={cliente.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="border-b transition-colors hover:bg-muted/50"
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                              {cliente.nome.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-medium">
+                                {cliente.nome}
+                              </p>
+                              {cliente.email && (
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {cliente.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {cliente.telefone
+                            ? formatarTelefone(cliente.telefone)
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {cliente.whatsapp
+                            ? formatarTelefone(cliente.whatsapp)
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              cliente.tipo === "fixo" ? "default" : "secondary"
+                            }
+                          >
+                            {cliente.tipo === "fixo" ? "Fixo" : "Esporádico"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              cliente.is_ativo ? "default" : "destructive"
+                            }
+                          >
+                            {cliente.is_ativo ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => abrirDialogEditar(cliente)}
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog
+                              open={clienteDeletando?.id === cliente.id}
+                              onOpenChange={(open) => {
+                                if (!open) setClienteDeletando(null);
+                              }}
+                            >
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setClienteDeletando(cliente)}
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Excluir cliente
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir{" "}
+                                    <strong>{cliente.nome}</strong>? Esta ação
+                                    não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={excluirCliente}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+
+          <div className="grid gap-3 md:hidden">
+            <AnimatePresence>
+              {clientesFiltrados.map((cliente) => (
+                <motion.div
+                  key={cliente.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                            {cliente.nome.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">
+                              {cliente.nome}
+                            </CardTitle>
+                            <div className="mt-0.5 flex gap-1.5">
+                              <Badge
+                                variant={
+                                  cliente.tipo === "fixo"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {cliente.tipo === "fixo"
+                                  ? "Fixo"
+                                  : "Esporádico"}
+                              </Badge>
+                              <Badge
+                                variant={
+                                  cliente.is_ativo ? "default" : "destructive"
+                                }
+                                className="text-xs"
+                              >
+                                {cliente.is_ativo ? "Ativo" : "Inativo"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => abrirDialogEditar(cliente)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <AlertDialog
+                            open={clienteDeletando?.id === cliente.id}
+                            onOpenChange={(open) => {
+                              if (!open) setClienteDeletando(null);
+                            }}
+                          >
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setClienteDeletando(cliente)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Excluir cliente
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir{" "}
+                                  <strong>{cliente.nome}</strong>? Esta ação não
+                                  pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={excluirCliente}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-1.5 pt-0">
+                      {cliente.telefone && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5" />
+                          {formatarTelefone(cliente.telefone)}
+                        </div>
+                      )}
+                      {cliente.email && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5" />
+                          {cliente.email}
+                        </div>
+                      )}
+                      {cliente.cpf_cnpj && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <FileText className="h-3.5 w-3.5" />
+                          {formatarCPFCNPJ(cliente.cpf_cnpj)}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </>
       )}
 
-      {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-card shadow-xl">
-            <div className="flex items-center justify-between border-b p-4">
-              <h2 className="text-lg font-semibold">
-                {clienteEditando ? "Editar Cliente" : "Novo Cliente"}
-              </h2>
-              <button
-                onClick={() => {
-                  setModalAberto(false);
-                  setClienteEditando(null);
-                }}
-                className="text-xl text-muted-foreground hover:text-foreground"
-              >
-                ✕
-              </button>
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {clienteEditando ? "Editar Cliente" : "Novo Cliente"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome *</Label>
+              <Input
+                id="nome"
+                value={form.nome}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                placeholder="Nome do cliente"
+                required
+              />
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 p-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Nome *</label>
-                <input
-                  type="text"
-                  value={form.nome}
-                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Telefone
-                  </label>
-                  <input
-                    type="text"
-                    value={form.telefone}
-                    onChange={(e) =>
-                      setForm({ ...form, telefone: e.target.value })
-                    }
-                    placeholder="(00) 00000-0000"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    WhatsApp
-                  </label>
-                  <input
-                    type="text"
-                    value={form.whatsapp}
-                    onChange={(e) =>
-                      setForm({ ...form, whatsapp: e.target.value })
-                    }
-                    placeholder="(00) 00000-0000"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  E-mail
-                </label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    CPF/CNPJ
-                  </label>
-                  <input
-                    type="text"
-                    value={form.cpf_cnpj}
-                    onChange={(e) =>
-                      setForm({ ...form, cpf_cnpj: e.target.value })
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Tipo
-                  </label>
-                  <select
-                    value={form.tipo}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        tipo: e.target.value as "fixo" | "esporadico",
-                      })
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="esporadico">Esporádico</option>
-                    <option value="fixo">Fixo</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Observações
-                </label>
-                <textarea
-                  value={form.observacoes}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={form.telefone}
                   onChange={(e) =>
-                    setForm({ ...form, observacoes: e.target.value })
+                    setForm({ ...form, telefone: e.target.value })
                   }
-                  rows={3}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="(00) 00000-0000"
                 />
               </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalAberto(false);
-                    setClienteEditando(null);
-                  }}
-                  className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  {clienteEditando ? "Salvar" : "Adicionar"}
-                </button>
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <Input
+                  id="whatsapp"
+                  value={form.whatsapp}
+                  onChange={(e) =>
+                    setForm({ ...form, whatsapp: e.target.value })
+                  }
+                  placeholder="(00) 00000-0000"
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
+                <Input
+                  id="cpf_cnpj"
+                  value={form.cpf_cnpj}
+                  onChange={(e) =>
+                    setForm({ ...form, cpf_cnpj: e.target.value })
+                  }
+                  placeholder="000.000.000-00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={form.tipo}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      tipo: v as "fixo" | "esporadico",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="esporadico">Esporádico</SelectItem>
+                    <SelectItem value="fixo">Fixo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input
+                  id="cidade"
+                  value={form.endereco.cidade || ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      endereco: { ...form.endereco, cidade: e.target.value },
+                    })
+                  }
+                  placeholder="Cidade"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estado">Estado</Label>
+                <Input
+                  id="estado"
+                  value={form.endereco.estado || ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      endereco: { ...form.endereco, estado: e.target.value },
+                    })
+                  }
+                  placeholder="UF"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="observacoes">Observações</Label>
+              <Textarea
+                id="observacoes"
+                value={form.observacoes}
+                onChange={(e) =>
+                  setForm({ ...form, observacoes: e.target.value })
+                }
+                placeholder="Observações sobre o cliente..."
+                rows={3}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={fecharDialog}
+                disabled={salvando}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={salvando}>
+                {salvando
+                  ? "Salvando..."
+                  : clienteEditando
+                    ? "Salvar"
+                    : "Adicionar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

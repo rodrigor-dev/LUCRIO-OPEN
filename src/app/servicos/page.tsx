@@ -1,319 +1,728 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda } from "@/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Plus,
+  Search,
+  Wrench,
+  Pencil,
+  Trash2,
+  Filter,
+  DollarSign,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Clock,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 interface Cliente {
   id: string;
   nome: string;
 }
 
+interface Servico {
+  id: string;
+  nome: string;
+  descricao: string;
+  categoria: string;
+  valor: number;
+  data: string;
+  status: string;
+  forma_pagamento: string;
+  cliente_id: string | null;
+  observacoes: string;
+  cliente?: { nome: string } | null;
+  negocio_id: string;
+  criado_em: string;
+}
+
+const FORM_DEFAULTS = {
+  nome: "",
+  descricao: "",
+  categoria: "",
+  valor: "",
+  data: new Date().toISOString().split("T")[0],
+  status: "pendente",
+  forma_pagamento: "pix",
+  cliente_id: "",
+  observacoes: "",
+};
+
+const FORMAS_PAGAMENTO: Record<string, string> = {
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+  pix: "PIX",
+  transferencia: "Transferência",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pendente: "Pendente",
+  concluido: "Concluído",
+  cancelado: "Cancelado",
+};
+
+const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pendente: "secondary",
+  concluido: "default",
+  cancelado: "destructive",
+};
+
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  pendente: <Clock className="h-3 w-3" />,
+  concluido: <CheckCircle className="h-3 w-3" />,
+  cancelado: <XCircle className="h-3 w-3" />,
+};
+
 export default function ServicosPage() {
   const supabase = createClient();
-  const [servicos, setServicos] = useState<any[]>([]);
+  const [servicos, setServicos] = useState<Servico[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [modalAberto, setModalAberto] = useState(false);
   const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [editando, setEditando] = useState<Servico | null>(null);
+  const [excluindo, setExcluindo] = useState<Servico | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState({
-    nome: "",
-    descricao: "",
-    categoria: "",
-    valor: "",
-    data: new Date().toISOString().split("T")[0],
-    status: "pendente" as string,
-    forma_pagamento: "pix" as string,
-    cliente_id: "",
-    observacoes: "",
-  });
+  const [form, setForm] = useState(FORM_DEFAULTS);
+
+  const carregarDados = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
+
+      if (!negocio) return;
+
+      const [servicosRes, clientesRes] = await Promise.all([
+        supabase
+          .from("servicos")
+          .select("*, cliente:clientes(nome)")
+          .eq("negocio_id", negocio.id)
+          .order("data", { ascending: false }),
+        supabase
+          .from("clientes")
+          .select("id, nome")
+          .eq("negocio_id", negocio.id)
+          .order("nome"),
+      ]);
+
+      if (servicosRes.error) {
+        toast.error("Erro ao carregar serviços");
+        return;
+      }
+
+      setServicos(servicosRes.data || []);
+      setClientes(clientesRes.data || []);
+    } catch {
+      toast.error("Erro ao carregar dados");
+    } finally {
+      setCarregando(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     carregarDados();
-  }, [supabase]);
-
-  async function carregarDados() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
-
-    if (!negocio) return;
-
-    const [servicosRes, clientesRes] = await Promise.all([
-      supabase
-        .from("servicos")
-        .select("*, cliente:clientes(nome)")
-        .eq("negocio_id", negocio.id)
-        .order("data", { ascending: false }),
-      supabase
-        .from("clientes")
-        .select("id, nome")
-        .eq("negocio_id", negocio.id)
-        .order("nome"),
-    ]);
-
-    setServicos(servicosRes.data || []);
-    setClientes(clientesRes.data || []);
-    setCarregando(false);
-  }
+  }, [carregarDados]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitting(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
 
-    if (!user) return;
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
 
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
+      if (!negocio) return;
 
-    if (!negocio) return;
+      const payload = {
+        nome: form.nome,
+        descricao: form.descricao,
+        categoria: form.categoria,
+        valor: parseFloat(form.valor),
+        data: form.data,
+        status: form.status,
+        forma_pagamento: form.forma_pagamento,
+        cliente_id: form.cliente_id && form.cliente_id !== "none" ? form.cliente_id : null,
+        observacoes: form.observacoes,
+      };
 
-    const { error } = await supabase.from("servicos").insert({
-      negocio_id: negocio.id,
-      nome: form.nome,
-      descricao: form.descricao,
-      categoria: form.categoria,
-      valor: parseFloat(form.valor),
-      data: form.data,
-      status: form.status,
-      forma_pagamento: form.forma_pagamento,
-      cliente_id: form.cliente_id || null,
-      observacoes: form.observacoes,
-    });
+      if (editando) {
+        const { error } = await supabase
+          .from("servicos")
+          .update(payload)
+          .eq("id", editando.id);
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+        if (error) {
+          toast.error("Erro ao atualizar serviço");
+          return;
+        }
 
-    setModalAberto(false);
-    setForm({
-      nome: "",
-      descricao: "",
-      categoria: "",
-      valor: "",
-      data: new Date().toISOString().split("T")[0],
-      status: "pendente",
-      forma_pagamento: "pix",
-      cliente_id: "",
-      observacoes: "",
-    });
-    carregarDados();
-  }
+        toast.success("Serviço atualizado com sucesso!");
+      } else {
+        const { error } = await supabase.from("servicos").insert({
+          negocio_id: negocio.id,
+          ...payload,
+        });
 
-  async function excluirServico(id: string) {
-    if (confirm("Tem certeza que deseja excluir este serviço?")) {
-      await supabase.from("servicos").delete().eq("id", id);
+        if (error) {
+          toast.error("Erro ao criar serviço");
+          return;
+        }
+
+        toast.success("Serviço criado com sucesso!");
+      }
+
+      setDialogAberto(false);
+      setEditando(null);
+      setForm(FORM_DEFAULTS);
       carregarDados();
+    } catch {
+      toast.error("Erro ao salvar serviço");
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  const statusColors: Record<string, string> = {
-    pendente: "bg-yellow-100 text-yellow-700",
-    concluido: "bg-green-100 text-green-700",
-    cancelado: "bg-red-100 text-red-700",
-  };
+  async function handleExcluir() {
+    if (!excluindo) return;
+
+    try {
+      const { error } = await supabase.from("servicos").delete().eq("id", excluindo.id);
+
+      if (error) {
+        toast.error("Erro ao excluir serviço");
+        return;
+      }
+
+      toast.success("Serviço excluído com sucesso!");
+      setExcluindo(null);
+      carregarDados();
+    } catch {
+      toast.error("Erro ao excluir serviço");
+    }
+  }
+
+  function abrirEdicao(servico: Servico) {
+    setEditando(servico);
+    setForm({
+      nome: servico.nome,
+      descricao: servico.descricao || "",
+      categoria: servico.categoria || "",
+      valor: String(servico.valor),
+      data: servico.data,
+      status: servico.status,
+      forma_pagamento: servico.forma_pagamento || "pix",
+      cliente_id: servico.cliente_id || "",
+      observacoes: servico.observacoes || "",
+    });
+    setDialogAberto(true);
+  }
+
+  function abrirNovo() {
+    setEditando(null);
+    setForm(FORM_DEFAULTS);
+    setDialogAberto(true);
+  }
+
+  const servicosFiltrados = servicos.filter((s) => {
+    const buscaMatch =
+      busca === "" ||
+      s.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      s.cliente?.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+      s.categoria?.toLowerCase().includes(busca.toLowerCase());
+
+    const statusMatch = filtroStatus === "todos" || s.status === filtroStatus;
+
+    return buscaMatch && statusMatch;
+  });
+
+  const totalFiltrado = servicosFiltrados.reduce((acc, s) => acc + s.valor, 0);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h1 className="text-2xl font-bold">Serviços</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
+            <Wrench className="h-6 w-6 text-blue-600" />
+            Serviços
+          </h1>
           <p className="text-muted-foreground">
             Gerencie seus serviços realizados
           </p>
         </div>
-        <button
-          onClick={() => setModalAberto(true)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
+        <Button onClick={abrirNovo} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="mr-2 h-4 w-4" />
           Novo Serviço
-        </button>
-      </div>
+        </Button>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-center"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, cliente ou categoria..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="concluido">Concluído</SelectItem>
+              <SelectItem value="cancelado">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </motion.div>
 
       {carregando ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      ) : servicos.length === 0 ? (
-        <div className="rounded-lg border bg-card p-12 text-center shadow-sm">
-          <div className="mb-4 text-4xl">🔧</div>
-          <h3 className="mb-2 text-lg font-semibold">Nenhum serviço registrado</h3>
-          <p className="mb-4 text-muted-foreground">Registre seu primeiro serviço</p>
-          <button
-            onClick={() => setModalAberto(true)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Registrar Serviço
-          </button>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-4 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-32" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="space-y-4 p-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {servicos.map((servico) => (
-            <div
-              key={servico.id}
-              className="rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
-            >
-              <div className="mb-3 flex items-start justify-between">
-                <div>
-                  <p className="font-medium">{servico.nome}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {servico.cliente?.nome || "Sem cliente"}
-                  </p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-4"
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatarMoeda(totalFiltrado)}
                 </div>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    statusColors[servico.status] || ""
-                  }`}
-                >
-                  {servico.status === "concluido" ? "Concluído" : servico.status.charAt(0).toUpperCase() + servico.status.slice(1)}
-                </span>
-              </div>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor</p>
-                  <p className="text-lg font-bold">{formatarMoeda(servico.valor)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {servicosFiltrados.length} serviço(s)
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {formatarMoeda(
+                    servicosFiltrados
+                      .filter((s) => s.status === "concluido")
+                      .reduce((acc, s) => acc + s.valor, 0)
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => excluirServico(servico.id)}
-                    className="text-destructive hover:text-destructive/80"
-                  >
-                    🗑️
-                  </button>
+                <p className="text-xs text-muted-foreground">
+                  {servicosFiltrados.filter((s) => s.status === "concluido").length} concluído(s)
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+                <Clock className="h-4 w-4 text-yellow-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {formatarMoeda(
+                    servicosFiltrados
+                      .filter((s) => s.status === "pendente")
+                      .reduce((acc, s) => acc + s.valor, 0)
+                  )}
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                <p className="text-xs text-muted-foreground">
+                  {servicosFiltrados.filter((s) => s.status === "pendente").length} pendente(s)
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {servicosFiltrados.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Wrench className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mb-2 text-lg font-semibold">Nenhum serviço encontrado</h3>
+                <p className="mb-4 text-center text-sm text-muted-foreground">
+                  {busca || filtroStatus !== "todos"
+                    ? "Tente ajustar os filtros de busca"
+                    : "Registre seu primeiro serviço para começar"}
+                </p>
+                {!busca && filtroStatus === "todos" && (
+                  <Button onClick={abrirNovo} className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Registrar Serviço
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead className="hidden sm:table-cell">Cliente</TableHead>
+                      <TableHead className="hidden md:table-cell">Categoria</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="hidden sm:table-cell">Data</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <AnimatePresence>
+                      {servicosFiltrados.map((servico, index) => (
+                        <motion.tr
+                          key={servico.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ delay: index * 0.03 }}
+                          className="border-b transition-colors hover:bg-muted/50"
+                        >
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{servico.nome}</p>
+                              {servico.descricao && (
+                                <p className="text-xs text-muted-foreground line-clamp-1">
+                                  {servico.descricao}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground">
+                            {servico.cliente?.nome || "—"}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground">
+                            {servico.categoria || "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-blue-600">
+                            {formatarMoeda(servico.valor)}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground">
+                            {new Intl.DateTimeFormat("pt-BR").format(new Date(servico.data))}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={STATUS_VARIANTS[servico.status] || "outline"}>
+                              <span className="mr-1 inline-flex items-center gap-0.5">
+                                {STATUS_ICONS[servico.status]}
+                              </span>
+                              {STATUS_LABELS[servico.status] || servico.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => abrirEdicao(servico)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setExcluindo(servico)}
+                                title="Excluir"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </motion.div>
       )}
 
-      {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-card shadow-xl">
-            <div className="flex items-center justify-between border-b p-4">
-              <h2 className="text-lg font-semibold">Novo Serviço</h2>
-              <button
-                onClick={() => setModalAberto(false)}
-                className="text-xl text-muted-foreground hover:text-foreground"
-              >
-                ✕
-              </button>
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editando ? "Editar Serviço" : "Novo Serviço"}</DialogTitle>
+            <DialogDescription>
+              {editando
+                ? "Atualize as informações do serviço"
+                : "Preencha os dados para registrar um novo serviço"}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome do Serviço *</Label>
+              <Input
+                id="nome"
+                value={form.nome}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                placeholder="Ex: Instalação elétrica"
+                required
+              />
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 p-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Nome do Serviço *
-                </label>
-                <input
-                  type="text"
-                  value={form.nome}
-                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            <div className="space-y-2">
+              <Label htmlFor="descricao">Descrição</Label>
+              <Textarea
+                id="descricao"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                placeholder="Descreva o serviço realizado..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="categoria">Categoria</Label>
+              <Input
+                id="categoria"
+                value={form.categoria}
+                onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                placeholder="Ex: Elétrica, Hidráulica, Pintura..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="valor">Valor (R$) *</Label>
+                <Input
+                  id="valor"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.valor}
+                  onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                  placeholder="0,00"
                   required
-                  placeholder="Ex: Instalação elétrica"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Valor (R$) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.valor}
-                    onChange={(e) =>
-                      setForm({ ...form, valor: e.target.value })
-                    }
-                    required
-                    placeholder="0,00"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Data *
-                  </label>
-                  <input
-                    type="date"
-                    value={form.data}
-                    onChange={(e) => setForm({ ...form, data: e.target.value })}
-                    required
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="data">Data *</Label>
+                <Input
+                  id="data"
+                  type="date"
+                  value={form.data}
+                  onChange={(e) => setForm({ ...form, data: e.target.value })}
+                  required
+                />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Cliente
-                  </label>
-                  <select
-                    value={form.cliente_id}
-                    onChange={(e) =>
-                      setForm({ ...form, cliente_id: e.target.value })
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Status
-                  </label>
-                  <select
-                    value={form.status}
-                    onChange={(e) =>
-                      setForm({ ...form, status: e.target.value })
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="pendente">Pendente</option>
-                    <option value="concluido">Concluído</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModalAberto(false)}
-                  className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent"
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente</Label>
+              <Select
+                value={form.cliente_id}
+                onValueChange={(value) => setForm({ ...form, cliente_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {clientes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(value) => setForm({ ...form, status: value })}
                 >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="concluido">Concluído</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Select
+                  value={form.forma_pagamento}
+                  onValueChange={(value) => setForm({ ...form, forma_pagamento: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="cartao">Cartão</SelectItem>
+                    <SelectItem value="transferencia">Transferência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="observacoes">Observações</Label>
+              <Textarea
+                id="observacoes"
+                value={form.observacoes}
+                onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                placeholder="Observações adicionais..."
+                rows={2}
+              />
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
                   Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  Registrar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {submitting ? "Salvando..." : editando ? "Salvar Alterações" : "Registrar Serviço"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!excluindo} onOpenChange={(open) => !open && setExcluindo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Serviço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o serviço &quot;{excluindo?.nome}&quot;? Esta ação não
+              pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExcluir}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

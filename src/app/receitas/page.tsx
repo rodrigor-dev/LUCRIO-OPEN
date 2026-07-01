@@ -1,360 +1,729 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda } from "@/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Plus,
+  Search,
+  TrendingUp,
+  DollarSign,
+  Pencil,
+  Trash2,
+  Filter,
+  Copy,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 interface Cliente {
   id: string;
   nome: string;
 }
 
+interface Receita {
+  id: string;
+  descricao: string;
+  valor: number;
+  data: string;
+  status: string;
+  forma_pagamento: string;
+  cliente_id: string | null;
+  observacoes: string;
+  cliente?: { nome: string } | null;
+  negocio_id: string;
+  criado_em: string;
+}
+
+const FORM_DEFAULTS = {
+  descricao: "",
+  valor: "",
+  data: new Date().toISOString().split("T")[0],
+  status: "pendente",
+  forma_pagamento: "pix",
+  cliente_id: "",
+  observacoes: "",
+};
+
+const FORMAS_PAGAMENTO: Record<string, string> = {
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+  pix: "PIX",
+  transferencia: "Transferência",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pendente: "Pendente",
+  pago: "Pago",
+  cancelado: "Cancelado",
+};
+
+const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pendente: "secondary",
+  pago: "default",
+  cancelado: "destructive",
+};
+
 export default function ReceitasPage() {
   const supabase = createClient();
-  const [receitas, setReceitas] = useState<any[]>([]);
+  const [receitas, setReceitas] = useState<Receita[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [modalAberto, setModalAberto] = useState(false);
   const [carregando, setCarregando] = useState(true);
-  const [filtroStatus, setFiltroStatus] = useState("");
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [editando, setEditando] = useState<Receita | null>(null);
+  const [excluindo, setExcluindo] = useState<Receita | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState({
-    descricao: "",
-    valor: "",
-    data: new Date().toISOString().split("T")[0],
-    status: "pendente" as string,
-    forma_pagamento: "pix" as string,
-    cliente_id: "",
-    observacoes: "",
-  });
+  const [form, setForm] = useState(FORM_DEFAULTS);
+
+  const carregarDados = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
+
+      if (!negocio) return;
+
+      const [receitasRes, clientesRes] = await Promise.all([
+        supabase
+          .from("receitas")
+          .select("*, cliente:clientes(nome)")
+          .eq("negocio_id", negocio.id)
+          .order("data", { ascending: false }),
+        supabase
+          .from("clientes")
+          .select("id, nome")
+          .eq("negocio_id", negocio.id)
+          .order("nome"),
+      ]);
+
+      if (receitasRes.error) {
+        toast.error("Erro ao carregar receitas");
+        return;
+      }
+
+      setReceitas(receitasRes.data || []);
+      setClientes(clientesRes.data || []);
+    } catch {
+      toast.error("Erro ao carregar dados");
+    } finally {
+      setCarregando(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     carregarDados();
-  }, [supabase]);
-
-  async function carregarDados() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
-
-    if (!negocio) return;
-
-    const [receitasRes, clientesRes] = await Promise.all([
-      supabase
-        .from("receitas")
-        .select("*, cliente:clientes(nome)")
-        .eq("negocio_id", negocio.id)
-        .order("data", { ascending: false }),
-      supabase
-        .from("clientes")
-        .select("id, nome")
-        .eq("negocio_id", negocio.id)
-        .order("nome"),
-    ]);
-
-    setReceitas(receitasRes.data || []);
-    setClientes(clientesRes.data || []);
-    setCarregando(false);
-  }
+  }, [carregarDados]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitting(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
 
-    if (!user) return;
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
 
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
+      if (!negocio) return;
 
-    if (!negocio) return;
+      const payload = {
+        descricao: form.descricao,
+        valor: parseFloat(form.valor),
+        data: form.data,
+        status: form.status,
+        forma_pagamento: form.forma_pagamento,
+        cliente_id: form.cliente_id && form.cliente_id !== "none" ? form.cliente_id : null,
+        observacoes: form.observacoes,
+      };
 
-    const { error } = await supabase.from("receitas").insert({
-      negocio_id: negocio.id,
-      descricao: form.descricao,
-      valor: parseFloat(form.valor),
-      data: form.data,
-      status: form.status,
-      forma_pagamento: form.forma_pagamento,
-      cliente_id: form.cliente_id || null,
-      observacoes: form.observacoes,
-    });
+      if (editando) {
+        const { error } = await supabase
+          .from("receitas")
+          .update(payload)
+          .eq("id", editando.id);
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+        if (error) {
+          toast.error("Erro ao atualizar receita");
+          return;
+        }
 
-    setModalAberto(false);
-    setForm({
-      descricao: "",
-      valor: "",
-      data: new Date().toISOString().split("T")[0],
-      status: "pendente",
-      forma_pagamento: "pix",
-      cliente_id: "",
-      observacoes: "",
-    });
-    carregarDados();
-  }
+        toast.success("Receita atualizada com sucesso!");
+      } else {
+        const { error } = await supabase.from("receitas").insert({
+          negocio_id: negocio.id,
+          ...payload,
+        });
 
-  async function excluirReceita(id: string) {
-    if (confirm("Tem certeza que deseja excluir esta receita?")) {
-      await supabase.from("receitas").delete().eq("id", id);
+        if (error) {
+          toast.error("Erro ao criar receita");
+          return;
+        }
+
+        toast.success("Receita criada com sucesso!");
+      }
+
+      setDialogAberto(false);
+      setEditando(null);
+      setForm(FORM_DEFAULTS);
       carregarDados();
+    } catch {
+      toast.error("Erro ao salvar receita");
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  const receitasFiltradas = filtroStatus
-    ? receitas.filter((r) => r.status === filtroStatus)
-    : receitas;
+  async function handleExcluir() {
+    if (!excluindo) return;
 
-  const statusColors: Record<string, string> = {
-    pendente: "bg-yellow-100 text-yellow-700",
-    pago: "bg-green-100 text-green-700",
-    cancelado: "bg-red-100 text-red-700",
-  };
+    try {
+      const { error } = await supabase.from("receitas").delete().eq("id", excluindo.id);
+
+      if (error) {
+        toast.error("Erro ao excluir receita");
+        return;
+      }
+
+      toast.success("Receita excluída com sucesso!");
+      setExcluindo(null);
+      carregarDados();
+    } catch {
+      toast.error("Erro ao excluir receita");
+    }
+  }
+
+  async function handleDuplicar(receita: Receita) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
+
+      if (!negocio) return;
+
+      const { error } = await supabase.from("receitas").insert({
+        negocio_id: negocio.id,
+        descricao: `${receita.descricao} (Cópia)`,
+        valor: receita.valor,
+        data: new Date().toISOString().split("T")[0],
+        status: "pendente",
+        forma_pagamento: receita.forma_pagamento,
+        cliente_id: receita.cliente_id,
+        observacoes: receita.observacoes,
+      });
+
+      if (error) {
+        toast.error("Erro ao duplicar receita");
+        return;
+      }
+
+      toast.success("Receita duplicada com sucesso!");
+      carregarDados();
+    } catch {
+      toast.error("Erro ao duplicar receita");
+    }
+  }
+
+  function abrirEdicao(receita: Receita) {
+    setEditando(receita);
+    setForm({
+      descricao: receita.descricao,
+      valor: String(receita.valor),
+      data: receita.data,
+      status: receita.status,
+      forma_pagamento: receita.forma_pagamento || "pix",
+      cliente_id: receita.cliente_id || "",
+      observacoes: receita.observacoes || "",
+    });
+    setDialogAberto(true);
+  }
+
+  function abrirNovo() {
+    setEditando(null);
+    setForm(FORM_DEFAULTS);
+    setDialogAberto(true);
+  }
+
+  const receitasFiltradas = receitas.filter((r) => {
+    const buscaMatch =
+      busca === "" ||
+      r.descricao.toLowerCase().includes(busca.toLowerCase()) ||
+      r.cliente?.nome?.toLowerCase().includes(busca.toLowerCase());
+
+    const statusMatch = filtroStatus === "todos" || r.status === filtroStatus;
+
+    return buscaMatch && statusMatch;
+  });
+
+  const totalFiltrado = receitasFiltradas.reduce((acc, r) => acc + r.valor, 0);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h1 className="text-2xl font-bold">Receitas</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
+            <TrendingUp className="h-6 w-6 text-emerald-600" />
+            Receitas
+          </h1>
           <p className="text-muted-foreground">
-            Gerencie suas entradas
+            Gerencie suas entradas financeiras
           </p>
         </div>
-        <button
-          onClick={() => setModalAberto(true)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
+        <Button onClick={abrirNovo} className="bg-emerald-600 hover:bg-emerald-700">
+          <Plus className="mr-2 h-4 w-4" />
           Nova Receita
-        </button>
-      </div>
+        </Button>
+      </motion.div>
 
-      <div className="flex flex-wrap gap-2">
-        {["", "pendente", "pago", "cancelado"].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFiltroStatus(status)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filtroStatus === status
-                ? "bg-primary text-primary-foreground"
-                : "bg-accent text-accent-foreground hover:bg-accent/80"
-            }`}
-          >
-            {status === "" ? "Todos" : status.charAt(0).toUpperCase() + status.slice(1)}
-          </button>
-        ))}
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-center"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por descrição ou cliente..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="pago">Pago</SelectItem>
+              <SelectItem value="cancelado">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </motion.div>
 
       {carregando ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      ) : receitasFiltradas.length === 0 ? (
-        <div className="rounded-lg border bg-card p-12 text-center shadow-sm">
-          <div className="mb-4 text-4xl">💰</div>
-          <h3 className="mb-2 text-lg font-semibold">Nenhuma receita encontrada</h3>
-          <p className="mb-4 text-muted-foreground">Adicione sua primeira receita</p>
-          <button
-            onClick={() => setModalAberto(true)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Adicionar Receita
-          </button>
-        </div>
-      ) : (
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="divide-y">
-            {receitasFiltradas.map((receita) => (
-              <div
-                key={receita.id}
-                className="flex items-center justify-between p-4 hover:bg-accent/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
-                    💰
-                  </div>
-                  <div>
-                    <p className="font-medium">{receita.descricao}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {receita.cliente?.nome && `${receita.cliente?.nome} · `}
-                      {new Intl.DateTimeFormat("pt-BR").format(
-                        new Date(receita.data)
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="font-semibold text-green-600">
-                      {formatarMoeda(receita.valor)}
-                    </p>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        statusColors[receita.status] || ""
-                      }`}
-                    >
-                      {receita.status === "pago" ? "Pago" : receita.status === "pendente" ? "Pendente" : "Cancelado"}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => excluirReceita(receita.id)}
-                    className="text-destructive hover:text-destructive/80"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-4 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-32" />
+                </CardContent>
+              </Card>
             ))}
           </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="space-y-4 p-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-4"
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {formatarMoeda(totalFiltrado)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {receitasFiltradas.length} receita(s)
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pagas</CardTitle>
+                <TrendingUp className="h-4 w-4 text-emerald-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600">
+                  {formatarMoeda(
+                    receitasFiltradas
+                      .filter((r) => r.status === "pago")
+                      .reduce((acc, r) => acc + r.valor, 0)
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {receitasFiltradas.filter((r) => r.status === "pago").length} paga(s)
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+                <DollarSign className="h-4 w-4 text-yellow-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {formatarMoeda(
+                    receitasFiltradas
+                      .filter((r) => r.status === "pendente")
+                      .reduce((acc, r) => acc + r.valor, 0)
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {receitasFiltradas.filter((r) => r.status === "pendente").length} pendente(s)
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {receitasFiltradas.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <TrendingUp className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mb-2 text-lg font-semibold">Nenhuma receita encontrada</h3>
+                <p className="mb-4 text-center text-sm text-muted-foreground">
+                  {busca || filtroStatus !== "todos"
+                    ? "Tente ajustar os filtros de busca"
+                    : "Adicione sua primeira receita para começar"}
+                </p>
+                {!busca && filtroStatus === "todos" && (
+                  <Button onClick={abrirNovo} className="bg-emerald-600 hover:bg-emerald-700">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Receita
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="hidden sm:table-cell">Data</TableHead>
+                      <TableHead className="hidden md:table-cell">Forma Pgto</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <AnimatePresence>
+                      {receitasFiltradas.map((receita, index) => (
+                        <motion.tr
+                          key={receita.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ delay: index * 0.03 }}
+                          className="border-b transition-colors hover:bg-muted/50"
+                        >
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{receita.descricao}</p>
+                              {receita.cliente?.nome && (
+                                <p className="text-xs text-muted-foreground">
+                                  {receita.cliente.nome}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-emerald-600">
+                            {formatarMoeda(receita.valor)}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground">
+                            {new Intl.DateTimeFormat("pt-BR").format(new Date(receita.data))}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground">
+                            {FORMAS_PAGAMENTO[receita.forma_pagamento] || receita.forma_pagamento}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={STATUS_VARIANTS[receita.status] || "outline"}>
+                              {STATUS_LABELS[receita.status] || receita.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleDuplicar(receita)}
+                                title="Duplicar"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => abrirEdicao(receita)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setExcluindo(receita)}
+                                title="Excluir"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </motion.div>
       )}
 
-      {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-card shadow-xl">
-            <div className="flex items-center justify-between border-b p-4">
-              <h2 className="text-lg font-semibold">Nova Receita</h2>
-              <button
-                onClick={() => setModalAberto(false)}
-                className="text-xl text-muted-foreground hover:text-foreground"
-              >
-                ✕
-              </button>
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editando ? "Editar Receita" : "Nova Receita"}</DialogTitle>
+            <DialogDescription>
+              {editando
+                ? "Atualize as informações da receita"
+                : "Preencha os dados para adicionar uma nova receita"}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="descricao">Descrição *</Label>
+              <Input
+                id="descricao"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                placeholder="Ex: Serviço de instalação"
+                required
+              />
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 p-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Descrição *
-                </label>
-                <input
-                  type="text"
-                  value={form.descricao}
-                  onChange={(e) =>
-                    setForm({ ...form, descricao: e.target.value })
-                  }
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="valor">Valor (R$) *</Label>
+                <Input
+                  id="valor"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.valor}
+                  onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                  placeholder="0,00"
                   required
-                  placeholder="Ex: Serviço de instalação"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Valor (R$) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.valor}
-                    onChange={(e) =>
-                      setForm({ ...form, valor: e.target.value })
-                    }
-                    required
-                    placeholder="0,00"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Data *
-                  </label>
-                  <input
-                    type="date"
-                    value={form.data}
-                    onChange={(e) => setForm({ ...form, data: e.target.value })}
-                    required
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="data">Data *</Label>
+                <Input
+                  id="data"
+                  type="date"
+                  value={form.data}
+                  onChange={(e) => setForm({ ...form, data: e.target.value })}
+                  required
+                />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Status
-                  </label>
-                  <select
-                    value={form.status}
-                    onChange={(e) =>
-                      setForm({ ...form, status: e.target.value })
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="pendente">Pendente</option>
-                    <option value="pago">Pago</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    Forma de Pagamento
-                  </label>
-                  <select
-                    value={form.forma_pagamento}
-                    onChange={(e) =>
-                      setForm({ ...form, forma_pagamento: e.target.value })
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="pix">PIX</option>
-                    <option value="dinheiro">Dinheiro</option>
-                    <option value="cartao">Cartão</option>
-                    <option value="transferencia">Transferência</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Cliente
-                </label>
-                <select
-                  value={form.cliente_id}
-                  onChange={(e) =>
-                    setForm({ ...form, cliente_id: e.target.value })
-                  }
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Select
+                  value={form.forma_pagamento}
+                  onValueChange={(value) => setForm({ ...form, forma_pagamento: value })}
                 >
-                  <option value="">Selecione um cliente</option>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="cartao">Cartão</SelectItem>
+                    <SelectItem value="transferencia">Transferência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(value) => setForm({ ...form, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="pago">Pago</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente</Label>
+              <Select
+                value={form.cliente_id}
+                onValueChange={(value) => setForm({ ...form, cliente_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <SelectItem key={c.id} value={c.id}>
                       {c.nome}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModalAberto(false)}
-                  className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent"
-                >
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="observacoes">Observações</Label>
+              <Input
+                id="observacoes"
+                value={form.observacoes}
+                onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                placeholder="Observações adicionais..."
+              />
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
                   Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  Adicionar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {submitting ? "Salvando..." : editando ? "Salvar Alterações" : "Adicionar Receita"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!excluindo} onOpenChange={(open) => !open && setExcluindo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Receita</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a receita &quot;{excluindo?.descricao}&quot;? Esta ação não
+              pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExcluir}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
