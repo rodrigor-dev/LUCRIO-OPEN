@@ -31,17 +31,24 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  const rotasPublicas = [
+  const rotasPublicasExatas = [
     "/",
     "/login",
     "/cadastro",
     "/recuperar-senha",
     "/redefinir-senha",
+  ];
+
+  const rotasPublicasComPrefixo = [
     "/auth/callback",
     "/auth/confirm",
   ];
 
-  const rotaPublica = rotasPublicas.some((rota) => pathname.startsWith(rota));
+  const ehRotaExataPublica = rotasPublicasExatas.includes(pathname);
+  const ehRotaComPrefixoPublico = rotasPublicasComPrefixo.some((rota) =>
+    pathname.startsWith(rota)
+  );
+  const rotaPublica = ehRotaExataPublica || ehRotaComPrefixoPublico;
 
   if (!user && !rotaPublica) {
     const url = request.nextUrl.clone();

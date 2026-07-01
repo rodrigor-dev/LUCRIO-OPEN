@@ -62,11 +62,16 @@ export async function buscarClientes(
   negocioId: string,
   termo: string
 ): Promise<Cliente[]> {
+  const termoSanitizado = termo
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_")
+    .replace(/\\/g, "\\\\");
+
   const { data, error } = await supabase
     .from("clientes")
     .select("*")
     .eq("negocio_id", negocioId)
-    .or(`nome.ilike.%${termo}%,email.ilike.%${termo}%,telefone.ilike.%${termo}%`)
+    .or(`nome.ilike.%${termoSanitizado}%,email.ilike.%${termoSanitizado}%,telefone.ilike.%${termoSanitizado}%`)
     .order("nome");
 
   if (error) throw error;
