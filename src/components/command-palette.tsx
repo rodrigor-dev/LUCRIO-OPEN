@@ -250,12 +250,15 @@ export default function CommandPalette() {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[100] flex items-start justify-center bg-black/50 px-4 pt-[15vh]"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Busca global"
+            className="fixed inset-0 z-[100] flex items-start justify-center bg-black/50 px-4 pt-[15vh]"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(false);
           }}
@@ -275,6 +278,7 @@ export default function CommandPalette() {
                 placeholder="Buscar clientes, receitas, despesas, serviços..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                aria-label="Buscar no sistema"
                 className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
               <kbd className="pointer-events-none hidden shrink-0 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
@@ -282,7 +286,7 @@ export default function CommandPalette() {
               </kbd>
             </div>
 
-            <div ref={listRef} className="max-h-80 overflow-y-auto p-1">
+            <div ref={listRef} role="listbox" aria-label="Resultados da busca" className="max-h-80 overflow-y-auto p-1">
               {loading && (
                 <div className="flex items-center justify-center py-8">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted border-t-foreground" />
@@ -317,6 +321,8 @@ export default function CommandPalette() {
                           <button
                             key={item.id}
                             data-selected={selected}
+                            role="option"
+                            aria-selected={selected}
                             onClick={() => navigate(item.href)}
                             onMouseEnter={() =>
                               setSelectedIndex(globalIndex)

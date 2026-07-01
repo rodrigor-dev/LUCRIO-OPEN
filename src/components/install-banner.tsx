@@ -70,6 +70,7 @@ export default function InstallBanner() {
           </div>
           <button
             onClick={handleFechar}
+            aria-label="Fechar banner de instalação"
             className="text-muted-foreground hover:text-foreground"
           >
             ✕

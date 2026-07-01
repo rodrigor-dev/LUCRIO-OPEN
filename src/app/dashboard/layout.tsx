@@ -27,6 +27,7 @@ import PWAUpdater from "@/components/pwa-updater";
 import InstallBanner from "@/components/install-banner";
 import BottomNav from "@/components/bottom-nav";
 import CommandPalette from "@/components/command-palette";
+import { SkipToContent } from "@/components/skip-to-content";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -243,9 +244,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <TooltipProvider>
+      <SkipToContent />
       <div className="flex min-h-screen bg-background">
         {/* Desktop Sidebar */}
       <aside
+        role="navigation"
+        aria-label="Menu principal"
         className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:flex-col lg:border-r lg:border-border lg:bg-card lg:transition-all lg:duration-300 ${
           sidebarCollapsed ? "lg:w-[68px]" : "lg:w-64"
         }`}
@@ -319,6 +323,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            role="navigation"
+            aria-label="Menu de navegação mobile"
             className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-card shadow-xl lg:hidden"
           >
             <div className="flex h-full flex-col">
@@ -338,6 +344,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Link>
                 <button
                   onClick={() => setMobileOpen(false)}
+                  aria-label="Fechar menu"
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <X className="h-5 w-5" />
@@ -361,9 +368,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }`}
       >
         {/* Mobile Header */}
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-lg lg:hidden">
+        <header role="banner" className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-lg lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menu de navegação"
             className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Menu className="h-5 w-5" />
@@ -379,13 +387,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center gap-1">
             <button
               onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}
+              aria-label="Busca global (Ctrl+K)"
               className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <Search className="h-5 w-5" />
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex h-11 w-11 items-center justify-center rounded-full">
+                <button aria-label="Menu do usuário" className="flex h-11 w-11 items-center justify-center rounded-full">
                 <Avatar className="h-8 w-8 border-2 border-emerald-200 dark:border-emerald-800">
                   <AvatarFallback className="bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
                     {userInitials}
@@ -420,7 +429,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6">
+        <main
+          id="main-content"
+          role="main"
+          aria-label="Conteúdo principal"
+          className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
+        >
           {children}
         </main>
         <BottomNav />
