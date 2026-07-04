@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { valor, descricao, email } = dados;
+    const { valor, descricao, email, plano } = dados;
 
     if (typeof valor !== "number" || valor <= 0 || valor > 100000) {
       return NextResponse.json(
@@ -57,6 +57,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const planoTipo = plano === "anual" ? "anual" : "mensal";
+
     const { createMercoPagClient } = await import("@/services/mercopag.service");
     const mercopag = createMercoPagClient();
 
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
       valor,
       descricao: String(descricao || "Assinatura LUCRIO").slice(0, 500),
       email: String(email),
-      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/pagamento/sucesso`,
+      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/pagamento/sucesso?plano=${planoTipo}`,
       webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mercopag`,
     });
 

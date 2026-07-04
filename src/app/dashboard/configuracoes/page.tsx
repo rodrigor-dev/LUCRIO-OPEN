@@ -846,7 +846,7 @@ export default function ConfiguracoesPage() {
                           <p className="text-lg font-semibold">{planName}</p>
                           <p className="text-sm text-muted-foreground">
                             {assinatura?.status === "trial"
-                              ? "Acesso completo durante o período de teste"
+                              ? "Acesso completo durante o período de teste gratuito"
                               : assinatura?.status === "ativo"
                               ? "Acesso completo a todas as funcionalidades"
                               : "Assine um plano para acessar todas as funcionalidades"}
@@ -859,13 +859,13 @@ export default function ConfiguracoesPage() {
                           <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
                             <Clock className="h-4 w-4" />
                             <p className="text-sm font-medium">
-                              Período de teste: <strong>{diasTrial}</strong> dias restantes
+                              Teste gratuito: <strong>{diasTrial}</strong> dias restantes
                             </p>
                           </div>
                           <div className="mt-2 h-2 w-full rounded-full bg-amber-200 dark:bg-amber-800">
                             <div
                               className="h-full rounded-full bg-amber-500 transition-all"
-                              style={{ width: `${Math.min(100, (diasTrial / 14) * 100)}%` }}
+                              style={{ width: `${Math.min(100, (diasTrial / 7) * 100)}%` }}
                             />
                           </div>
                         </div>
@@ -882,7 +882,7 @@ export default function ConfiguracoesPage() {
                         </div>
                       )}
 
-                      {assinatura && (
+                      {assinatura && assinatura.status !== "incompleto" && (
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <p className="text-muted-foreground">Início do período</p>
@@ -901,36 +901,8 @@ export default function ConfiguracoesPage() {
 
                       <Separator />
 
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <Button
-                          onClick={async () => {
-                            try {
-                              const res = await fetch("/api/pagamentos", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  dados: {
-                                    valor: 49.90,
-                                    descricao: "LUCRIO PRO - Plano Mensal",
-                                    email: usuario?.email || "",
-                                  },
-                                }),
-                              });
-                              const data = await res.json();
-                              if (data.init_point) {
-                                window.location.href = data.init_point;
-                              } else {
-                                toast.error(data.erro || "Erro ao criar pagamento");
-                              }
-                            } catch {
-                              toast.error("Erro ao processar pagamento");
-                            }
-                          }}
-                        >
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Assinar Plano PRO - R$ 49,90/mês
-                        </Button>
-                        {assinatura?.status === "ativo" && (
+                      {assinatura?.status === "ativo" ? (
+                        <div className="flex flex-col sm:flex-row gap-3">
                           <Button
                             variant="outline"
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -938,8 +910,112 @@ export default function ConfiguracoesPage() {
                           >
                             Cancelar Assinatura
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Plano Mensal */}
+                          <Card className="border-2 border-primary/20 hover:border-primary/50 transition-colors">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base flex items-center justify-between">
+                                Mensal
+                                <span className="text-lg font-bold text-primary">R$ 14,99</span>
+                              </CardTitle>
+                              <CardDescription className="text-xs">por mês</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <ul className="text-xs text-muted-foreground space-y-1 mb-4">
+                                <li>✓ 7 dias de teste grátis</li>
+                                <li>✓ Cancele quando quiser</li>
+                                <li>✓ Todas as funcionalidades</li>
+                              </ul>
+                              <Button
+                                className="w-full"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch("/api/pagamentos", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        dados: {
+                                          valor: 14.99,
+                                          descricao: "LUCRIO PRO - Plano Mensal",
+                                          email: usuario?.email || "",
+                                          plano: "mensal",
+                                        },
+                                      }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.init_point) {
+                                      window.location.href = data.init_point;
+                                    } else {
+                                      toast.error(data.erro || "Erro ao criar pagamento");
+                                    }
+                                  } catch {
+                                    toast.error("Erro ao processar pagamento");
+                                  }
+                                }}
+                              >
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Assinar Mensal
+                              </Button>
+                            </CardContent>
+                          </Card>
+
+                          {/* Plano Anual */}
+                          <Card className="border-2 border-green-500/30 hover:border-green-500/60 transition-colors relative">
+                            <div className="absolute -top-2 right-4 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              ECONOMIZE 23%
+                            </div>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base flex items-center justify-between">
+                                Anual
+                                <span className="text-lg font-bold text-green-600">R$ 139,99</span>
+                              </CardTitle>
+                              <CardDescription className="text-xs">por ano (R$ 11,67/mês)</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <ul className="text-xs text-muted-foreground space-y-1 mb-4">
+                                <li>✓ 7 dias de teste grátis</li>
+                                <li>✓ Pague 10, ganhe 12</li>
+                                <li>✓ Todas as funcionalidades</li>
+                              </ul>
+                              <Button
+                                className="w-full"
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch("/api/pagamentos", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        dados: {
+                                          valor: 139.99,
+                                          descricao: "LUCRIO PRO - Plano Anual",
+                                          email: usuario?.email || "",
+                                          plano: "anual",
+                                        },
+                                      }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.init_point) {
+                                      window.location.href = data.init_point;
+                                    } else {
+                                      toast.error(data.erro || "Erro ao criar pagamento");
+                                    }
+                                  } catch {
+                                    toast.error("Erro ao processar pagamento");
+                                  }
+                                }}
+                              >
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Assinar Anual
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>

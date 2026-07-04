@@ -30,6 +30,9 @@ function PagamentoSucessoInner() {
         }
 
         if (status === "approved" || status === "authorized") {
+          const plano = searchParams?.get("plano") ?? "mensal";
+          const diasPlano = plano === "anual" ? 365 : 30;
+
           const { data: assinatura } = await supabase
             .from("assinaturas")
             .select("id")
@@ -42,22 +45,24 @@ function PagamentoSucessoInner() {
               .from("assinaturas")
               .update({
                 status: "ativo",
+                plano_id: plano,
                 intent_pagamento_id: pagamentoId,
+                trial_termina: new Date().toISOString(),
                 ultimo_pagamento: new Date().toISOString(),
-                proximo_pagamento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                fim_periodo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                proximo_pagamento: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
+                fim_periodo: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
               })
               .eq("id", assinatura.id);
           } else {
             await supabase.from("assinaturas").insert({
               usuario_id: user.id,
-              plano_id: "pro",
+              plano_id: plano,
               status: "ativo",
               intent_pagamento_id: pagamentoId,
               trial_termina: new Date().toISOString(),
               ultimo_pagamento: new Date().toISOString(),
-              proximo_pagamento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              fim_periodo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              proximo_pagamento: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
+              fim_periodo: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
             });
           }
 

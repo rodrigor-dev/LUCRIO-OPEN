@@ -95,32 +95,22 @@ export async function GET(request: Request) {
           .single();
 
         if (!existenteAssinatura) {
-          const { data: plano } = await supabase
-            .from("planos")
-            .select("id")
-            .eq("is_ativo", true)
-            .order("preco_mensal", { ascending: true })
-            .limit(1)
-            .single();
+          const trialTermina = new Date();
+          trialTermina.setDate(trialTermina.getDate() + 7);
 
-          if (plano) {
-            const trialTermina = new Date();
-            trialTermina.setDate(trialTermina.getDate() + 7);
+          await supabase.from("assinaturas").insert({
+            usuario_id: user.id,
+            plano_id: "pro",
+            status: "trial",
+            trial_termina: trialTermina.toISOString(),
+            inicio_periodo: new Date().toISOString(),
+            fim_periodo: trialTermina.toISOString(),
+          });
 
-            await supabase.from("assinaturas").insert({
-              usuario_id: user.id,
-              plano_id: plano.id,
-              status: "trial",
-              trial_termina: trialTermina.toISOString(),
-              inicio_periodo: new Date().toISOString(),
-              fim_periodo: trialTermina.toISOString(),
-            });
-
-            await supabase
-              .from("usuarios")
-              .update({ trial_termina_em: trialTermina.toISOString() })
-              .eq("id", user.id);
-          }
+          await supabase
+            .from("usuarios")
+            .update({ trial_termina_em: trialTermina.toISOString() })
+            .eq("id", user.id);
         }
       }
 
