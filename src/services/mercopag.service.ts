@@ -27,15 +27,22 @@ export function createMercoPagClient() {
 
   return {
     async criarPagamento(dados: DadosPagamento): Promise<PagamentoCriado> {
-      const resposta = await fetch(`${MERCOPAG_API}/payments`, {
+      const resposta = await fetch(`${MERCOPAG_API}/checkout/preferences`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          transaction_amount: dados.valor,
-          description: dados.descricao,
+          items: [
+            {
+              id: "LUCRIO-PRO",
+              title: dados.descricao,
+              quantity: 1,
+              unit_price: dados.valor,
+              currency_id: "BRL",
+            },
+          ],
           payer: {
             email: dados.email,
           },
@@ -63,7 +70,7 @@ export function createMercoPagClient() {
       return {
         id: pagamento.id,
         init_point: pagamento.init_point,
-        status: pagamento.status,
+        status: "pending",
       };
     },
 
