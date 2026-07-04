@@ -60,6 +60,9 @@ export interface Cliente {
   cpf_cnpj?: string;
   endereco: Endereco;
   tipo: "fixo" | "esporadico";
+  valor_mensal?: number;
+  dia_vencimento?: number;
+  fornecedor?: string;
   observacoes?: string;
   is_ativo: boolean;
   criado_em: string;
@@ -90,9 +93,16 @@ export interface Receita {
   descricao: string;
   valor: number;
   data: string;
-  status: "pendente" | "pago" | "cancelado";
+  data_vencimento?: string;
+  data_pagamento?: string;
+  status: "pendente" | "pago" | "cancelado" | "atrasado";
   forma_pagamento?: string;
   comprovante_url?: string;
+  recorrencia_tipo?: string;
+  recorrencia_id?: string;
+  parcela_numero?: number;
+  parcela_total?: number;
+  grupo_parcela_id?: string;
   observacoes?: string;
   criado_em: string;
   atualizado_em: string;
@@ -105,10 +115,19 @@ export interface Despesa {
   descricao: string;
   valor: number;
   data: string;
+  data_vencimento?: string;
+  data_pagamento?: string;
+  fornecedor?: string;
   forma_pagamento?: string;
-  status: "pendente" | "pago" | "cancelado";
+  status: "pendente" | "pago" | "cancelado" | "atrasado";
   observacoes?: string;
   comprovante_url?: string;
+  parcela_numero?: number;
+  parcela_total?: number;
+  grupo_parcela_id?: string;
+  cartao_tipo?: "avista" | "parcelado";
+  cartao_parcelas?: number;
+  cartao_valor_total?: number;
   criado_em: string;
   atualizado_em: string;
 }
@@ -209,4 +228,62 @@ export interface LogAtividade {
   ip_address?: string;
   user_agent?: string;
   criado_em: string;
+}
+
+export interface Recorrencia {
+  id: string;
+  negocio_id: string;
+  cliente_id?: string;
+  tipo: "receita" | "despesa";
+  recorrencia: "mensal" | "semanal" | "quinzenal" | "anual";
+  valor: number;
+  descricao: string;
+  categoria_id?: string;
+  forma_pagamento?: string;
+  dia_vencimento?: number;
+  is_ativa: boolean;
+  proximo_gerar_em?: string;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface CalendarioItem {
+  id: string;
+  negocio_id: string;
+  cliente_id?: string;
+  fornecedor?: string;
+  descricao: string;
+  valor: number;
+  data_evento: string;
+  tipo: "receita" | "despesa";
+  status: string;
+  data_vencimento?: string;
+  data_pagamento?: string;
+  cliente_nome?: string;
+}
+
+export interface ResumoCliente {
+  cliente_id: string;
+  negocio_id: string;
+  nome: string;
+  tipo: string;
+  valor_mensal?: number;
+  is_ativo: boolean;
+  total_recebido: number;
+  total_em_aberto: number;
+  total_pagos: number;
+  total_atrasados: number;
+  total_pendentes: number;
+  ultimo_pagamento?: string;
+  total_receitas: number;
+  primeira_receita?: string;
+}
+
+export interface KPIDashboard {
+  negocio_id: string;
+  receita_mes: number;
+  a_receber: number;
+  atrasado: number;
+  despesa_mes: number;
+  mrr: number;
 }

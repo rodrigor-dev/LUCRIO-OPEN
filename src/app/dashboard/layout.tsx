@@ -13,6 +13,7 @@ import {
   Wallet,
   FileText,
   BarChart3,
+  Calendar,
   Settings,
   LogOut,
   Menu,
@@ -58,6 +59,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/despesas", label: "Despesas", icon: TrendingDown },
   { href: "/dashboard/fluxo-caixa", label: "Fluxo de Caixa", icon: Wallet },
   { href: "/dashboard/propostas", label: "Propostas", icon: FileText },
+  { href: "/dashboard/calendario", label: "Calendário", icon: Calendar },
   { href: "/dashboard/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
 ];

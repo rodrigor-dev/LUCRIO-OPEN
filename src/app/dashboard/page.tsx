@@ -3,21 +3,28 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/hooks/use-supabase";
 import { formatarMoeda, formatarData } from "@/utils";
 import {
-  TrendingUp,
-  TrendingDown,
   DollarSign,
-  Target,
-  Users,
-  Wrench,
   Clock,
+  AlertTriangle,
+  TrendingUp,
+  Users,
+  UserX,
+  BarChart3,
+  Repeat,
   Plus,
   ArrowRight,
   Activity,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
@@ -30,53 +37,98 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
-  Area,
   AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 
-interface Metricas {
-  receitaTotal: number;
-  despesaTotal: number;
-  lucroLiquido: number;
-  ticketMedio: number;
+interface KPIs {
+  recebidoMes: number;
+  aReceber: number;
+  atrasado: number;
+  totalMes: number;
   clientesAtivos: number;
-  servicosRealizados: number;
-  receitasPendentes: number;
+  clientesInadimplentes: number;
+  ticketMedio: number;
+  mrr: number;
 }
 
-interface DadosGrafico {
+interface DadosMes {
   mes: string;
   receitas: number;
   despesas: number;
 }
 
+interface DadosSaldo {
+  mes: string;
+  saldo: number;
+}
+
+interface TopCliente {
+  nome: string;
+  valor: number;
+}
+
+interface DespesaCategoria {
+  nome: string;
+  valor: number;
+}
+
 interface Atividade {
   id: string;
-  tipo: string;
+  tipo: "receita" | "despesa";
   descricao: string;
   data: string;
 }
 
-function AnimatedNumber({ value, format }: { value: number; format?: "moeda" | "inteiro" }) {
+const MESES = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+];
+
+const CORES_GRAFICO = [
+  "#22c55e",
+  "#ef4444",
+  "#3b82f6",
+  "#8b5cf6",
+  "#f59e0b",
+  "#ec4899",
+  "#06b6d4",
+  "#84cc16",
+];
+
+function AnimatedNumber({
+  value,
+  format,
+}: {
+  value: number;
+  format?: "moeda" | "inteiro";
+}) {
   const [displayValue, setDisplayValue] = useState(0);
   const ref = useRef<number | null>(null);
 
   useEffect(() => {
     const duration = 1000;
     const start = performance.now();
-    const from = 0;
 
     function animate(now: number) {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayValue(from + (value - from) * eased);
-
-      if (progress < 1) {
-        ref.current = requestAnimationFrame(animate);
-      }
+      setDisplayValue(value * eased);
+      if (progress < 1) ref.current = requestAnimationFrame(animate);
     }
 
     ref.current = requestAnimationFrame(animate);
@@ -92,13 +144,13 @@ function AnimatedNumber({ value, format }: { value: number; format?: "moeda" | "
 function MetricCardSkeleton() {
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-32" />
           </div>
-          <Skeleton className="h-12 w-12 rounded-full" />
+          <Skeleton className="h-10 w-10 rounded-full" />
         </div>
       </CardContent>
     </Card>
@@ -109,29 +161,33 @@ function ChartSkeleton() {
   return (
     <Card>
       <CardHeader>
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-4 w-64" />
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-3 w-64" />
       </CardHeader>
       <CardContent>
-        <Skeleton className="h-72 w-full" />
+        <Skeleton className="h-64 w-full" />
       </CardContent>
     </Card>
   );
 }
 
 export default function DashboardPage() {
-  const supabase = createClient();
+  const supabase = useSupabase();
   const router = useRouter();
-  const [metricas, setMetricas] = useState<Metricas>({
-    receitaTotal: 0,
-    despesaTotal: 0,
-    lucroLiquido: 0,
-    ticketMedio: 0,
+  const [kpis, setKpis] = useState<KPIs>({
+    recebidoMes: 0,
+    aReceber: 0,
+    atrasado: 0,
+    totalMes: 0,
     clientesAtivos: 0,
-    servicosRealizados: 0,
-    receitasPendentes: 0,
+    clientesInadimplentes: 0,
+    ticketMedio: 0,
+    mrr: 0,
   });
-  const [dadosGrafico, setDadosGrafico] = useState<DadosGrafico[]>([]);
+  const [receitasDespesas, setReceitasDespesas] = useState<DadosMes[]>([]);
+  const [evolucaoSaldo, setEvolucaoSaldo] = useState<DadosSaldo[]>([]);
+  const [topClientes, setTopClientes] = useState<TopCliente[]>([]);
+  const [despesasCategoria, setDespesasCategoria] = useState<DespesaCategoria[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -157,269 +213,348 @@ export default function DashboardPage() {
         return;
       }
 
+      const negocioId = negocio.id;
       const agora = new Date();
       const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
+        .toISOString()
+        .split("T")[0];
+      const inicioAno = new Date(agora.getFullYear(), 0, 1)
+        .toISOString()
+        .split("T")[0];
+      const inicio12Meses = new Date(
+        agora.getFullYear(),
+        agora.getMonth() - 11,
+        1
+      )
         .toISOString()
         .split("T")[0];
 
       const [
         receitasMes,
         despesasMes,
-        clientes,
-        servicos,
         receitasPendentes,
-        receitas6Meses,
-        despesas6Meses,
+        receitasAtrasadas,
+        clientes,
+        clientesInadimplentesRes,
+        receitasMesTicket,
+        clientesFixos,
+        receitas12Meses,
+        despesas12Meses,
+        clientesTop,
+        despesasCategoriaRes,
         ultimasReceitas,
         ultimasDespesas,
       ] = await Promise.all([
         supabase
           .from("receitas")
           .select("valor")
-          .eq("negocio_id", negocio.id)
+          .eq("negocio_id", negocioId)
           .gte("data", inicioMes)
           .eq("status", "pago"),
         supabase
           .from("despesas")
           .select("valor")
-          .eq("negocio_id", negocio.id)
+          .eq("negocio_id", negocioId)
+          .gte("data", inicioMes)
+          .eq("status", "pago"),
+        supabase
+          .from("receitas")
+          .select("valor")
+          .eq("negocio_id", negocioId)
+          .eq("status", "pendente"),
+        supabase
+          .from("receitas")
+          .select("valor")
+          .eq("negocio_id", negocioId)
+          .eq("status", "atrasado"),
+        supabase
+          .from("clientes")
+          .select("id", { count: "exact" })
+          .eq("negocio_id", negocioId)
+          .eq("is_ativo", true),
+        supabase
+          .from("receitas")
+          .select("cliente_id")
+          .eq("negocio_id", negocioId)
+          .eq("status", "atrasado"),
+        supabase
+          .from("receitas")
+          .select("valor")
+          .eq("negocio_id", negocioId)
           .gte("data", inicioMes)
           .eq("status", "pago"),
         supabase
           .from("clientes")
-          .select("id", { count: "exact" })
-          .eq("negocio_id", negocio.id)
-          .eq("is_ativo", true),
-        supabase
-          .from("servicos")
-          .select("id", { count: "exact" })
-          .eq("negocio_id", negocio.id)
-          .eq("status", "concluido"),
+          .select("valor_mensal")
+          .eq("negocio_id", negocioId)
+          .eq("tipo", "fixo")
+          .eq("is_ativo", true)
+          .not("valor_mensal", "is", null),
         supabase
           .from("receitas")
-          .select("valor")
-          .eq("negocio_id", negocio.id)
-          .eq("status", "pendente"),
+          .select("valor, data")
+          .eq("negocio_id", negocioId)
+          .gte("data", inicio12Meses)
+          .neq("status", "cancelado"),
+        supabase
+          .from("despesas")
+          .select("valor, data")
+          .eq("negocio_id", negocioId)
+          .gte("data", inicio12Meses)
+          .neq("status", "cancelado"),
         supabase
           .from("receitas")
-          .select("valor, data, status")
-          .eq("negocio_id", negocio.id)
+          .select("cliente_id, valor, clientes!inner(nome)")
+          .eq("negocio_id", negocioId)
+          .gte("data", inicioMes)
           .eq("status", "pago"),
         supabase
           .from("despesas")
-          .select("valor, data, status")
-          .eq("negocio_id", negocio.id)
+          .select("valor, categoria_id, categorias_despesas!inner(nome)")
+          .eq("negocio_id", negocioId)
+          .gte("data", inicioMes)
           .eq("status", "pago"),
         supabase
           .from("receitas")
           .select("id, valor, descricao, data")
-          .eq("negocio_id", negocio.id)
+          .eq("negocio_id", negocioId)
           .order("data", { ascending: false })
           .limit(5),
         supabase
           .from("despesas")
           .select("id, valor, descricao, data")
-          .eq("negocio_id", negocio.id)
+          .eq("negocio_id", negocioId)
           .order("data", { ascending: false })
           .limit(5),
       ]);
 
-      const receitaTotal = receitasMes.data?.reduce((acc, r) => acc + r.valor, 0) || 0;
-      const despesaTotal = despesasMes.data?.reduce((acc, d) => acc + d.valor, 0) || 0;
-      const pendentes =
-        receitasPendentes.data?.reduce((acc, r) => acc + r.valor, 0) || 0;
+      const receitaMes =
+        receitasMes.data?.reduce((acc, r) => acc + Number(r.valor), 0) || 0;
+      const despesaMes =
+        despesasMes.data?.reduce((acc, d) => acc + Number(d.valor), 0) || 0;
+      const pendente =
+        receitasPendentes.data?.reduce((acc, r) => acc + Number(r.valor), 0) || 0;
+      const atrasado =
+        receitasAtrasadas.data?.reduce((acc, r) => acc + Number(r.valor), 0) || 0;
 
-      setMetricas({
-        receitaTotal,
-        despesaTotal,
-        lucroLiquido: receitaTotal - despesaTotal,
-        ticketMedio: servicos.count ? receitaTotal / servicos.count : 0,
+      const clientesInadimplentesIds = new Set(
+        clientesInadimplentesRes.data?.map((r) => r.cliente_id).filter(Boolean) || []
+      );
+
+      const ticketMedio =
+        receitasMesTicket.data && receitasMesTicket.data.length > 0
+          ? receitaMes / receitasMesTicket.data.length
+          : 0;
+
+      const mrr =
+        clientesFixos.data?.reduce(
+          (acc, c) => acc + Number(c.valor_mensal || 0),
+          0
+        ) || 0;
+
+      setKpis({
+        recebidoMes: receitaMes,
+        aReceber: pendente,
+        atrasado,
+        totalMes: receitaMes - despesaMes,
         clientesAtivos: clientes.count || 0,
-        servicosRealizados: servicos.count || 0,
-        receitasPendentes: pendentes,
+        clientesInadimplentes: clientesInadimplentesIds.size,
+        ticketMedio,
+        mrr,
       });
 
-      const mesesNomes = [
-        "Jan",
-        "Fev",
-        "Mar",
-        "Abr",
-        "Mai",
-        "Jun",
-        "Jul",
-        "Ago",
-        "Set",
-        "Out",
-        "Nov",
-        "Dez",
-      ];
-
-      const mapaMeses: DadosGrafico[] = [];
+      const mapaMeses: DadosMes[] = [];
       for (let i = 5; i >= 0; i--) {
         const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
-        const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
         mapaMeses.push({
-          mes: mesesNomes[d.getMonth()],
+          mes: MESES[d.getMonth()],
           receitas: 0,
           despesas: 0,
         });
 
-        const receitasMesFiltro =
-          receitas6Meses.data?.filter((r) => {
+        const idx = mapaMeses.length - 1;
+
+        receitas12Meses.data
+          ?.filter((r) => {
             const dataR = new Date(r.data);
             return (
               dataR.getFullYear() === d.getFullYear() &&
               dataR.getMonth() === d.getMonth()
             );
-          }) || [];
+          })
+          .forEach((r) => {
+            mapaMeses[idx].receitas += Number(r.valor);
+          });
 
-        const despesasMesFiltro =
-          despesas6Meses.data?.filter((ds) => {
+        despesas12Meses.data
+          ?.filter((ds) => {
             const dataD = new Date(ds.data);
             return (
               dataD.getFullYear() === d.getFullYear() &&
               dataD.getMonth() === d.getMonth()
             );
-          }) || [];
-
-        const idx = mapaMeses.length - 1;
-        mapaMeses[idx].receitas = receitasMesFiltro.reduce(
-          (acc, r) => acc + r.valor,
-          0
-        );
-        mapaMeses[idx].despesas = despesasMesFiltro.reduce(
-          (acc, d) => acc + d.valor,
-          0
-        );
+          })
+          .forEach((ds) => {
+            mapaMeses[idx].despesas += Number(ds.valor);
+          });
       }
 
-      setDadosGrafico(mapaMeses);
+      setReceitasDespesas(mapaMeses);
+
+      const mapaSaldo: DadosSaldo[] = [];
+      let saldoAcumulado = 0;
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+        let receitasMesVal = 0;
+        let despesasMesVal = 0;
+
+        receitas12Meses.data
+          ?.filter((r) => {
+            const dataR = new Date(r.data);
+            return (
+              dataR.getFullYear() === d.getFullYear() &&
+              dataR.getMonth() === d.getMonth()
+            );
+          })
+          .forEach((r) => {
+            receitasMesVal += Number(r.valor);
+          });
+
+        despesas12Meses.data
+          ?.filter((ds) => {
+            const dataD = new Date(ds.data);
+            return (
+              dataD.getFullYear() === d.getFullYear() &&
+              dataD.getMonth() === d.getMonth()
+            );
+          })
+          .forEach((ds) => {
+            despesasMesVal += Number(ds.valor);
+          });
+
+        saldoAcumulado += receitasMesVal - despesasMesVal;
+        mapaSaldo.push({
+          mes: MESES[d.getMonth()],
+          saldo: saldoAcumulado,
+        });
+      }
+
+      setEvolucaoSaldo(mapaSaldo);
+
+      const clienteMap = new Map<string, { nome: string; valor: number }>();
+      clientesTop.data?.forEach((r: any) => {
+        const nome = r.clientes?.nome || "Sem cliente";
+        const existing = clienteMap.get(nome) || { nome, valor: 0 };
+        existing.valor += Number(r.valor);
+        clienteMap.set(nome, existing);
+      });
+      const top5 = Array.from(clienteMap.values())
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 5);
+      setTopClientes(top5);
+
+      const catMap = new Map<string, number>();
+      despesasCategoriaRes.data?.forEach((d: any) => {
+        const nome = d.categorias_despesas?.nome || "Outros";
+        catMap.set(nome, (catMap.get(nome) || 0) + Number(d.valor));
+      });
+      const categorias = Array.from(catMap.entries())
+        .map(([nome, valor]) => ({ nome, valor }))
+        .sort((a, b) => b.valor - a.valor);
+      setDespesasCategoria(categorias);
 
       const atividadesFormatadas: Atividade[] = [];
-
       ultimasReceitas.data?.forEach((r) => {
         atividadesFormatadas.push({
           id: `r-${r.id}`,
           tipo: "receita",
-          descricao: `Receita de ${formatarMoeda(r.valor)}${r.descricao ? ` - ${r.descricao}` : ""}`,
+          descricao: `Receita de ${formatarMoeda(Number(r.valor))}${r.descricao ? ` - ${r.descricao}` : ""}`,
           data: r.data,
         });
       });
-
       ultimasDespesas.data?.forEach((d) => {
         atividadesFormatadas.push({
           id: `d-${d.id}`,
           tipo: "despesa",
-          descricao: `Despesa de ${formatarMoeda(d.valor)}${d.descricao ? ` - ${d.descricao}` : ""}`,
+          descricao: `Despesa de ${formatarMoeda(Number(d.valor))}${d.descricao ? ` - ${d.descricao}` : ""}`,
           data: d.data,
         });
       });
-
       atividadesFormatadas.sort(
         (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
       );
-
-      setAtividades(atividadesFormatadas.slice(0, 8));
+      setAtividades(atividadesFormatadas.slice(0, 10));
 
       setCarregando(false);
     }
 
     carregarDados();
-  }, [supabase]);
+  }, [supabase, router]);
 
-  if (carregando) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <Skeleton className="h-8 w-48 mb-2" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCardSkeleton />
-          <MetricCardSkeleton />
-          <MetricCardSkeleton />
-          <MetricCardSkeleton />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <ChartSkeleton />
-          <ChartSkeleton />
-        </div>
-      </div>
-    );
-  }
-
-  const metricCards = [
+  const kpiCards = [
     {
-      titulo: "Receita do Mês",
-      valor: metricas.receitaTotal,
-      formato: "moeda" as const,
-      icone: TrendingUp,
-      cor: "text-green-600",
-      bg: "bg-green-50",
-      hoverBg: "hover:bg-green-100",
-      borderHover: "hover:border-green-200",
-    },
-    {
-      titulo: "Despesas do Mês",
-      valor: metricas.despesaTotal,
-      formato: "moeda" as const,
-      icone: TrendingDown,
-      cor: "text-red-600",
-      bg: "bg-red-50",
-      hoverBg: "hover:bg-red-100",
-      borderHover: "hover:border-red-200",
-    },
-    {
-      titulo: "Lucro Líquido",
-      valor: metricas.lucroLiquido,
+      titulo: "Recebido no mês",
+      valor: kpis.recebidoMes,
       formato: "moeda" as const,
       icone: DollarSign,
-      cor: metricas.lucroLiquido >= 0 ? "text-green-600" : "text-red-600",
-      bg: metricas.lucroLiquido >= 0 ? "bg-green-50" : "bg-red-50",
-      hoverBg: metricas.lucroLiquido >= 0 ? "hover:bg-green-100" : "hover:bg-red-100",
-      borderHover: metricas.lucroLiquido >= 0 ? "hover:border-green-200" : "hover:border-red-200",
+      cor: "text-green-600",
+      bg: "bg-green-50",
     },
     {
-      titulo: "Ticket Médio",
-      valor: metricas.ticketMedio,
-      formato: "moeda" as const,
-      icone: Target,
-      cor: "text-blue-600",
-      bg: "bg-blue-50",
-      hoverBg: "hover:bg-blue-100",
-      borderHover: "hover:border-blue-200",
-    },
-    {
-      titulo: "Clientes Ativos",
-      valor: metricas.clientesAtivos,
-      formato: "inteiro" as const,
-      icone: Users,
-      cor: "text-purple-600",
-      bg: "bg-purple-50",
-      hoverBg: "hover:bg-purple-100",
-      borderHover: "hover:border-purple-200",
-    },
-    {
-      titulo: "Serviços Realizados",
-      valor: metricas.servicosRealizados,
-      formato: "inteiro" as const,
-      icone: Wrench,
-      cor: "text-orange-600",
-      bg: "bg-orange-50",
-      hoverBg: "hover:bg-orange-100",
-      borderHover: "hover:border-orange-200",
-    },
-    {
-      titulo: "Valores Pendentes",
-      valor: metricas.receitasPendentes,
+      titulo: "A receber",
+      valor: kpis.aReceber,
       formato: "moeda" as const,
       icone: Clock,
-      cor: "text-yellow-600",
-      bg: "bg-yellow-50",
-      hoverBg: "hover:bg-yellow-100",
-      borderHover: "hover:border-yellow-200",
+      cor: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      titulo: "Atrasado",
+      valor: kpis.atrasado,
+      formato: "moeda" as const,
+      icone: AlertTriangle,
+      cor: "text-red-600",
+      bg: "bg-red-50",
+    },
+    {
+      titulo: "Total do mês",
+      valor: kpis.totalMes,
+      formato: "moeda" as const,
+      icone: TrendingUp,
+      cor: kpis.totalMes >= 0 ? "text-purple-600" : "text-red-600",
+      bg: kpis.totalMes >= 0 ? "bg-purple-50" : "bg-red-50",
+    },
+    {
+      titulo: "Clientes ativos",
+      valor: kpis.clientesAtivos,
+      formato: "inteiro" as const,
+      icone: Users,
+      cor: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      titulo: "Clientes inadimplentes",
+      valor: kpis.clientesInadimplentes,
+      formato: "inteiro" as const,
+      icone: UserX,
+      cor: "text-red-600",
+      bg: "bg-red-50",
+    },
+    {
+      titulo: "Ticket médio",
+      valor: kpis.ticketMedio,
+      formato: "moeda" as const,
+      icone: BarChart3,
+      cor: "text-amber-600",
+      bg: "bg-amber-50",
+    },
+    {
+      titulo: "MRR",
+      valor: kpis.mrr,
+      formato: "moeda" as const,
+      icone: Repeat,
+      cor: "text-indigo-600",
+      bg: "bg-indigo-50",
     },
   ];
 
@@ -427,22 +562,28 @@ export default function DashboardPage() {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.08,
-      },
+      transition: { staggerChildren: 0.06 },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 16 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.4, ease: "easeOut" },
+      transition: { duration: 0.35, ease: "easeOut" },
     },
   };
 
-  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: Array<{ value: number; name: string; color: string }>;
+    label?: string;
+  }) => {
     if (!active || !payload) return null;
     return (
       <div className="rounded-lg border bg-white p-3 shadow-lg">
@@ -456,61 +597,76 @@ export default function DashboardPage() {
     );
   };
 
+  const PieTooltip = ({
+    active,
+    payload,
+  }: {
+    active?: boolean;
+    payload?: Array<{ name: string; value: number }>;
+  }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="rounded-lg border bg-white p-3 shadow-lg">
+        <p className="text-sm font-semibold text-gray-900">{payload[0].name}</p>
+        <p className="text-sm text-gray-600">{formatarMoeda(payload[0].value)}</p>
+      </div>
+    );
+  };
+
+  if (carregando) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <MetricCardSkeleton key={i} />
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ChartSkeleton />
+          <ChartSkeleton />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ChartSkeleton />
+          <ChartSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
           Visão geral do seu negócio
         </p>
       </div>
 
       <motion.div
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {metricCards.slice(0, 4).map((card) => (
+        {kpiCards.map((card) => (
           <motion.div key={card.titulo} variants={itemVariants}>
-            <Card className={`transition-colors ${card.borderHover}`}>
-              <CardContent className="p-6">
+            <Card className="transition-colors hover:border-gray-200">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{card.titulo}</p>
-                    <p className={`mt-1 text-2xl font-bold ${card.cor}`}>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground truncate">
+                      {card.titulo}
+                    </p>
+                    <p className={`mt-1 text-xl font-bold ${card.cor}`}>
                       <AnimatedNumber value={card.valor} format={card.formato} />
                     </p>
                   </div>
-                  <div className={`rounded-full p-3 ${card.bg}`}>
-                    <card.icone className={`h-6 w-6 ${card.cor}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      <motion.div
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {metricCards.slice(4).map((card) => (
-          <motion.div key={card.titulo} variants={itemVariants}>
-            <Card className={`transition-colors ${card.borderHover}`}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{card.titulo}</p>
-                    <p className={`mt-1 text-2xl font-bold ${card.cor}`}>
-                      <AnimatedNumber value={card.valor} format={card.formato} />
-                    </p>
-                  </div>
-                  <div className={`rounded-full p-3 ${card.bg}`}>
-                    <card.icone className={`h-6 w-6 ${card.cor}`} />
+                  <div className={`shrink-0 rounded-full p-2.5 ${card.bg}`}>
+                    <card.icone className={`h-5 w-5 ${card.cor}`} />
                   </div>
                 </div>
               </CardContent>
@@ -523,17 +679,17 @@ export default function DashboardPage() {
         className="grid gap-6 lg:grid-cols-2"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
       >
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Receitas vs Despesas</CardTitle>
+            <CardTitle className="text-lg">Receita vs Despesa</CardTitle>
             <CardDescription>Comparativo dos últimos 6 meses</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dadosGrafico} barGap={4}>
+                <BarChart data={receitasDespesas} barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis
                     dataKey="mes"
@@ -545,16 +701,12 @@ export default function DashboardPage() {
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) =>
-                      value >= 1000
-                        ? `${(value / 1000).toFixed(0)}k`
-                        : String(value)
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
                     }
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-                  />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                   <Bar
                     dataKey="receitas"
                     name="Receitas"
@@ -577,22 +729,17 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Evolução do Lucro</CardTitle>
-            <CardDescription>Lucro líquido nos últimos 6 meses</CardDescription>
+            <CardTitle className="text-lg">Evolução do Saldo</CardTitle>
+            <CardDescription>Saldo acumulado nos últimos 12 meses</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={dadosGrafico.map((d) => ({
-                    ...d,
-                    lucro: d.receitas - d.despesas,
-                  }))}
-                >
+                <AreaChart data={evolucaoSaldo}>
                   <defs>
-                    <linearGradient id="lucroGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    <linearGradient id="saldoGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -606,24 +753,121 @@ export default function DashboardPage() {
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) =>
-                      value >= 1000
-                        ? `${(value / 1000).toFixed(0)}k`
-                        : String(value)
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
                     }
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Area
                     type="monotone"
-                    dataKey="lucro"
-                    name="Lucro"
-                    stroke="#3b82f6"
+                    dataKey="saldo"
+                    name="Saldo"
+                    stroke="#8b5cf6"
                     strokeWidth={2}
-                    fill="url(#lucroGradient)"
+                    fill="url(#saldoGrad)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div
+        className="grid gap-6 lg:grid-cols-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45, duration: 0.5 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Top 5 Clientes</CardTitle>
+            <CardDescription>Clientes que mais geraram receita este mês</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topClientes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Users className="mb-3 h-10 w-10 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">Nenhum cliente com receita este mês</p>
+              </div>
+            ) : (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={topClientes}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="valor"
+                      nameKey="nome"
+                    >
+                      {topClientes.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={CORES_GRAFICO[index % CORES_GRAFICO.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 12 }}
+                      formatter={(value) =>
+                        value.length > 16 ? `${value.slice(0, 16)}...` : value
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Despesas por Categoria</CardTitle>
+            <CardDescription>Breakdown das despesas do mês</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {despesasCategoria.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">Nenhuma despesa registrada este mês</p>
+              </div>
+            ) : (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={despesasCategoria}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="valor"
+                      nameKey="nome"
+                    >
+                      {despesasCategoria.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={CORES_GRAFICO[index % CORES_GRAFICO.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 12 }}
+                      formatter={(value) =>
+                        value.length > 16 ? `${value.slice(0, 16)}...` : value
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -708,14 +952,14 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-80 overflow-y-auto">
                 {atividades.map((atividade) => (
                   <div
                     key={atividade.id}
                     className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
                     <div
-                      className={`rounded-full p-2 ${
+                      className={`shrink-0 rounded-full p-2 ${
                         atividade.tipo === "receita"
                           ? "bg-green-100"
                           : "bg-red-100"
@@ -724,7 +968,7 @@ export default function DashboardPage() {
                       {atividade.tipo === "receita" ? (
                         <TrendingUp className="h-4 w-4 text-green-600" />
                       ) : (
-                        <TrendingDown className="h-4 w-4 text-red-600" />
+                        <TrendingUp className="h-4 w-4 text-red-600 rotate-180" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -736,7 +980,9 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <Badge
-                      variant={atividade.tipo === "receita" ? "default" : "destructive"}
+                      variant={
+                        atividade.tipo === "receita" ? "default" : "destructive"
+                      }
                       className="shrink-0"
                     >
                       {atividade.tipo === "receita" ? "Receita" : "Despesa"}

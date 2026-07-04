@@ -54,6 +54,8 @@ import {
   Phone,
   Mail,
   FileText,
+  ChevronDown,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -65,6 +67,9 @@ type FormState = {
   cpf_cnpj: string;
   endereco: Endereco;
   tipo: "fixo" | "esporadico";
+  valor_mensal: string;
+  dia_vencimento: string;
+  fornecedor: string;
   observacoes: string;
 };
 
@@ -76,8 +81,17 @@ const emptyForm: FormState = {
   cpf_cnpj: "",
   endereco: {},
   tipo: "esporadico",
+  valor_mensal: "",
+  dia_vencimento: "",
+  fornecedor: "",
   observacoes: "",
 };
+
+function formatarMoeda(valor: string) {
+  const num = parseFloat(valor.replace(/[^\d,]/g, "").replace(",", "."));
+  if (isNaN(num)) return "";
+  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default function ClientesPage() {
   const supabase = useSupabase();
@@ -92,6 +106,7 @@ export default function ClientesPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [salvando, setSalvando] = useState(false);
   const [clienteDeletando, setClienteDeletando] = useState<Cliente | null>(null);
+  const [enderecoAberto, setEnderecoAberto] = useState(false);
 
   useEffect(() => {
     carregarClientes();
@@ -152,6 +167,7 @@ export default function ClientesPage() {
   function abrirDialogNovo() {
     setClienteEditando(null);
     setForm(emptyForm);
+    setEnderecoAberto(false);
     setDialogAberto(true);
   }
 
@@ -165,8 +181,12 @@ export default function ClientesPage() {
       cpf_cnpj: cliente.cpf_cnpj || "",
       endereco: cliente.endereco || {},
       tipo: cliente.tipo,
+      valor_mensal: cliente.valor_mensal != null ? String(cliente.valor_mensal) : "",
+      dia_vencimento: cliente.dia_vencimento != null ? String(cliente.dia_vencimento) : "",
+      fornecedor: cliente.fornecedor || "",
       observacoes: cliente.observacoes || "",
     });
+    setEnderecoAberto(false);
     setDialogAberto(true);
   }
 
@@ -174,6 +194,7 @@ export default function ClientesPage() {
     setDialogAberto(false);
     setClienteEditando(null);
     setForm(emptyForm);
+    setEnderecoAberto(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -201,19 +222,24 @@ export default function ClientesPage() {
         return;
       }
 
+      const payload = {
+        nome: form.nome,
+        telefone: form.telefone || null,
+        whatsapp: form.whatsapp || null,
+        email: form.email || null,
+        cpf_cnpj: form.cpf_cnpj || null,
+        endereco: form.endereco,
+        tipo: form.tipo,
+        valor_mensal: form.tipo === "fixo" && form.valor_mensal ? parseFloat(form.valor_mensal) : null,
+        dia_vencimento: form.tipo === "fixo" && form.dia_vencimento ? parseInt(form.dia_vencimento) : null,
+        fornecedor: form.fornecedor || null,
+        observacoes: form.observacoes || null,
+      };
+
       if (clienteEditando) {
         const { error } = await supabase
           .from("clientes")
-          .update({
-            nome: form.nome,
-            telefone: form.telefone || null,
-            whatsapp: form.whatsapp || null,
-            email: form.email || null,
-            cpf_cnpj: form.cpf_cnpj || null,
-            endereco: form.endereco,
-            tipo: form.tipo,
-            observacoes: form.observacoes || null,
-          })
+          .update(payload)
           .eq("id", clienteEditando.id);
 
         if (error) {
@@ -225,14 +251,7 @@ export default function ClientesPage() {
       } else {
         const { error } = await supabase.from("clientes").insert({
           negocio_id: negocio.id,
-          nome: form.nome,
-          telefone: form.telefone || null,
-          whatsapp: form.whatsapp || null,
-          email: form.email || null,
-          cpf_cnpj: form.cpf_cnpj || null,
-          endereco: form.endereco,
-          tipo: form.tipo,
-          observacoes: form.observacoes || null,
+          ...payload,
         });
 
         if (error) {
@@ -355,6 +374,8 @@ export default function ClientesPage() {
                     <TableHead>Telefone</TableHead>
                     <TableHead>WhatsApp</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Valor Mensal</TableHead>
+                    <TableHead>Vencimento</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -405,6 +426,16 @@ export default function ClientesPage() {
                           >
                             {cliente.tipo === "fixo" ? "Fixo" : "Esporádico"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {cliente.tipo === "fixo" && cliente.valor_mensal != null
+                            ? formatarMoeda(String(cliente.valor_mensal))
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {cliente.tipo === "fixo" && cliente.dia_vencimento != null
+                            ? `Dia ${cliente.dia_vencimento}`
+                            : "—"}
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -590,6 +621,17 @@ export default function ClientesPage() {
                           {formatarCPFCNPJ(cliente.cpf_cnpj)}
                         </div>
                       )}
+                      {cliente.tipo === "fixo" && cliente.valor_mensal != null && (
+                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                          <DollarSign className="h-3.5 w-3.5" />
+                          {formatarMoeda(String(cliente.valor_mensal))}
+                          {cliente.dia_vencimento != null && (
+                            <span className="text-xs text-muted-foreground">
+                              · Vence dia {cliente.dia_vencimento}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -608,7 +650,7 @@ export default function ClientesPage() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome *</Label>
+              <Label htmlFor="nome">Nome do cliente *</Label>
               <Input
                 id="nome"
                 value={form.nome}
@@ -617,6 +659,79 @@ export default function ClientesPage() {
                 required
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Tipo do cliente</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tipo"
+                    value="esporadico"
+                    checked={form.tipo === "esporadico"}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        tipo: e.target.value as "fixo" | "esporadico",
+                      })
+                    }
+                    className="h-4 w-4 border-primary text-primary accent-primary"
+                  />
+                  <span className="text-sm">Cliente Esporádico</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tipo"
+                    value="fixo"
+                    checked={form.tipo === "fixo"}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        tipo: e.target.value as "fixo" | "esporadico",
+                      })
+                    }
+                    className="h-4 w-4 border-primary text-primary accent-primary"
+                  />
+                  <span className="text-sm">Cliente Fixo</span>
+                </label>
+              </div>
+            </div>
+
+            {form.tipo === "fixo" && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="valor_mensal">Valor Mensal (obrigatório) *</Label>
+                  <Input
+                    id="valor_mensal"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.valor_mensal}
+                    onChange={(e) =>
+                      setForm({ ...form, valor_mensal: e.target.value })
+                    }
+                    placeholder="0,00"
+                    required={form.tipo === "fixo"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
+                  <Input
+                    id="dia_vencimento"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={form.dia_vencimento}
+                    onChange={(e) =>
+                      setForm({ ...form, dia_vencimento: e.target.value })
+                    }
+                    placeholder="1 a 31"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
@@ -641,6 +756,7 @@ export default function ClientesPage() {
                 />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
@@ -651,70 +767,7 @@ export default function ClientesPage() {
                 placeholder="email@exemplo.com"
               />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
-                <Input
-                  id="cpf_cnpj"
-                  value={form.cpf_cnpj}
-                  onChange={(e) =>
-                    setForm({ ...form, cpf_cnpj: e.target.value })
-                  }
-                  placeholder="000.000.000-00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select
-                  value={form.tipo}
-                  onValueChange={(v) =>
-                    setForm({
-                      ...form,
-                      tipo: v as "fixo" | "esporadico",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="esporadico">Esporádico</SelectItem>
-                    <SelectItem value="fixo">Fixo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cidade">Cidade</Label>
-                <Input
-                  id="cidade"
-                  value={form.endereco.cidade || ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      endereco: { ...form.endereco, cidade: e.target.value },
-                    })
-                  }
-                  placeholder="Cidade"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="estado">Estado</Label>
-                <Input
-                  id="estado"
-                  value={form.endereco.estado || ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      endereco: { ...form.endereco, estado: e.target.value },
-                    })
-                  }
-                  placeholder="UF"
-                  maxLength={2}
-                />
-              </div>
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações</Label>
               <Textarea
@@ -727,6 +780,141 @@ export default function ClientesPage() {
                 rows={3}
               />
             </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setEnderecoAberto(!enderecoAberto)}
+                className="flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50"
+              >
+                Endereço
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${
+                    enderecoAberto ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              <AnimatePresence>
+                {enderecoAberto && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-4 rounded-md border p-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor="rua">Rua</Label>
+                          <Input
+                            id="rua"
+                            value={form.endereco.rua || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                endereco: { ...form.endereco, rua: e.target.value },
+                              })
+                            }
+                            placeholder="Rua"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="numero">Número</Label>
+                          <Input
+                            id="numero"
+                            value={form.endereco.numero || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                endereco: { ...form.endereco, numero: e.target.value },
+                              })
+                            }
+                            placeholder="Nº"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="complemento">Complemento</Label>
+                          <Input
+                            id="complemento"
+                            value={form.endereco.complemento || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                endereco: { ...form.endereco, complemento: e.target.value },
+                              })
+                            }
+                            placeholder="Apto, Bloco..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="bairro">Bairro</Label>
+                          <Input
+                            id="bairro"
+                            value={form.endereco.bairro || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                endereco: { ...form.endereco, bairro: e.target.value },
+                              })
+                            }
+                            placeholder="Bairro"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="cidade">Cidade</Label>
+                          <Input
+                            id="cidade"
+                            value={form.endereco.cidade || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                endereco: { ...form.endereco, cidade: e.target.value },
+                              })
+                            }
+                            placeholder="Cidade"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="estado">Estado</Label>
+                          <Input
+                            id="estado"
+                            value={form.endereco.estado || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                endereco: { ...form.endereco, estado: e.target.value },
+                              })
+                            }
+                            placeholder="UF"
+                            maxLength={2}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cep">CEP</Label>
+                          <Input
+                            id="cep"
+                            value={form.endereco.cep || ""}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                endereco: { ...form.endereco, cep: e.target.value },
+                              })
+                            }
+                            placeholder="00000-000"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <DialogFooter>
               <Button
                 type="button"
