@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
-import { formatarTelefone, formatarCPFCNPJ } from "@/utils";
-import type { Cliente, Endereco } from "@/types/database";
+import { formatarTelefone, formatarCPFCNPJ, formatarMoeda } from "@/utils";
+import type { Cliente, Endereco, Receita } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,12 +87,6 @@ const emptyForm: FormState = {
   observacoes: "",
 };
 
-function formatarMoeda(valor: string) {
-  const num = parseFloat(valor.replace(/[^\d,]/g, "").replace(",", "."));
-  if (isNaN(num)) return "";
-  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 export default function ClientesPage() {
   const supabase = useSupabase();
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -107,6 +101,8 @@ export default function ClientesPage() {
   const [salvando, setSalvando] = useState(false);
   const [clienteDeletando, setClienteDeletando] = useState<Cliente | null>(null);
   const [enderecoAberto, setEnderecoAberto] = useState(false);
+  const [receitasRecorrentes, setReceitasRecorrentes] = useState<Receita[]>([]);
+  const [verificandoRecorrencia, setVerificandoRecorrencia] = useState(false);
 
   useEffect(() => {
     carregarClientes();
@@ -271,7 +267,128 @@ export default function ClientesPage() {
     }
   }
 
-  async function excluirCliente() {
+  async function verificarRecorrencia(cliente: Cliente) {
+    setVerificandoRecorrencia(true);
+    try {
+      const { data: receitas, error } = await supabase
+        .from("receitas")
+        .select("*")
+        .eq("cliente_id", cliente.id)
+        .neq("recorrencia_tipo", "nenhuma")
+        .neq("status", "cancelado");
+
+      if (error) {
+        toast.error("Erro ao verificar recorrência.");
+        return;
+      }
+
+      if (receitas && receitas.length > 0) {
+        setReceitasRecorrentes(receitas);
+      } else {
+        setReceitasRecorrentes([]);
+      }
+    } catch {
+      toast.error("Erro ao verificar recorrência.");
+    } finally {
+      setVerificandoRecorrencia(false);
+    }
+  }
+
+  async function handleExcluirClick(cliente: Cliente) {
+    await verificarRecorrencia(cliente);
+    setClienteDeletando(cliente);
+  }
+
+  async function excluirApenasEsteMes() {
+    if (!clienteDeletando || receitasRecorrentes.length === 0) return;
+
+    try {
+      const hoje = new Date();
+      const mesAtual = hoje.getMonth();
+      const anoAtual = hoje.getFullYear();
+
+      for (const receita of receitasRecorrentes) {
+        const dataReceita = new Date(receita.data);
+        if (
+          dataReceita.getMonth() === mesAtual &&
+          dataReceita.getFullYear() === anoAtual
+        ) {
+          await supabase.from("receitas").delete().eq("id", receita.id);
+        }
+      }
+
+      toast.success("Receitas do mês excluídas com sucesso!");
+      setClienteDeletando(null);
+      setReceitasRecorrentes([]);
+      carregarClientes();
+    } catch {
+      toast.error("Erro ao excluir receitas do mês.");
+    }
+  }
+
+  async function excluirEsteMesEProximos() {
+    if (!clienteDeletando) return;
+
+    try {
+      const hoje = new Date();
+      const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+        .toISOString()
+        .split("T")[0];
+
+      await supabase
+        .from("receitas")
+        .delete()
+        .eq("cliente_id", clienteDeletando.id)
+        .gte("data", inicioMesAtual);
+
+      const { error } = await supabase
+        .from("clientes")
+        .delete()
+        .eq("id", clienteDeletando.id);
+
+      if (error) {
+        toast.error("Erro ao excluir cliente.");
+        return;
+      }
+
+      toast.success("Cliente e receitas futuras excluídos com sucesso!");
+      setClienteDeletando(null);
+      setReceitasRecorrentes([]);
+      carregarClientes();
+    } catch {
+      toast.error("Erro ao excluir cliente e receitas.");
+    }
+  }
+
+  async function excluirClienteCompleto() {
+    if (!clienteDeletando) return;
+
+    try {
+      await supabase
+        .from("receitas")
+        .delete()
+        .eq("cliente_id", clienteDeletando.id);
+
+      const { error } = await supabase
+        .from("clientes")
+        .delete()
+        .eq("id", clienteDeletando.id);
+
+      if (error) {
+        toast.error("Erro ao excluir cliente.");
+        return;
+      }
+
+      toast.success("Cliente e todas as receitas excluídos com sucesso!");
+      setClienteDeletando(null);
+      setReceitasRecorrentes([]);
+      carregarClientes();
+    } catch {
+      toast.error("Erro ao excluir cliente e receitas.");
+    }
+  }
+
+  async function excluirClienteSimples() {
     if (!clienteDeletando) return;
 
     try {
@@ -286,13 +403,15 @@ export default function ClientesPage() {
       }
 
       toast.success("Cliente excluído com sucesso!");
+      setClienteDeletando(null);
+      setReceitasRecorrentes([]);
       carregarClientes();
     } catch {
       toast.error("Erro ao excluir cliente.");
-    } finally {
-      setClienteDeletando(null);
     }
   }
+
+  const isRecorrente = receitasRecorrentes.length > 0;
 
   return (
     <div className="space-y-6">
@@ -429,7 +548,7 @@ export default function ClientesPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {cliente.tipo === "fixo" && cliente.valor_mensal != null
-                            ? formatarMoeda(String(cliente.valor_mensal))
+                            ? formatarMoeda(Number(cliente.valor_mensal))
                             : "—"}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
@@ -456,45 +575,20 @@ export default function ClientesPage() {
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <AlertDialog
-                              open={clienteDeletando?.id === cliente.id}
-                              onOpenChange={(open) => {
-                                if (!open) setClienteDeletando(null);
-                              }}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleExcluirClick(cliente)}
+                              disabled={verificandoRecorrencia}
+                              title="Excluir"
                             >
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => setClienteDeletando(cliente)}
-                                  title="Excluir"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Excluir cliente
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja excluir{" "}
-                                    <strong>{cliente.nome}</strong>? Esta ação
-                                    não pode ser desfeita.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={excluirCliente}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Excluir
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                              {verificandoRecorrencia && clienteDeletando?.id === cliente.id ? (
+                                <Skeleton className="h-4 w-4" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
                           </div>
                         </TableCell>
                       </motion.tr>
@@ -559,46 +653,19 @@ export default function ClientesPage() {
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <AlertDialog
-                            open={clienteDeletando?.id === cliente.id}
-                            onOpenChange={(open) => {
-                              if (!open) setClienteDeletando(null);
-                            }}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleExcluirClick(cliente)}
+                            disabled={verificandoRecorrencia}
                           >
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => setClienteDeletando(cliente)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Excluir cliente
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir{" "}
-                                  <strong>{cliente.nome}</strong>? Esta ação não
-                                  pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>
-                                  Cancelar
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={excluirCliente}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                            {verificandoRecorrencia && clienteDeletando?.id === cliente.id ? (
+                              <Skeleton className="h-3.5 w-3.5" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
                         </div>
                       </div>
                     </CardHeader>
@@ -624,7 +691,7 @@ export default function ClientesPage() {
                       {cliente.tipo === "fixo" && cliente.valor_mensal != null && (
                         <div className="flex items-center gap-2 text-sm font-medium text-primary">
                           <DollarSign className="h-3.5 w-3.5" />
-                          {formatarMoeda(String(cliente.valor_mensal))}
+                          {formatarMoeda(Number(cliente.valor_mensal))}
                           {cliente.dia_vencimento != null && (
                             <span className="text-xs text-muted-foreground">
                               · Vence dia {cliente.dia_vencimento}
@@ -935,6 +1002,122 @@ export default function ClientesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Smart Delete Dialog for Recurring Clients */}
+      <AlertDialog
+        open={!!clienteDeletando && isRecorrente}
+        onOpenChange={(open) => {
+          if (!open) {
+            setClienteDeletando(null);
+            setReceitasRecorrentes([]);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir cliente recorrente
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              O cliente <strong>{clienteDeletando?.nome}</strong> possui{" "}
+              <strong>{receitasRecorrentes.length}</strong> receita(s) recorrente(s).
+              Escolha como deseja excluir:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left h-auto py-3"
+                onClick={excluirApenasEsteMes}
+              >
+                <div>
+                  <p className="font-medium">Excluir apenas este mês</p>
+                  <p className="text-sm text-muted-foreground">
+                    Remove apenas as receitas do mês atual
+                  </p>
+                </div>
+              </Button>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left h-auto py-3"
+                onClick={excluirEsteMesEProximos}
+              >
+                <div>
+                  <p className="font-medium">Excluir este mês e todos os próximos</p>
+                  <p className="text-sm text-muted-foreground">
+                    Remove o cliente e todas as receitas futuras
+                  </p>
+                </div>
+              </Button>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Button
+                variant="destructive"
+                className="w-full justify-start text-left h-auto py-3"
+                onClick={excluirClienteCompleto}
+              >
+                <div>
+                  <p className="font-medium">Excluir cliente completo</p>
+                  <p className="text-sm text-destructive-foreground/80">
+                    Remove o cliente e todas as receitas (pasadas e futuras)
+                  </p>
+                </div>
+              </Button>
+            </motion.div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Simple Delete Dialog for Non-Recurring Clients */}
+      <AlertDialog
+        open={!!clienteDeletando && !isRecorrente}
+        onOpenChange={(open) => {
+          if (!open) {
+            setClienteDeletando(null);
+            setReceitasRecorrentes([]);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir cliente
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir{" "}
+              <strong>{clienteDeletando?.nome}</strong>? Esta ação
+              não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={excluirClienteSimples}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

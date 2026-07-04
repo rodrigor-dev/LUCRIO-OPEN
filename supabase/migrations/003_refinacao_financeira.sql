@@ -177,39 +177,37 @@ GROUP BY c.id, c.negocio_id, c.nome, c.tipo, c.valor_mensal, c.is_ativo;
 -- ============================================================
 CREATE OR REPLACE VIEW kpis_dashboard AS
 SELECT
-  negocio_id,
-  -- Receita do mês atual
+  d.negocio_id,
   COALESCE(SUM(CASE
-    WHEN tipo = 'receita' AND status = 'pago'
-    AND data_pagamento >= date_trunc('month', CURRENT_DATE)
-    AND data_pagamento < date_trunc('month', CURRENT_DATE) + interval '1 month'
-    THEN valor ELSE 0 END), 0) AS receita_mes,
-  -- A receber
+    WHEN d.tipo = 'receita' AND d.status = 'pago'
+    AND d.data_pagamento >= date_trunc('month', CURRENT_DATE)
+    AND d.data_pagamento < date_trunc('month', CURRENT_DATE) + interval '1 month'
+    THEN d.valor ELSE 0 END), 0) AS receita_mes,
   COALESCE(SUM(CASE
-    WHEN tipo = 'receita' AND status IN ('pendente', 'atrasado')
-    THEN valor ELSE 0 END), 0) AS a_receber,
-  -- Atrasado
+    WHEN d.tipo = 'receita' AND d.status IN ('pendente', 'atrasado')
+    THEN d.valor ELSE 0 END), 0) AS a_receber,
   COALESCE(SUM(CASE
-    WHEN tipo = 'receita' AND status = 'atrasado'
-    THEN valor ELSE 0 END), 0) AS atrasado,
-  -- Despesa do mês
+    WHEN d.tipo = 'receita' AND d.status = 'atrasado'
+    THEN d.valor ELSE 0 END), 0) AS atrasado,
   COALESCE(SUM(CASE
-    WHEN tipo = 'despesa' AND status = 'pago'
-    AND data_pagamento >= date_trunc('month', CURRENT_DATE)
-    AND data_pagamento < date_trunc('month', CURRENT_DATE) + interval '1 month'
-    THEN valor ELSE 0 END), 0) AS despesa_mes,
-  -- MRR (Receita Recorrente Mensal)
-  COALESCE((SELECT SUM(valor_mensal) FROM clientes
-    WHERE tipo = 'fixo' AND is_ativo = true
-    AND negocio_id = kpis_dashboard.negocio_id), 0) AS mrr
+    WHEN d.tipo = 'despesa' AND d.status = 'pago'
+    AND d.data_pagamento >= date_trunc('month', CURRENT_DATE)
+    AND d.data_pagamento < date_trunc('month', CURRENT_DATE) + interval '1 month'
+    THEN d.valor ELSE 0 END), 0) AS despesa_mes,
+  COALESCE(mrr.valor, 0) AS mrr
 FROM (
   SELECT negocio_id, valor, status, data_pagamento, 'receita' AS tipo
   FROM receitas WHERE status != 'cancelado'
   UNION ALL
   SELECT negocio_id, valor, status, data_pagamento, 'despesa' AS tipo
   FROM despesas WHERE status != 'cancelado'
-) dados
-GROUP BY negocio_id;
+) d
+LEFT JOIN (
+  SELECT negocio_id, SUM(valor_mensal) AS valor
+  FROM clientes WHERE tipo = 'fixo' AND is_ativo = true
+  GROUP BY negocio_id
+) mrr ON mrr.negocio_id = d.negocio_id
+GROUP BY d.negocio_id, mrr.valor;
 
 -- ============================================================
 -- 10. TRIGGER — atualizar_timestamp para recorrencias

@@ -8,7 +8,7 @@ import {
   STATUS_VARIANTS,
 } from "@/lib/constants";
 import type { Despesa as DespesaDB } from "@/types/database";
-import { formatarMoeda } from "@/utils";
+import { formatarMoeda, toastComDesfazer } from "@/utils";
 import { atualizarStatusVencidos, alterarStatusEmMassa, excluirEmMassa } from "@/services/status.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -320,6 +320,8 @@ export default function DespesasPage() {
     setExcluindoBtn(true);
 
     try {
+      const despesaDeletada = { ...excluindo };
+
       const { error } = await supabase.from("despesas").delete().eq("id", excluindo.id);
 
       if (error) {
@@ -327,7 +329,34 @@ export default function DespesasPage() {
         return;
       }
 
-      toast.success("Despesa excluída com sucesso!");
+      toastComDesfazer("Despesa excluída com sucesso!", async () => {
+        const { error: insertError } = await supabase.from("despesas").insert({
+          id: despesaDeletada.id,
+          negocio_id: despesaDeletada.negocio_id,
+          categoria_id: despesaDeletada.categoria_id,
+          descricao: despesaDeletada.descricao,
+          valor: despesaDeletada.valor,
+          data: despesaDeletada.data,
+          data_vencimento: despesaDeletada.data_vencimento,
+          data_pagamento: despesaDeletada.data_pagamento,
+          fornecedor: despesaDeletada.fornecedor,
+          forma_pagamento: despesaDeletada.forma_pagamento,
+          status: despesaDeletada.status,
+          observacoes: despesaDeletada.observacoes,
+          comprovante_url: despesaDeletada.comprovante_url,
+          parcela_numero: despesaDeletada.parcela_numero,
+          parcela_total: despesaDeletada.parcela_total,
+          grupo_parcela_id: despesaDeletada.grupo_parcela_id,
+          cartao_tipo: despesaDeletada.cartao_tipo,
+          cartao_parcelas: despesaDeletada.cartao_parcelas,
+          cartao_valor_total: despesaDeletada.cartao_valor_total,
+        });
+
+        if (insertError) {
+          throw insertError;
+        }
+      });
+
       setExcluindo(null);
       carregarDados();
     } catch {

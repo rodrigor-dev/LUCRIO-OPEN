@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
+import { usePagination } from "@/hooks/use-pagination";
+import { Pagination } from "@/components/pagination";
 import { FORMAS_PAGAMENTO, STATUS_LABELS } from "@/lib/constants";
 import type { Receita as ReceitaDB } from "@/types/database";
 import {
   formatarMoeda,
   formatarData,
+  toastComDesfazer,
 } from "@/utils";
 import {
   atualizarStatusVencidos,
@@ -130,6 +133,15 @@ export default function ReceitasPage() {
 
   const [form, setForm] = useState(FORM_DEFAULTS);
 
+  const {
+    currentPage,
+    totalPages,
+    paginatedItems,
+    goToPage,
+    setPageItems,
+    totalItems,
+  } = usePagination<Receita>({ itemsPerPage: 50 });
+
   // ---- Data Loading ----
   const carregarDados = useCallback(async () => {
     try {
@@ -220,6 +232,10 @@ export default function ReceitasPage() {
       return buscaMatch && statusMatch && periodoMatch;
     });
   }, [receitas, busca, filtroStatus, filtroPeriodo, mesAtual, anoAtual]);
+
+  useEffect(() => {
+    setPageItems(receitasFiltradas);
+  }, [receitasFiltradas, setPageItems]);
 
   // ---- KPIs (based on ALL receitas, not filtered) ----
   const kpis = useMemo(() => {
@@ -362,6 +378,8 @@ export default function ReceitasPage() {
     setExcluindoBtn(true);
 
     try {
+      const receitaDeletada = { ...excluindo };
+
       const { error } = await supabase
         .from("receitas")
         .delete()
@@ -372,7 +390,33 @@ export default function ReceitasPage() {
         return;
       }
 
-      toast.success("Receita excluída com sucesso!");
+      toastComDesfazer("Receita excluída com sucesso!", async () => {
+        const { error: insertError } = await supabase.from("receitas").insert({
+          id: receitaDeletada.id,
+          negocio_id: receitaDeletada.negocio_id,
+          cliente_id: receitaDeletada.cliente_id,
+          servico_id: receitaDeletada.servico_id,
+          descricao: receitaDeletada.descricao,
+          valor: receitaDeletada.valor,
+          data: receitaDeletada.data,
+          data_vencimento: receitaDeletada.data_vencimento,
+          data_pagamento: receitaDeletada.data_pagamento,
+          status: receitaDeletada.status,
+          forma_pagamento: receitaDeletada.forma_pagamento,
+          comprovante_url: receitaDeletada.comprovante_url,
+          recorrencia_tipo: receitaDeletada.recorrencia_tipo,
+          recorrencia_id: receitaDeletada.recorrencia_id,
+          parcela_numero: receitaDeletada.parcela_numero,
+          parcela_total: receitaDeletada.parcela_total,
+          grupo_parcela_id: receitaDeletada.grupo_parcela_id,
+          observacoes: receitaDeletada.observacoes,
+        });
+
+        if (insertError) {
+          throw insertError;
+        }
+      });
+
       setExcluindo(null);
       setDrawerAberto(false);
       carregarDados();
@@ -893,60 +937,68 @@ export default function ReceitasPage() {
                   )}
                 </div>
               ) : (
-                <AnimatePresence mode="popLayout">
-                  {receitasFiltradas.map((receita, index) => (
-                    <motion.div
-                      key={receita.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -50 }}
-                      transition={{ delay: index * 0.02 }}
-                      className={`flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors ${
-                        selecionadas.has(receita.id)
-                          ? "border-emerald-500 bg-emerald-50/50"
-                          : ""
-                      }`}
-                    >
-                      {/* Checkbox */}
-                      <Checkbox
-                        checked={selecionadas.has(receita.id)}
-                        onCheckedChange={() => toggleSelecao(receita.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-
-                      {/* Status Dot */}
-                      <div
-                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[receita.status] || STATUS_DOT_COLORS.pendente}`}
-                      />
-
-                      {/* Client Name */}
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          {receita.descricao}
-                        </p>
-                        {receita.cliente?.nome && (
-                          <p className="truncate text-xs text-muted-foreground">
-                            {receita.cliente.nome}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Value + Arrow */}
-                      <div
-                        className="flex items-center gap-2 shrink-0 cursor-pointer"
-                        onClick={() => abrirDrawer(receita)}
+                <>
+                  <AnimatePresence mode="popLayout">
+                    {paginatedItems.map((receita, index) => (
+                      <motion.div
+                        key={receita.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ delay: index * 0.02 }}
+                        className={`flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors ${
+                          selecionadas.has(receita.id)
+                            ? "border-emerald-500 bg-emerald-50/50"
+                            : ""
+                        }`}
                       >
-                        <span
-                          className={`text-sm font-bold ${VALUE_COLORS[receita.status] || ""}`}
+                        {/* Checkbox */}
+                        <Checkbox
+                          checked={selecionadas.has(receita.id)}
+                          onCheckedChange={() => toggleSelecao(receita.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+
+                        {/* Status Dot */}
+                        <div
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[receita.status] || STATUS_DOT_COLORS.pendente}`}
+                        />
+
+                        {/* Client Name */}
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-sm font-semibold">
+                            {receita.descricao}
+                          </p>
+                          {receita.cliente?.nome && (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {receita.cliente.nome}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Value + Arrow */}
+                        <div
+                          className="flex items-center gap-2 shrink-0 cursor-pointer"
+                          onClick={() => abrirDrawer(receita)}
                         >
-                          {formatarMoeda(receita.valor)}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                          <span
+                            className={`text-sm font-bold ${VALUE_COLORS[receita.status] || ""}`}
+                          >
+                            {formatarMoeda(receita.valor)}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    onPageChange={goToPage}
+                  />
+                </>
               )}
             </motion.div>
           </>

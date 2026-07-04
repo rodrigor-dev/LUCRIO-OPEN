@@ -1,3 +1,25 @@
+import { toast } from "sonner";
+
+export function toastComDesfazer(
+  message: string,
+  onDesfazer: () => Promise<void>
+) {
+  toast.error(message, {
+    action: {
+      label: "Desfazer",
+      onClick: async () => {
+        try {
+          await onDesfazer();
+          toast.success("Ação desfeita com sucesso!");
+        } catch {
+          toast.error("Erro ao desfazer");
+        }
+      },
+    },
+    duration: 5000,
+  });
+}
+
 export function formatarMoeda(valor: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
