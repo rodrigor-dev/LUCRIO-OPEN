@@ -12,7 +12,7 @@ interface PagamentoCriado {
   status: string;
 }
 
-const MERCOPAG_API = "https://api.mercadopago.com/v1";
+const MERCOPAG_API = "https://api.mercadopago.com";
 
 function obterTokenAcesso(): string {
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -76,7 +76,7 @@ export function createMercoPagClient() {
 
     async consultarPagamento(idPagamento: string) {
       const resposta = await fetch(
-        `${MERCOPAG_API}/payments/${idPagamento}`,
+        `${MERCOPAG_API}/v1/payments/${idPagamento}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -98,7 +98,7 @@ export function createMercoPagClient() {
       frequency: number;
       frequency_type: string;
     }) {
-      const resposta = await fetch(`${MERCOPAG_API}/preapproval`, {
+      const resposta = await fetch(`${MERCOPAG_API}/v1/preapproval`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
