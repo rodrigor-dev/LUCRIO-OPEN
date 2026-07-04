@@ -902,17 +902,43 @@ export default function ConfiguracoesPage() {
                       <Separator />
 
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <Button onClick={() => toast.info("Gerenciamento de assinatura em breve")}>
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Gerenciar Assinatura
-                        </Button>
                         <Button
-                          variant="outline"
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => toast.info("Cancelamento de assinatura em breve")}
+                          onClick={async () => {
+                            try {
+                              const res = await fetch("/api/pagamentos", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  dados: {
+                                    valor: 49.90,
+                                    descricao: "LUCRIO PRO - Plano Mensal",
+                                    email: usuario?.email || "",
+                                  },
+                                }),
+                              });
+                              const data = await res.json();
+                              if (data.init_point) {
+                                window.location.href = data.init_point;
+                              } else {
+                                toast.error(data.erro || "Erro ao criar pagamento");
+                              }
+                            } catch {
+                              toast.error("Erro ao processar pagamento");
+                            }
+                          }}
                         >
-                          Cancelar Assinatura
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Assinar Plano PRO - R$ 49,90/mês
                         </Button>
+                        {assinatura?.status === "ativo" && (
+                          <Button
+                            variant="outline"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => toast.info("Cancelamento disponível em breve")}
+                          >
+                            Cancelar Assinatura
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
