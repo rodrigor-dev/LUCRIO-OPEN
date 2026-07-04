@@ -71,10 +71,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ init_point: pagamento.init_point });
-  } catch (error) {
-    console.error("Erro ao criar pagamento:", error);
+  } catch (error: unknown) {
+    const mensagem = error instanceof Error ? error.message : String(error);
+    console.error("[PAGAMENTOS] Erro completo:", mensagem);
     return NextResponse.json(
-      { erro: "Erro ao processar pagamento" },
+      { erro: "Erro ao processar pagamento", detalhe: mensagem },
       { status: 500 }
     );
   }

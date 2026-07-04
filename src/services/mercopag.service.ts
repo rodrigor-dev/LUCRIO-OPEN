@@ -51,9 +51,10 @@ export function createMercoPagClient() {
       });
 
       if (!resposta.ok) {
-        const erro = await resposta.json();
+        const erro = await resposta.json().catch(() => ({ message: resposta.statusText }));
+        console.error("[MERCOPAGO] Status:", resposta.status, "Erro:", JSON.stringify(erro));
         throw new Error(
-          erro.message || "Erro ao criar pagamento no Mercado Pago"
+          `Mercado Pago ${resposta.status}: ${erro.message || erro.error || JSON.stringify(erro)}`
         );
       }
 
