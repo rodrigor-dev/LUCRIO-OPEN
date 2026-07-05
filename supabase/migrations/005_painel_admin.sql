@@ -1,7 +1,53 @@
--- Migration 005: Painel Administrativo Master
+-- Migration 005b: Correcao para planos existente + dados admin
+-- Execute ESTE em vez do 005 original
 
 -- ============================================================
--- 1. CONFIGURACOES GLOBAIS do SaaS
+-- 1. ADICIONAR COLUNAS FALTANTES na tabela planos
+-- ============================================================
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS is_destaque BOOLEAN DEFAULT false;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS limite_clientes INTEGER DEFAULT -1;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS limite_receitas INTEGER DEFAULT -1;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS limite_despesas INTEGER DEFAULT -1;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS limite_armazenamento_mb INTEGER DEFAULT 100;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS limite_usuarios INTEGER DEFAULT 1;
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS cor TEXT DEFAULT '#6366f1';
+ALTER TABLE planos ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ DEFAULT now();
+
+-- Gerar slug a partir do nome para registros existentes
+UPDATE planos SET slug = LOWER(REPLACE(nome, ' ', '-')) WHERE slug IS NULL;
+
+-- Adicionar constraint UNIQUE no slug
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planos_slug_unique') THEN
+    ALTER TABLE planos ADD CONSTRAINT planos_slug_unique UNIQUE (slug);
+  END IF;
+END $$;
+
+-- ============================================================
+-- 2. ATUALIZAR planos existentes com dados novos
+-- ============================================================
+UPDATE planos SET
+  descricao = 'Plano basico com funcionalidades limitadas',
+  preco_mensal = 0,
+  preco_anual = 0,
+  is_ativo = true,
+  is_destaque = false,
+  ordem = 1,
+  limite_clientes = 10,
+  funcionalidades = '["Clientes basicos","Receitas","Despesas","Dashboard simples"]'::jsonb
+WHERE slug = 'plano-basico' OR slug = 'basico' OR slug = 'gratuito';
+
+-- Inserir PRO se nao existir
+INSERT INTO planos (nome, slug, descricao, preco_mensal, preco_anual, is_ativo, is_destaque, ordem, limite_clientes, funcionalidades)
+SELECT 'PRO', 'pro', 'Plano completo com todas as funcionalidades', 14.99, 139.99, true, true, 2, -1,
+  '["Clientes ilimitados","Receitas e despesas","Calendario financeiro","Relatorios avancados","Propostas","Suporte prioritario"]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM planos WHERE slug = 'pro');
+
+-- ============================================================
+-- 3. CONFIGURACOES GLOBAIS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS configuracoes_globais (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -32,36 +78,7 @@ INSERT INTO configuracoes_globais (chave, valor, tipo, descricao) VALUES
 ON CONFLICT (chave) DO NOTHING;
 
 -- ============================================================
--- 2. PLANOS (gestao flexivel)
--- ============================================================
-CREATE TABLE IF NOT EXISTS planos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  descricao TEXT,
-  preco_mensal NUMERIC(10,2) NOT NULL DEFAULT 0,
-  preco_anual NUMERIC(10,2) NOT NULL DEFAULT 0,
-  is_ativo BOOLEAN DEFAULT true,
-  is_destaque BOOLEAN DEFAULT false,
-  ordem INTEGER DEFAULT 0,
-  limite_clientes INTEGER DEFAULT -1,
-  limite_receitas INTEGER DEFAULT -1,
-  limite_despesas INTEGER DEFAULT -1,
-  limite_armazenamento_mb INTEGER DEFAULT 100,
-  limite_usuarios INTEGER DEFAULT 1,
-  funcionalidades JSONB DEFAULT '[]'::jsonb,
-  cor TEXT DEFAULT '#6366f1',
-  criado_em TIMESTAMPTZ DEFAULT now(),
-  atualizado_em TIMESTAMPTZ DEFAULT now()
-);
-
-INSERT INTO planos (nome, slug, descricao, preco_mensal, preco_anual, is_ativo, is_destaque, ordem, limite_clientes, funcionalidades) VALUES
-  ('Gratuito', 'gratuito', 'Plano basico com funcionalidades limitadas', 0, 0, true, false, 1, 10, '["Clientes basicos","Receitas","Despesas","Dashboard simples"]'::jsonb),
-  ('PRO', 'pro', 'Plano completo com todas as funcionalidades', 14.99, 139.99, true, true, 2, -1, '["Clientes ilimitados","Receitas e despesas","Calendario financeiro","Relatorios avancados","Propostas","Suporte prioritario"]'::jsonb)
-ON CONFLICT (slug) DO NOTHING;
-
--- ============================================================
--- 3. CUPONS DE DESCONTO
+-- 4. CUPONS DE DESCONTO
 -- ============================================================
 CREATE TABLE IF NOT EXISTS cupons (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -90,7 +107,7 @@ CREATE TABLE IF NOT EXISTS cupons (
 );
 
 -- ============================================================
--- 4. AUDITORIA
+-- 5. AUDITORIA
 -- ============================================================
 CREATE TABLE IF NOT EXISTS auditoria (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,13 +123,13 @@ CREATE TABLE IF NOT EXISTS auditoria (
   criado_em TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_auditoria_usuario ON auditoria(usuario_id);
-CREATE INDEX idx_auditoria_acao ON auditoria(acao);
-CREATE INDEX idx_auditoria_entidade ON auditoria(entidade);
-CREATE INDEX idx_auditoria_criado ON auditoria(criado_em);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_acao ON auditoria(acao);
+CREATE INDEX IF NOT EXISTS idx_auditoria_entidade ON auditoria(entidade);
+CREATE INDEX IF NOT EXISTS idx_auditoria_criado ON auditoria(criado_em);
 
 -- ============================================================
--- 5. LOGS do sistema
+-- 6. LOGS do sistema
 -- ============================================================
 CREATE TABLE IF NOT EXISTS system_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -131,12 +148,12 @@ CREATE TABLE IF NOT EXISTS system_logs (
   criado_em TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_system_logs_nivel ON system_logs(nivel);
-CREATE INDEX idx_system_logs_criado ON system_logs(criado_em);
-CREATE INDEX idx_system_logs_usuario ON system_logs(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_system_logs_nivel ON system_logs(nivel);
+CREATE INDEX IF NOT EXISTS idx_system_logs_criado ON system_logs(criado_em);
+CREATE INDEX IF NOT EXISTS idx_system_logs_usuario ON system_logs(usuario_id);
 
 -- ============================================================
--- 6. SUPORTE
+-- 7. SUPORTE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS suporte_tickets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -160,11 +177,11 @@ CREATE TABLE IF NOT EXISTS suporte_mensagens (
   criado_em TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_suporte_tickets_usuario ON suporte_tickets(usuario_id);
-CREATE INDEX idx_suporte_tickets_status ON suporte_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_suporte_tickets_usuario ON suporte_tickets(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_suporte_tickets_status ON suporte_tickets(status);
 
 -- ============================================================
--- 7. AVISOS GLOBAIS
+-- 8. AVISOS GLOBAIS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS avisos_globais (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -182,7 +199,7 @@ CREATE TABLE IF NOT EXISTS avisos_globais (
 );
 
 -- ============================================================
--- 8. FEATURE FLAGS
+-- 9. FEATURE FLAGS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS feature_flags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -196,7 +213,7 @@ CREATE TABLE IF NOT EXISTS feature_flags (
 );
 
 -- ============================================================
--- 9. BACKUPS
+-- 10. BACKUPS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS backups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -210,7 +227,7 @@ CREATE TABLE IF NOT EXISTS backups (
 );
 
 -- ============================================================
--- 10. ATUALIZACOES
+-- 11. ATUALIZACOES
 -- ============================================================
 CREATE TABLE IF NOT EXISTS atualizacoes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -223,7 +240,7 @@ CREATE TABLE IF NOT EXISTS atualizacoes (
 );
 
 -- ============================================================
--- 11. PERMISSOES RBAC
+-- 12. PERMISSOES RBAC
 -- ============================================================
 CREATE TABLE IF NOT EXISTS roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -245,7 +262,7 @@ INSERT INTO roles (nome, slug, descricao, permissoes, is_sistema) VALUES
   ('Desenvolvedor', 'dev', 'Desenvolvedor', '["logs.read","feature_flags.read","feature_flags.update","backups.read","backups.update"]'::jsonb, true)
 ON CONFLICT (slug) DO NOTHING;
 
--- Adicionar role_id na tabela usuarios
+-- Adicionar colunas na tabela usuarios
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS role_id UUID REFERENCES roles(id);
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS is_bloqueado BOOLEAN DEFAULT false;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS is_suspendido BOOLEAN DEFAULT false;
@@ -254,7 +271,7 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ip_ultimo_acesso TEXT;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS user_agent_ultimo TEXT;
 
 -- ============================================================
--- 12. BLOQUEIO DE IP
+-- 13. BLOQUEIO DE IP
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ips_bloqueados (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -265,10 +282,10 @@ CREATE TABLE IF NOT EXISTS ips_bloqueados (
   expira_em TIMESTAMPTZ
 );
 
-CREATE INDEX idx_ips_bloqueados_ip ON ips_bloqueados(ip);
+CREATE INDEX IF NOT EXISTS idx_ips_bloqueados_ip ON ips_bloqueados(ip);
 
 -- ============================================================
--- 13. SESSOES ATIVAS
+-- 14. SESSOES ATIVAS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS sessoes_ativas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -279,13 +296,12 @@ CREATE TABLE IF NOT EXISTS sessoes_ativas (
   ultimo_acesso_em TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_sessoes_ativas_usuario ON sessoes_ativas(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_sessoes_ativas_usuario ON sessoes_ativas(usuario_id);
 
 -- ============================================================
 -- RLS para tabelas admin
 -- ============================================================
 ALTER TABLE configuracoes_globais ENABLE ROW LEVEL SECURITY;
-ALTER TABLE planos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auditoria ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_logs ENABLE ROW LEVEL SECURITY;
@@ -299,26 +315,74 @@ ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ips_bloqueados ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessoes_ativas ENABLE ROW LEVEL SECURITY;
 
--- Policies: admins podem tudo, usuarios comuns leem dados publicos
-CREATE POLICY "config_globais_admin" ON configuracoes_globais FOR ALL USING (true);
-CREATE POLICY "planos_public" ON planos FOR SELECT USING (is_ativo = true);
-CREATE POLICY "planos_admin" ON planos FOR ALL USING (true);
-CREATE POLICY "cupons_admin" ON cupons FOR ALL USING (true);
-CREATE POLICY "auditoria_admin" ON auditoria FOR ALL USING (true);
-CREATE POLICY "logs_admin" ON system_logs FOR ALL USING (true);
-CREATE POLICY "suporte_usuario" ON suporte_tickets FOR ALL USING (usuario_id = auth.uid());
-CREATE POLICY "suporte_admin" ON suporte_tickets FOR ALL USING (true);
-CREATE POLICY "suporte_msg_usuario" ON suporte_mensagens FOR SELECT USING (true);
-CREATE POLICY "suporte_msg_admin" ON suporte_mensagens FOR ALL USING (true);
-CREATE POLICY "avisos_public" ON avisos_globais FOR SELECT USING (is_ativo = true);
-CREATE POLICY "avisos_admin" ON avisos_globais FOR ALL USING (true);
-CREATE POLICY "feature_flags_admin" ON feature_flags FOR ALL USING (true);
-CREATE POLICY "backups_admin" ON backups FOR ALL USING (true);
-CREATE POLICY "atualizacoes_public" ON atualizacoes FOR SELECT USING (is_visivel = true);
-CREATE POLICY "atualizacoes_admin" ON atualizacoes FOR ALL USING (true);
-CREATE POLICY "roles_admin" ON roles FOR ALL USING (true);
-CREATE POLICY "ips_admin" ON ips_bloqueados FOR ALL USING (true);
-CREATE POLICY "sessoes_admin" ON sessoes_ativas FOR ALL USING (true);
+-- Policies
+DO $$
+BEGIN
+  -- configuracoes_globais
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'config_globais_admin') THEN
+    CREATE POLICY 'config_globais_admin' ON configuracoes_globais FOR ALL USING (true);
+  END IF;
+  -- cupons
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cupons_admin') THEN
+    CREATE POLICY 'cupons_admin' ON cupons FOR ALL USING (true);
+  END IF;
+  -- auditoria
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auditoria_admin') THEN
+    CREATE POLICY 'auditoria_admin' ON auditoria FOR ALL USING (true);
+  END IF;
+  -- system_logs
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'logs_admin') THEN
+    CREATE POLICY 'logs_admin' ON system_logs FOR ALL USING (true);
+  END IF;
+  -- suporte_tickets
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'suporte_usuario') THEN
+    CREATE POLICY 'suporte_usuario' ON suporte_tickets FOR ALL USING (usuario_id = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'suporte_admin') THEN
+    CREATE POLICY 'suporte_admin' ON suporte_tickets FOR ALL USING (true);
+  END IF;
+  -- suporte_mensagens
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'suporte_msg_usuario') THEN
+    CREATE POLICY 'suporte_msg_usuario' ON suporte_mensagens FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'suporte_msg_admin') THEN
+    CREATE POLICY 'suporte_msg_admin' ON suporte_mensagens FOR ALL USING (true);
+  END IF;
+  -- avisos_globais
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'avisos_public') THEN
+    CREATE POLICY 'avisos_public' ON avisos_globais FOR SELECT USING (is_ativo = true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'avisos_admin') THEN
+    CREATE POLICY 'avisos_admin' ON avisos_globais FOR ALL USING (true);
+  END IF;
+  -- feature_flags
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'feature_flags_admin') THEN
+    CREATE POLICY 'feature_flags_admin' ON feature_flags FOR ALL USING (true);
+  END IF;
+  -- backups
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'backups_admin') THEN
+    CREATE POLICY 'backups_admin' ON backups FOR ALL USING (true);
+  END IF;
+  -- atualizacoes
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'atualizacoes_public') THEN
+    CREATE POLICY 'atualizacoes_public' ON atualizacoes FOR SELECT USING (is_visivel = true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'atualizacoes_admin') THEN
+    CREATE POLICY 'atualizacoes_admin' ON atualizacoes FOR ALL USING (true);
+  END IF;
+  -- roles
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'roles_admin') THEN
+    CREATE POLICY 'roles_admin' ON roles FOR ALL USING (true);
+  END IF;
+  -- ips_bloqueados
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'ips_admin') THEN
+    CREATE POLICY 'ips_admin' ON ips_bloqueados FOR ALL USING (true);
+  END IF;
+  -- sessoes_ativas
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'sessoes_admin') THEN
+    CREATE POLICY 'sessoes_admin' ON sessoes_ativas FOR ALL USING (true);
+  END IF;
+END $$;
 
 -- ============================================================
 -- VIEWS para dashboard admin

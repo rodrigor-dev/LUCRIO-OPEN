@@ -926,7 +926,7 @@ export default function DashboardPage() {
                 <div className="rounded-full bg-blue-100 p-2 transition-colors group-hover:bg-blue-200">
                   <Activity className="h-4 w-4 text-blue-600" />
                 </div>
-                <span>Nova Proposta</span>
+                <span>Novo Orcamento</span>
                 <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>

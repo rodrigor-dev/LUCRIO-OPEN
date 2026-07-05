@@ -43,6 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import SubscriptionGuard from "@/components/subscription-guard";
 import type { Usuario, Negocio } from "@/types/database";
 
 interface NavItem {
@@ -58,7 +59,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/receitas", label: "Receitas", icon: TrendingUp },
   { href: "/dashboard/despesas", label: "Despesas", icon: TrendingDown },
   { href: "/dashboard/fluxo-caixa", label: "Fluxo de Caixa", icon: Wallet },
-  { href: "/dashboard/propostas", label: "Propostas", icon: FileText },
+  { href: "/dashboard/propostas", label: "Orcamentos", icon: FileText },
   { href: "/dashboard/calendario", label: "Calendário", icon: Calendar },
   { href: "/dashboard/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
@@ -437,7 +438,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           aria-label="Conteúdo principal"
           className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
         >
-          {children}
+          <SubscriptionGuard>{children}</SubscriptionGuard>
         </main>
         <BottomNav />
       </div>

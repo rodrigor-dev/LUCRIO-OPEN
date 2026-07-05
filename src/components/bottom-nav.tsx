@@ -33,7 +33,7 @@ const tabs = [
 
 const moreItems = [
   { label: "Serviços", icon: Wrench, href: "/dashboard/servicos" },
-  { label: "Propostas", icon: FileText, href: "/dashboard/propostas" },
+  { label: "Orcamentos", icon: FileText, href: "/dashboard/propostas" },
   { label: "Fluxo de Caixa", icon: Wallet, href: "/dashboard/fluxo-caixa" },
   { label: "Relatórios", icon: BarChart3, href: "/dashboard/relatorios" },
   { label: "Configurações", icon: Settings, href: "/dashboard/configuracoes" },

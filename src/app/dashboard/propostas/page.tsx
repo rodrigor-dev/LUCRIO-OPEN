@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatarMoeda, gerarNumeroProposta } from "@/utils";
+import { formatarMoeda, gerarNumeroOrcamento } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,6 +148,12 @@ export default function PropostasPage() {
   const [itens, setItens] = useState<ItemProposta[]>([
     { descricao: "", quantidade: 1, valor_unitario: 0, total: 0 },
   ]);
+
+  const scrollToInput = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+  }, []);
 
   useEffect(() => {
     carregarDados();
@@ -309,7 +315,7 @@ export default function PropostasPage() {
         .eq("id", propostaEditando.id);
 
       if (error) {
-        toast.error("Erro ao atualizar proposta.");
+        toast.error("Erro ao atualizar orcamento.");
         setSalvando(false);
         return;
       }
@@ -335,20 +341,20 @@ export default function PropostasPage() {
         await supabase.from("itens_proposta").insert(itensParaInserir);
       }
 
-      toast.success("Proposta atualizada com sucesso!");
+      toast.success("Orcamento atualizado com sucesso!");
     } else {
       const { data: proposta, error } = await supabase
         .from("propostas")
         .insert({
           ...payload,
-          numero_proposta: gerarNumeroProposta(),
+          numero_proposta: gerarNumeroOrcamento(),
           status: "rascunho",
         })
         .select()
         .single();
 
       if (error) {
-        toast.error("Erro ao criar proposta.");
+        toast.error("Erro ao criar orcamento.");
         setSalvando(false);
         return;
       }
@@ -367,7 +373,7 @@ export default function PropostasPage() {
         await supabase.from("itens_proposta").insert(itensParaInserir);
       }
 
-      toast.success("Proposta criada com sucesso!");
+      toast.success("Orcamento criado com sucesso!");
     }
 
     fecharDialog();
@@ -383,11 +389,11 @@ export default function PropostasPage() {
     const { error } = await supabase.from("propostas").delete().eq("id", propostaDeletando.id);
 
     if (error) {
-      toast.error("Erro ao excluir proposta.");
+      toast.error("Erro ao excluir orcamento.");
       return;
     }
 
-    toast.success("Proposta excluída com sucesso!");
+    toast.success("Orcamento excluido com sucesso!");
     setPropostaDeletando(null);
     carregarDados();
   }
@@ -399,11 +405,11 @@ export default function PropostasPage() {
       .eq("id", proposta.id);
 
     if (error) {
-      toast.error("Erro ao enviar proposta.");
+      toast.error("Erro ao enviar orcamento.");
       return;
     }
 
-    toast.success("Proposta enviada com sucesso!");
+    toast.success("Orcamento enviado com sucesso!");
     carregarDados();
   }
 
@@ -427,7 +433,7 @@ export default function PropostasPage() {
       .insert({
         negocio_id: negocio.id,
         cliente_id: proposta.cliente_id,
-        numero_proposta: gerarNumeroProposta(),
+        numero_proposta: gerarNumeroOrcamento(),
         validade: proposta.validade,
         status: "rascunho",
         subtotal: proposta.subtotal,
@@ -441,7 +447,7 @@ export default function PropostasPage() {
       .single();
 
     if (error) {
-      toast.error("Erro ao duplicar proposta.");
+      toast.error("Erro ao duplicar orcamento.");
       return;
     }
 
@@ -456,7 +462,7 @@ export default function PropostasPage() {
       await supabase.from("itens_proposta").insert(novosItens);
     }
 
-    toast.success("Proposta duplicada com sucesso!");
+    toast.success("Orcamento duplicado com sucesso!");
     carregarDados();
   }
 
@@ -464,14 +470,14 @@ export default function PropostasPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Propostas Comerciais</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Orcamentos</h1>
           <p className="text-sm text-muted-foreground">
-            Gerencie suas {propostas.length} proposta{propostas.length !== 1 ? "s" : ""}
+            Gerencie seus {propostas.length} orcamento{propostas.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Button onClick={abrirDialogNova} className="gap-2">
           <Plus className="h-4 w-4" />
-          Nova Proposta
+          Novo Orcamento
         </Button>
       </div>
 
@@ -479,7 +485,7 @@ export default function PropostasPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por número ou cliente..."
+            placeholder="Buscar por numero ou cliente..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="pl-9"
@@ -510,17 +516,17 @@ export default function PropostasPage() {
           <CardContent className="flex flex-col items-center justify-center py-16">
             <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <h3 className="mb-1 text-lg font-semibold">
-              Nenhuma proposta encontrada
+              Nenhum orcamento encontrado
             </h3>
             <p className="mb-4 text-sm text-muted-foreground">
               {busca || filtroStatus !== "todos"
                 ? "Tente buscar com outros termos ou filtros."
-                : "Crie sua primeira proposta comercial."}
+                : "Crie seu primeiro orcamento."}
             </p>
             {!busca && filtroStatus === "todos" && (
               <Button onClick={abrirDialogNova} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Criar Proposta
+                Criar Orcamento
               </Button>
             )}
           </CardContent>
@@ -532,12 +538,12 @@ export default function PropostasPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Número</TableHead>
+                    <TableHead>Numero</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Validade</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-right">Acoes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -630,10 +636,10 @@ export default function PropostasPage() {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Excluir proposta</AlertDialogTitle>
+                                  <AlertDialogTitle>Excluir orcamento</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Tem certeza que deseja excluir a proposta{" "}
-                                    <strong>{proposta.numero_proposta}</strong>? Esta ação não
+                                    Tem certeza que deseja excluir o orcamento{" "}
+                                    <strong>{proposta.numero_proposta}</strong>? Esta acao nao
                                     pode ser desfeita.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
@@ -694,7 +700,7 @@ export default function PropostasPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                           <Calendar className="h-3.5 w-3.5" />
-                          Válido até{" "}
+                          Valido ate{" "}
                           {new Intl.DateTimeFormat("pt-BR").format(
                             new Date(proposta.validade)
                           )}
@@ -756,10 +762,10 @@ export default function PropostasPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir proposta</AlertDialogTitle>
+                              <AlertDialogTitle>Excluir orcamento</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Tem certeza que deseja excluir a proposta{" "}
-                                <strong>{proposta.numero_proposta}</strong>? Esta ação não pode
+                                Tem certeza que deseja excluir o orcamento{" "}
+                                <strong>{proposta.numero_proposta}</strong>? Esta acao nao pode
                                 ser desfeita.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
@@ -785,10 +791,10 @@ export default function PropostasPage() {
       )}
 
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
-              {propostaEditando ? "Editar Proposta" : "Nova Proposta"}
+              {propostaEditando ? "Editar Orcamento" : "Novo Orcamento"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -817,6 +823,7 @@ export default function PropostasPage() {
                   type="date"
                   value={form.validade}
                   onChange={(e) => setForm({ ...form, validade: e.target.value })}
+                  onFocus={scrollToInput}
                 />
               </div>
             </div>
@@ -837,52 +844,59 @@ export default function PropostasPage() {
               </div>
               <div className="space-y-2">
                 {itens.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="Descrição"
-                      value={item.descricao}
-                      onChange={(e) => atualizarItem(index, "descricao", e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Qtd"
-                      value={item.quantidade}
-                      onChange={(e) =>
-                        atualizarItem(index, "quantidade", parseInt(e.target.value) || 0)
-                      }
-                      className="w-20"
-                      min={0}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Valor"
-                      value={item.valor_unitario || ""}
-                      onChange={(e) =>
-                        atualizarItem(
-                          index,
-                          "valor_unitario",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      className="w-28"
-                      min={0}
-                      step={0.01}
-                    />
-                    <span className="flex items-center whitespace-nowrap text-sm text-muted-foreground">
-                      {formatarMoeda(item.total)}
-                    </span>
-                    {itens.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
-                        onClick={() => removerItem(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                  <div key={index} className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Descricao"
+                        value={item.descricao}
+                        onChange={(e) => atualizarItem(index, "descricao", e.target.value)}
+                        onFocus={scrollToInput}
+                        className="flex-1 min-w-0"
+                      />
+                      {itens.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
+                          onClick={() => removerItem(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Qtd"
+                        value={item.quantidade}
+                        onChange={(e) =>
+                          atualizarItem(index, "quantidade", parseInt(e.target.value) || 0)
+                        }
+                        onFocus={scrollToInput}
+                        className="w-20"
+                        min={0}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Valor unitario"
+                        value={item.valor_unitario || ""}
+                        onChange={(e) =>
+                          atualizarItem(
+                            index,
+                            "valor_unitario",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        onFocus={scrollToInput}
+                        className="w-28"
+                        min={0}
+                        step={0.01}
+                      />
+                      <span className="flex items-center whitespace-nowrap text-sm text-muted-foreground">
+                        {formatarMoeda(item.total)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -897,6 +911,7 @@ export default function PropostasPage() {
                   onChange={(e) =>
                     setForm({ ...form, desconto: parseFloat(e.target.value) || 0 })
                   }
+                  onFocus={scrollToInput}
                   min={0}
                   step={0.01}
                 />
@@ -909,6 +924,7 @@ export default function PropostasPage() {
                   onChange={(e) =>
                     setForm({ ...form, frete: parseFloat(e.target.value) || 0 })
                   }
+                  onFocus={scrollToInput}
                   min={0}
                   step={0.01}
                 />
@@ -916,25 +932,27 @@ export default function PropostasPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Condições Gerais</Label>
+              <Label>Condicoes Gerais</Label>
               <Textarea
                 value={form.condicoes_gerais}
                 onChange={(e) =>
                   setForm({ ...form, condicoes_gerais: e.target.value })
                 }
+                onFocus={scrollToInput}
                 placeholder="Prazo de pagamento, garantia, etc."
                 rows={3}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Observações</Label>
+              <Label>Observacoes</Label>
               <Textarea
                 value={form.observacoes}
                 onChange={(e) =>
                   setForm({ ...form, observacoes: e.target.value })
                 }
-                placeholder="Observações internas..."
+                onFocus={scrollToInput}
+                placeholder="Observacoes internas..."
                 rows={2}
               />
             </div>
@@ -942,7 +960,7 @@ export default function PropostasPage() {
             <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-4">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
-                Total da Proposta
+                Total do Orcamento
               </div>
               <span className="text-xl font-bold">
                 {formatarMoeda(total)}
@@ -962,8 +980,8 @@ export default function PropostasPage() {
                 {salvando
                   ? "Salvando..."
                   : propostaEditando
-                    ? "Salvar Alterações"
-                    : "Criar Proposta"}
+                    ? "Salvar Alteracoes"
+                    : "Criar Orcamento"}
               </Button>
             </DialogFooter>
           </form>
@@ -1048,7 +1066,7 @@ export default function PropostasPage() {
               {propostaVisualizando.condicoes_gerais && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Condições Gerais
+                    Condicoes Gerais
                   </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm">
                     {propostaVisualizando.condicoes_gerais}
@@ -1059,7 +1077,7 @@ export default function PropostasPage() {
               {propostaVisualizando.observacoes && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Observações
+                    Observacoes
                   </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm">
                     {propostaVisualizando.observacoes}

@@ -21,8 +21,6 @@ import {
   TrendingUp,
   TrendingDown,
   CheckCircle2,
-  Clock,
-  AlertTriangle,
   CalendarDays,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,13 +38,6 @@ type CalendarioEvento = {
 };
 
 const DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
-
-const STATUS_COLORS: Record<string, string> = {
-  pago: "bg-emerald-500",
-  pendente: "bg-yellow-500",
-  atrasado: "bg-red-500",
-  cancelado: "bg-gray-400",
-};
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
   pago: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -89,6 +80,17 @@ function formatoDataKey(data: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function formatarMoedaShort(valor: number): string {
+  if (Math.abs(valor) >= 1000) {
+    return `${(valor / 1000).toFixed(1)}k`;
+  }
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(valor);
+}
+
 export default function CalendarioPage() {
   const supabase = useSupabase();
   const [carregando, setCarregando] = useState(true);
@@ -107,15 +109,21 @@ export default function CalendarioPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setCarregando(false);
+        return;
+      }
 
-      const { data: negocio } = await supabase
+      const { data: negocio, error: negocioError } = await supabase
         .from("negocios")
         .select("id")
         .eq("usuario_id", user.id)
         .single();
 
-      if (!negocio) return;
+      if (negocioError || !negocio) {
+        setCarregando(false);
+        return;
+      }
 
       const inicioMes = new Date(anoAtual, mesAtual, 1)
         .toISOString()
@@ -143,15 +151,22 @@ export default function CalendarioPage() {
           .order("data_vencimento", { ascending: true }),
       ]);
 
-      if (receitasRes.error || despesasRes.error) {
-        toast.error("Erro ao carregar calendário");
-        return;
+      if (receitasRes.error) {
+        console.error("Erro ao carregar receitas:", receitasRes.error);
+        toast.error("Erro ao carregar receitas do calendário");
+      } else {
+        setReceitas(receitasRes.data || []);
       }
 
-      setReceitas(receitasRes.data || []);
-      setDespesas(despesasRes.data || []);
-    } catch {
-      toast.error("Erro ao carregar dados");
+      if (despesasRes.error) {
+        console.error("Erro ao carregar despesas:", despesasRes.error);
+        toast.error("Erro ao carregar despesas do calendário");
+      } else {
+        setDespesas(despesasRes.data || []);
+      }
+    } catch (err) {
+      console.error("Erro inesperado ao carregar calendário:", err);
+      toast.error("Erro inesperado ao carregar dados");
     } finally {
       setCarregando(false);
     }
@@ -165,39 +180,51 @@ export default function CalendarioPage() {
   const eventosPorDia = useMemo(() => {
     const mapa: Record<string, CalendarioEvento[]> = {};
 
-    receitas.forEach((r) => {
-      const chave = formatoDataKey(
-        new Date(r.data_vencimento || r.data)
-      );
-      if (!mapa[chave]) mapa[chave] = [];
-      mapa[chave].push({
-        id: r.id,
-        tipo: "receita",
-        descricao: r.descricao,
-        valor: r.valor,
-        data: r.data,
-        data_vencimento: r.data_vencimento,
-        status: r.status,
-        forma_pagamento: r.forma_pagamento,
+    if (Array.isArray(receitas)) {
+      receitas.forEach((r) => {
+        try {
+          const chave = formatoDataKey(
+            new Date(r.data_vencimento || r.data)
+          );
+          if (!mapa[chave]) mapa[chave] = [];
+          mapa[chave].push({
+            id: r.id,
+            tipo: "receita",
+            descricao: r.descricao,
+            valor: r.valor,
+            data: r.data,
+            data_vencimento: r.data_vencimento,
+            status: r.status,
+            forma_pagamento: r.forma_pagamento,
+          });
+        } catch {
+          // skip invalid dates
+        }
       });
-    });
+    }
 
-    despesas.forEach((d) => {
-      const chave = formatoDataKey(
-        new Date(d.data_vencimento || d.data)
-      );
-      if (!mapa[chave]) mapa[chave] = [];
-      mapa[chave].push({
-        id: d.id,
-        tipo: "despesa",
-        descricao: d.descricao,
-        valor: d.valor,
-        data: d.data,
-        data_vencimento: d.data_vencimento,
-        status: d.status,
-        forma_pagamento: d.forma_pagamento,
+    if (Array.isArray(despesas)) {
+      despesas.forEach((d) => {
+        try {
+          const chave = formatoDataKey(
+            new Date(d.data_vencimento || d.data)
+          );
+          if (!mapa[chave]) mapa[chave] = [];
+          mapa[chave].push({
+            id: d.id,
+            tipo: "despesa",
+            descricao: d.descricao,
+            valor: d.valor,
+            data: d.data,
+            data_vencimento: d.data_vencimento,
+            status: d.status,
+            forma_pagamento: d.forma_pagamento,
+          });
+        } catch {
+          // skip invalid dates
+        }
       });
-    });
+    }
 
     return mapa;
   }, [receitas, despesas]);
@@ -276,6 +303,12 @@ export default function CalendarioPage() {
     return eventos.some((e) => e.status === "atrasado");
   };
 
+  const temVencimentoNoDia = (dia: Date) => {
+    const chave = formatoDataKey(dia);
+    const eventos = eventosPorDia[chave] || [];
+    return eventos.some((e) => e.status === "pendente");
+  };
+
   const resumoDia = (dia: Date) => {
     const chave = formatoDataKey(dia);
     const eventos = eventosPorDia[chave] || [];
@@ -291,17 +324,19 @@ export default function CalendarioPage() {
     return { totalReceita, totalDespesa, total: eventos.length };
   };
 
+  const temEventosNoMes = Object.keys(eventosPorDia).length > 0;
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between px-4 py-4">
+        <div className="flex items-center justify-between px-3 py-3 sm:px-4 sm:py-4">
           <div>
-            <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight">
+            <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight sm:text-xl">
               <CalendarDays className="h-5 w-5 text-violet-600" />
               Calendario
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground sm:text-sm">
               Visao financeira do mes
             </p>
           </div>
@@ -316,11 +351,11 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="px-2 pt-3 sm:px-4 sm:pt-4">
         {carregando ? (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <Skeleton className="h-10 w-full rounded-xl" />
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
               {Array.from({ length: 35 }).map((_, i) => (
                 <Skeleton key={i} className="aspect-square rounded-lg" />
               ))}
@@ -332,23 +367,25 @@ export default function CalendarioPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-between mb-4"
+              className="flex items-center justify-between mb-3 sm:mb-4"
             >
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10"
+                className="h-9 w-9 sm:h-10 sm:w-10"
                 onClick={mesAnterior}
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
               <div className="text-center">
-                <h2 className="text-lg font-bold capitalize">{nomeMes}</h2>
+                <h2 className="text-base font-bold capitalize sm:text-lg">
+                  {nomeMes}
+                </h2>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10"
+                className="h-9 w-9 sm:h-10 sm:w-10"
                 onClick={proximoMes}
               >
                 <ChevronRight className="h-5 w-5" />
@@ -356,11 +393,11 @@ export default function CalendarioPage() {
             </motion.div>
 
             {/* Weekday Headers */}
-            <div className="grid grid-cols-7 gap-1 mb-1">
+            <div className="grid grid-cols-7 gap-0.5 mb-1 sm:gap-1">
               {DIAS_SEMANA.map((dia) => (
                 <div
                   key={dia}
-                  className="text-center text-xs font-semibold text-muted-foreground py-2"
+                  className="text-center text-[10px] font-semibold text-muted-foreground py-1.5 sm:py-2 sm:text-xs"
                 >
                   {dia}
                 </div>
@@ -372,7 +409,7 @@ export default function CalendarioPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="grid grid-cols-7 gap-1"
+              className="grid grid-cols-7 gap-0.5 sm:gap-1"
             >
               {diasDoMes.map((dia, idx) => {
                 const isMesAtual = dia.getMonth() === mesAtual;
@@ -381,6 +418,7 @@ export default function CalendarioPage() {
                   dia.getMonth() === hoje.getMonth() &&
                   dia.getFullYear() === hoje.getFullYear();
                 const temAtrasado = temAtrasadoNoDia(dia);
+                const temVencimento = temVencimentoNoDia(dia);
                 const resumo = resumoDia(dia);
                 const eventos = eventosPorDia[formatoDataKey(dia)] || [];
                 const temEventos = eventos.length > 0;
@@ -391,6 +429,9 @@ export default function CalendarioPage() {
                 const despesaDots = eventos.filter(
                   (e) => e.tipo === "despesa"
                 ).length;
+                const vencimentoDots = eventos.filter(
+                  (e) => e.status === "pendente"
+                ).length;
 
                 return (
                   <motion.button
@@ -400,7 +441,7 @@ export default function CalendarioPage() {
                     transition={{ delay: idx * 0.008 }}
                     onClick={() => temEventos && abrirDia(dia)}
                     className={`
-                      relative flex flex-col items-center rounded-lg p-1 sm:p-1.5 min-h-[60px] sm:min-h-[72px] transition-all
+                      relative flex flex-col items-center rounded-md p-0.5 min-h-[48px] sm:min-h-[72px] transition-all
                       ${
                         !isMesAtual
                           ? "text-muted-foreground/40"
@@ -419,8 +460,8 @@ export default function CalendarioPage() {
                   >
                     <span
                       className={`
-                        text-xs sm:text-sm font-medium
-                        ${isHoje ? "flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white" : ""}
+                        text-[10px] sm:text-sm font-medium
+                        ${isHoje ? "flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-violet-600 text-white" : ""}
                       `}
                     >
                       {dia.getDate()}
@@ -428,13 +469,13 @@ export default function CalendarioPage() {
 
                     {/* Event dots */}
                     {temEventos && isMesAtual && (
-                      <div className="flex flex-col items-center gap-0.5 mt-0.5">
-                        <div className="flex gap-0.5">
+                      <div className="flex flex-col items-center gap-0 mt-0.5">
+                        <div className="flex gap-0.5 flex-wrap justify-center">
                           {Array.from({ length: Math.min(receitaDots, 3) }).map(
                             (_, i) => (
                               <span
                                 key={`r${i}`}
-                                className="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                className="h-1 w-1 rounded-full bg-emerald-500 sm:h-1.5 sm:w-1.5"
                               />
                             )
                           )}
@@ -442,13 +483,21 @@ export default function CalendarioPage() {
                             (_, i) => (
                               <span
                                 key={`d${i}`}
-                                className="h-1.5 w-1.5 rounded-full bg-red-500"
+                                className="h-1 w-1 rounded-full bg-red-500 sm:h-1.5 sm:w-1.5"
                               />
                             )
                           )}
+                          {Array.from({
+                            length: Math.min(vencimentoDots, 3),
+                          }).map((_, i) => (
+                            <span
+                              key={`v${i}`}
+                              className="h-1 w-1 rounded-full bg-yellow-400 sm:h-1.5 sm:w-1.5"
+                            />
+                          ))}
                         </div>
                         {resumo && (
-                          <span className="text-[9px] sm:text-[10px] font-medium leading-none text-muted-foreground truncate max-w-full">
+                          <span className="text-[8px] sm:text-[10px] font-medium leading-none text-muted-foreground truncate max-w-full hidden sm:block">
                             {resumo.totalReceita > 0 && resumo.totalDespesa > 0
                               ? `${formatarMoedaShort(resumo.totalReceita - resumo.totalDespesa)}`
                               : resumo.totalReceita > 0
@@ -463,22 +512,45 @@ export default function CalendarioPage() {
               })}
             </motion.div>
 
+            {/* Empty state */}
+            {!temEventosNoMes && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-12"
+              >
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                  <CalendarDays className="h-7 w-7 text-muted-foreground/50" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Nenhum evento este mes
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Receitas e despesas aparecerao aqui
+                </p>
+              </motion.div>
+            )}
+
             {/* Legend */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="flex items-center justify-center gap-4 mt-4 text-xs text-muted-foreground"
+              className="flex items-center justify-center gap-3 mt-4 text-[10px] text-muted-foreground sm:gap-4 sm:text-xs"
             >
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 Receita
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-red-500" />
                 Despesa
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                Vencimento
+              </div>
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-red-200 border border-red-300" />
                 Atrasado
               </div>
@@ -521,11 +593,11 @@ export default function CalendarioPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -50 }}
                       transition={{ delay: index * 0.03 }}
-                      className="flex items-center gap-3 rounded-xl border bg-card p-4"
+                      className="flex items-center gap-3 rounded-xl border bg-card p-3 sm:p-4"
                     >
                       {/* Type Icon */}
                       <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 ${
                           evento.tipo === "receita"
                             ? "bg-emerald-100 text-emerald-600"
                             : "bg-red-100 text-red-600"
@@ -616,15 +688,4 @@ export default function CalendarioPage() {
       </Sheet>
     </div>
   );
-}
-
-function formatarMoedaShort(valor: number): string {
-  if (Math.abs(valor) >= 1000) {
-    return `${(valor / 1000).toFixed(1)}k`;
-  }
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(valor);
 }

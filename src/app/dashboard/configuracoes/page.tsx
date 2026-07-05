@@ -1059,8 +1059,8 @@ export default function ConfiguracoesPage() {
                         answer="Sim! O LUCRIO é um PWA e pode ser instalado no seu celular pela tela de Configurações > Ajuda."
                       />
                       <FaqItem
-                        question="Como gerar uma proposta comercial?"
-                        answer="Acesse a página de Propostas, clique em 'Nova Proposta', adicione os itens e gere o PDF."
+                        question="Como gerar um orcamento?"
+                        answer="Acesse a pagina de Orcamentos, clique em 'Novo Orcamento', adicione os itens e gere o PDF."
                       />
                       <FaqItem
                         question="Como cancelar minha assinatura?"

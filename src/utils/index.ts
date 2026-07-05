@@ -20,11 +20,28 @@ export function toastComDesfazer(
   });
 }
 
-export function formatarMoeda(valor: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(valor);
+export function formatarMoeda(valor: number | string): string {
+  const num = typeof valor === "string" ? parseFloat(valor.replace(/[^\d.,]/g, "").replace(",", ".")) : valor;
+  if (isNaN(num)) return "R$ 0,00";
+  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export function parseMoeda(valor: string): number {
+  if (!valor) return 0;
+  const limpo = valor.replace(/[^\d.,]/g, "").replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(limpo);
+  return isNaN(num) ? 0 : Math.round(num * 100) / 100;
+}
+
+export function formatarInputMoeda(valor: string): string {
+  let numeros = valor.replace(/[^\d]/g, "");
+  numeros = numeros.replace(/^0+(\d)/, "$1");
+  if (!numeros) return "";
+  while (numeros.length < 3) numeros = "0" + numeros;
+  const centavos = numeros.slice(-2);
+  const reais = numeros.slice(0, -2);
+  const reaisFormatado = reais.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${reaisFormatado},${centavos}`;
 }
 
 export function formatarMoedaSemSimbolo(valor: number): string {
@@ -75,14 +92,18 @@ export function formatarCPFCNPJ(valor: string): string {
   return valor;
 }
 
-export function gerarNumeroProposta(): string {
+export function gerarNumeroOrcamento(): string {
   const agora = new Date();
   const ano = agora.getFullYear();
   const mes = String(agora.getMonth() + 1).padStart(2, "0");
   const aleatorio = Math.floor(Math.random() * 9999)
     .toString()
     .padStart(4, "0");
-  return `PROP-${ano}${mes}-${aleatorio}`;
+  return `ORC-${ano}${mes}-${aleatorio}`;
+}
+
+export function gerarNumeroProposta(): string {
+  return gerarNumeroOrcamento();
 }
 
 export function slugify(texto: string): string {
@@ -104,4 +125,35 @@ export function diasRestantes(dataFim: string): number {
   const agora = new Date();
   const diff = fim.getTime() - agora.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+// Previne cliques duplos em botões
+export function criarDebounce<T extends (...args: unknown[]) => unknown>(
+  fn: T,
+  delay: number = 1000
+): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
+
+// Salvamento seguro com retry
+export async function salvarComRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  let lastError: Error | null = null;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+  }
+  throw lastError;
 }
