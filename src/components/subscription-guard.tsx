@@ -1,35 +1,44 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Crown, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/use-subscription";
 
+const DEFAULT_EXCLUDED = ["/dashboard/configuracoes"];
+
 interface SubscriptionGuardProps {
   children: React.ReactNode;
+  excludePaths?: string[];
 }
 
-export default function SubscriptionGuard({ children }: SubscriptionGuardProps) {
+export default function SubscriptionGuard({ children, excludePaths }: SubscriptionGuardProps) {
   const sub = useSubscription();
+  const pathname = usePathname();
+
+  const excluded = excludePaths ?? DEFAULT_EXCLUDED;
+  const isExcluded = excluded.some((p) => pathname === p || pathname?.startsWith(p + "?") || pathname?.startsWith(p + "/"));
 
   if (sub.loading) {
     return null;
   }
 
   const shouldBlock =
-    sub.is_expired ||
-    (sub.is_trial && (sub.days_remaining ?? 0) <= 0) ||
-    (!sub.is_valid && !sub.is_trial);
+    !isExcluded && (
+      sub.is_expired ||
+      (sub.is_trial && (sub.days_remaining ?? 0) <= 0) ||
+      (!sub.is_valid && !sub.is_trial)
+    );
 
   return (
     <div className="relative">
-      {/* Children with blur when blocked */}
       <div className={shouldBlock ? "blur-sm pointer-events-none select-none" : ""}>
         {children}
       </div>
 
-      {/* Overlay */}
       <AnimatePresence>
         {shouldBlock && (
           <motion.div
@@ -62,10 +71,10 @@ export default function SubscriptionGuard({ children }: SubscriptionGuardProps) 
                     <span>Plano atual: <strong>{sub.plan_name}</strong></span>
                   </div>
                   <Button asChild size="lg" className="w-full bg-emerald-600 text-white hover:bg-emerald-700">
-                    <a href="/dashboard/configuracoes?tab=assinatura">
+                    <Link href="/dashboard/configuracoes?tab=assinatura">
                       Renovar Agora
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>

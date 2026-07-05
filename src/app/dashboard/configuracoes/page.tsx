@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda, diasRestantes } from "@/utils";
 import type { Usuario, Negocio, Assinatura } from "@/types/database";
@@ -217,7 +217,11 @@ export default function ConfiguracoesPage() {
     alertasVencimento: true,
     novidades: false,
   });
-  const [activeTab, setActiveTab] = useState("perfil");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams?.get("tab") ?? "perfil";
+    return ["perfil", "negocio", "notificacoes", "assinatura", "ajuda"].includes(tab) ? tab : "perfil";
+  });
 
   useEffect(() => {
     async function carregarDados() {
