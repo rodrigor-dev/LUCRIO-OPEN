@@ -160,43 +160,46 @@ export default function PropostasPage() {
   }, [supabase]);
 
   async function carregarDados() {
-    setCarregando(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      setCarregando(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
+      if (!user) {
+        return;
+      }
+
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
+
+      if (!negocio) {
+        return;
+      }
+
+      const [propostasRes, clientesRes] = await Promise.all([
+        supabase
+          .from("propostas")
+          .select("*, cliente:clientes(nome), itens_proposta(*)")
+          .eq("negocio_id", negocio.id)
+          .order("criado_em", { ascending: false }),
+        supabase
+          .from("clientes")
+          .select("id, nome")
+          .eq("negocio_id", negocio.id)
+          .order("nome"),
+      ]);
+
+      setPropostas(propostasRes.data || []);
+      setClientes(clientesRes.data || []);
+    } catch {
+      toast.error("Erro ao carregar dados");
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
-
-    if (!negocio) {
-      setCarregando(false);
-      return;
-    }
-
-    const [propostasRes, clientesRes] = await Promise.all([
-      supabase
-        .from("propostas")
-        .select("*, cliente:clientes(nome), itens_proposta(*)")
-        .eq("negocio_id", negocio.id)
-        .order("criado_em", { ascending: false }),
-      supabase
-        .from("clientes")
-        .select("id, nome")
-        .eq("negocio_id", negocio.id)
-        .order("nome"),
-    ]);
-
-    setPropostas(propostasRes.data || []);
-    setClientes(clientesRes.data || []);
-    setCarregando(false);
   }
 
   const propostasFiltradas = useMemo(() => {
@@ -383,87 +386,98 @@ export default function PropostasPage() {
 
   async function excluirProposta() {
     if (!propostaDeletando) return;
+    try {
+      await supabase.from("itens_proposta").delete().eq("proposta_id", propostaDeletando.id);
 
-    await supabase.from("itens_proposta").delete().eq("proposta_id", propostaDeletando.id);
+      const { error } = await supabase.from("propostas").delete().eq("id", propostaDeletando.id);
 
-    const { error } = await supabase.from("propostas").delete().eq("id", propostaDeletando.id);
+      if (error) {
+        toast.error("Erro ao excluir orcamento.");
+        return;
+      }
 
-    if (error) {
+      toast.success("Orcamento excluido com sucesso!");
+      setPropostaDeletando(null);
+      carregarDados();
+    } catch {
       toast.error("Erro ao excluir orcamento.");
-      return;
     }
-
-    toast.success("Orcamento excluido com sucesso!");
-    setPropostaDeletando(null);
-    carregarDados();
   }
 
   async function enviarProposta(proposta: Proposta) {
-    const { error } = await supabase
-      .from("propostas")
-      .update({ status: "enviada" })
-      .eq("id", proposta.id);
+    try {
+      const { error } = await supabase
+        .from("propostas")
+        .update({ status: "enviada" })
+        .eq("id", proposta.id);
 
-    if (error) {
+      if (error) {
+        toast.error("Erro ao enviar orcamento.");
+        return;
+      }
+
+      toast.success("Orcamento enviado com sucesso!");
+      carregarDados();
+    } catch {
       toast.error("Erro ao enviar orcamento.");
-      return;
     }
-
-    toast.success("Orcamento enviado com sucesso!");
-    carregarDados();
   }
 
   async function duplicarProposta(proposta: Proposta) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) return;
+      if (!user) return;
 
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
 
-    if (!negocio) return;
+      if (!negocio) return;
 
-    const { data: novaProposta, error } = await supabase
-      .from("propostas")
-      .insert({
-        negocio_id: negocio.id,
-        cliente_id: proposta.cliente_id,
-        numero_proposta: gerarNumeroOrcamento(),
-        validade: proposta.validade,
-        status: "rascunho",
-        subtotal: proposta.subtotal,
-        desconto: proposta.desconto,
-        frete: proposta.frete,
-        total: proposta.total,
-        condicoes_gerais: proposta.condicoes_gerais,
-        observacoes: proposta.observacoes,
-      })
-      .select()
-      .single();
+      const { data: novaProposta, error } = await supabase
+        .from("propostas")
+        .insert({
+          negocio_id: negocio.id,
+          cliente_id: proposta.cliente_id,
+          numero_proposta: gerarNumeroOrcamento(),
+          validade: proposta.validade,
+          status: "rascunho",
+          subtotal: proposta.subtotal,
+          desconto: proposta.desconto,
+          frete: proposta.frete,
+          total: proposta.total,
+          condicoes_gerais: proposta.condicoes_gerais,
+          observacoes: proposta.observacoes,
+        })
+        .select()
+        .single();
 
-    if (error) {
+      if (error) {
+        toast.error("Erro ao duplicar orcamento.");
+        return;
+      }
+
+      if (proposta.itens_proposta && proposta.itens_proposta.length > 0) {
+        const novosItens = proposta.itens_proposta.map((item) => ({
+          proposta_id: novaProposta.id,
+          descricao: item.descricao,
+          quantidade: item.quantidade,
+          valor_unitario: item.valor_unitario,
+          total: item.total,
+        }));
+        await supabase.from("itens_proposta").insert(novosItens);
+      }
+
+      toast.success("Orcamento duplicado com sucesso!");
+      carregarDados();
+    } catch {
       toast.error("Erro ao duplicar orcamento.");
-      return;
     }
-
-    if (proposta.itens_proposta && proposta.itens_proposta.length > 0) {
-      const novosItens = proposta.itens_proposta.map((item) => ({
-        proposta_id: novaProposta.id,
-        descricao: item.descricao,
-        quantidade: item.quantidade,
-        valor_unitario: item.valor_unitario,
-        total: item.total,
-      }));
-      await supabase.from("itens_proposta").insert(novosItens);
-    }
-
-    toast.success("Orcamento duplicado com sucesso!");
-    carregarDados();
   }
 
   return (

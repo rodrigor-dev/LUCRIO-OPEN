@@ -221,62 +221,66 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     async function carregarDados() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/login");
-        return;
+        if (!user) {
+          router.push("/login");
+          return;
+        }
+
+        const { data: usuarioData } = await supabase
+          .from("usuarios")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        const { data: negocioData } = await supabase
+          .from("negocios")
+          .select("*")
+          .eq("usuario_id", user.id)
+          .single();
+
+        const { data: assinaturaData } = await supabase
+          .from("assinaturas")
+          .select("*")
+          .eq("usuario_id", user.id)
+          .order("criado_em", { ascending: false })
+          .limit(1)
+          .single();
+
+        setUsuario(usuarioData);
+        setNegocio(negocioData);
+        setAssinatura(assinaturaData);
+
+        if (usuarioData) {
+          setPerfil({ nome: usuarioData.nome || "", telefone: usuarioData.telefone || "" });
+        }
+
+        if (negocioData) {
+          setNegocioForm({
+            nome: negocioData.nome || "",
+            cnpj_cpf: negocioData.cnpj_cpf || "",
+            telefone: negocioData.telefone || "",
+            email: negocioData.email || "",
+            endereco: {
+              rua: negocioData.endereco?.rua || "",
+              numero: negocioData.endereco?.numero || "",
+              complemento: negocioData.endereco?.complemento || "",
+              bairro: negocioData.endereco?.bairro || "",
+              cidade: negocioData.endereco?.cidade || "",
+              estado: negocioData.endereco?.estado || "",
+              cep: negocioData.endereco?.cep || "",
+            },
+          });
+        }
+      } catch {
+        /* silent */
+      } finally {
+        setCarregando(false);
       }
-
-      const { data: usuarioData } = await supabase
-        .from("usuarios")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      const { data: negocioData } = await supabase
-        .from("negocios")
-        .select("*")
-        .eq("usuario_id", user.id)
-        .single();
-
-      const { data: assinaturaData } = await supabase
-        .from("assinaturas")
-        .select("*")
-        .eq("usuario_id", user.id)
-        .order("criado_em", { ascending: false })
-        .limit(1)
-        .single();
-
-      setUsuario(usuarioData);
-      setNegocio(negocioData);
-      setAssinatura(assinaturaData);
-
-      if (usuarioData) {
-        setPerfil({ nome: usuarioData.nome || "", telefone: usuarioData.telefone || "" });
-      }
-
-      if (negocioData) {
-        setNegocioForm({
-          nome: negocioData.nome || "",
-          cnpj_cpf: negocioData.cnpj_cpf || "",
-          telefone: negocioData.telefone || "",
-          email: negocioData.email || "",
-          endereco: {
-            rua: negocioData.endereco?.rua || "",
-            numero: negocioData.endereco?.numero || "",
-            complemento: negocioData.endereco?.complemento || "",
-            bairro: negocioData.endereco?.bairro || "",
-            cidade: negocioData.endereco?.cidade || "",
-            estado: negocioData.endereco?.estado || "",
-            cep: negocioData.endereco?.cep || "",
-          },
-        });
-      }
-
-      setCarregando(false);
     }
 
     carregarDados();
@@ -918,7 +922,7 @@ export default function ConfiguracoesPage() {
                             <CardHeader className="pb-3">
                               <CardTitle className="text-base flex items-center justify-between">
                                 Mensal
-                                <span className="text-lg font-bold text-primary">R$ 14,99</span>
+                                <span className="text-lg font-bold text-primary">{formatarMoeda(14.99)}</span>
                               </CardTitle>
                               <CardDescription className="text-xs">por mês</CardDescription>
                             </CardHeader>
@@ -970,7 +974,7 @@ export default function ConfiguracoesPage() {
                             <CardHeader className="pb-3">
                               <CardTitle className="text-base flex items-center justify-between">
                                 Anual
-                                <span className="text-lg font-bold text-green-600">R$ 139,99</span>
+                                <span className="text-lg font-bold text-green-600">{formatarMoeda(139.99)}</span>
                               </CardTitle>
                               <CardDescription className="text-xs">por ano (R$ 11,67/mês)</CardDescription>
                             </CardHeader>

@@ -9,6 +9,7 @@ import type { Receita as ReceitaDB } from "@/types/database";
 import {
   formatarMoeda,
   formatarData,
+  formatarInputMoeda,
   toastComDesfazer,
 } from "@/utils";
 import {
@@ -115,16 +116,6 @@ function parseMoedaParaNumero(valor: string): number {
   const limpo = valor.replace(/[^\d,]/g, "").replace(",", ".");
   const num = parseFloat(limpo);
   return isNaN(num) ? 0 : num;
-}
-
-function formatarInputMoeda(valor: string): string {
-  const apenasNumeros = valor.replace(/\D/g, "");
-  if (apenasNumeros.length === 0) return "";
-  const centavos = apenasNumeros.padStart(3, "0");
-  const inteiros = centavos.slice(0, -2);
-  const decimal = centavos.slice(-2);
-  const inteirosFormatados = inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `R$ ${inteirosFormatados},${decimal}`;
 }
 
 export default function ReceitasPage() {
@@ -317,7 +308,7 @@ export default function ReceitasPage() {
   function handleValorBlur() {
     const numero = parseMoedaParaNumero(valorFormatado);
     if (numero > 0) {
-      setValorFormatado(formatarMoeda(numero).replace("R$", "R$"));
+      setValorFormatado(formatarMoeda(numero));
     }
   }
 

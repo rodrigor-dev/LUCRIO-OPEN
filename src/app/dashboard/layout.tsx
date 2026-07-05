@@ -82,30 +82,35 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/login");
-        return;
+        if (!user) {
+          router.push("/login");
+          return;
+        }
+
+        const { data: usuarioData } = await supabase
+          .from("usuarios")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        const { data: negocioData } = await supabase
+          .from("negocios")
+          .select("*")
+          .eq("usuario_id", user.id)
+          .single();
+
+        setUsuario(usuarioData);
+        setNegocio(negocioData);
+      } catch {
+        /* silent */
+      } finally {
+        setLoading(false);
       }
-
-      const { data: usuarioData } = await supabase
-        .from("usuarios")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      const { data: negocioData } = await supabase
-        .from("negocios")
-        .select("*")
-        .eq("usuario_id", user.id)
-        .single();
-
-      setUsuario(usuarioData);
-      setNegocio(negocioData);
-      setLoading(false);
     }
 
     loadUser();

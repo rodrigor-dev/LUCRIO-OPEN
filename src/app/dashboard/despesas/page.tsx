@@ -9,7 +9,7 @@ import {
   STATUS_VARIANTS,
 } from "@/lib/constants";
 import type { Despesa as DespesaDB } from "@/types/database";
-import { formatarMoeda, toastComDesfazer } from "@/utils";
+import { formatarMoeda, formatarInputMoeda, parseMoeda, toastComDesfazer } from "@/utils";
 import {
   atualizarStatusVencidos,
   alterarStatusEmMassa,
@@ -118,23 +118,6 @@ const FORM_DEFAULTS = {
   cartao_parcelas: "12",
   cartao_valor_total: "",
 };
-
-function formatarMoedaInput(valor: string): string {
-  const apenasNumeros = valor.replace(/[^\d]/g, "");
-  if (!apenasNumeros) return "";
-  const centavos = parseInt(apenasNumeros, 10);
-  const reais = centavos / 100;
-  return reais.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function parseMoeda(valor: string): number {
-  const limpo = valor.replace(/[^\d]/g, "");
-  if (!limpo) return 0;
-  return parseInt(limpo, 10) / 100;
-}
 
 export default function DespesasPage() {
   const supabase = useSupabase();
@@ -291,7 +274,7 @@ export default function DespesasPage() {
       if (valorRef.current) valorRef.current.value = "";
       return;
     }
-    const formatado = formatarMoedaInput(apenasDigitos);
+    const formatado = formatarInputMoeda(apenasDigitos);
     setForm({ ...form, valor: apenasDigitos });
     if (valorRef.current) valorRef.current.value = `R$ ${formatado}`;
   }
@@ -304,7 +287,7 @@ export default function DespesasPage() {
       e.target.value = "";
       return;
     }
-    const formatado = formatarMoedaInput(apenasDigitos);
+    const formatado = formatarInputMoeda(apenasDigitos);
     setForm({ ...form, cartao_valor_total: apenasDigitos });
     e.target.value = `R$ ${formatado}`;
   }
@@ -828,7 +811,7 @@ export default function DespesasPage() {
                   }`}
                   onClick={() => abrirDetalhe(d)}
                 >
-                  <CardContent className="p-3">
+                  <CardContent className="relative p-3">
                     <div className="flex items-start gap-3">
                       <div
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm"
@@ -1272,7 +1255,7 @@ export default function DespesasPage() {
                   type="text"
                   inputMode="decimal"
                   defaultValue={
-                    form.valor ? `R$ ${formatarMoedaInput(form.valor)}` : ""
+                    form.valor ? `R$ ${formatarInputMoeda(form.valor)}` : ""
                   }
                   onChange={handleValorChange}
                   placeholder="R$ 0,00"
@@ -1458,7 +1441,7 @@ export default function DespesasPage() {
                           inputMode="decimal"
                           defaultValue={
                             form.cartao_valor_total
-                              ? `R$ ${formatarMoedaInput(form.cartao_valor_total)}`
+                              ? `R$ ${formatarInputMoeda(form.cartao_valor_total)}`
                               : ""
                           }
                           onChange={handleValorCartaoChange}
