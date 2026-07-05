@@ -19,20 +19,28 @@ import {
   alterarStatusEmMassa,
   excluirEmMassa,
 } from "@/services/status.service";
+import { InputMoeda } from "@/components/ui/input-moeda";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetFooter,
-  SheetClose,
 } from "@/components/ui/sheet";
 import {
   Dialog,
@@ -72,9 +80,9 @@ import {
   Clock,
   AlertTriangle,
   ChevronRight,
+  ChevronLeft,
   CheckCheck,
   X,
-  SlidersHorizontal,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -110,6 +118,13 @@ const VALUE_COLORS: Record<string, string> = {
   pendente: "text-foreground",
   atrasado: "text-red-600",
   cancelado: "text-muted-foreground",
+};
+
+const STATUS_BADGE_COLORS: Record<string, string> = {
+  pago: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  pendente: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  atrasado: "bg-red-100 text-red-700 border-red-200",
+  cancelado: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
 function parseMoedaParaNumero(valor: string): number {
@@ -314,8 +329,7 @@ export default function ReceitasPage() {
 
   function setValorInicial(valor: number) {
     if (valor > 0) {
-      const formatado = formatarMoeda(valor);
-      setValorFormatado(formatado);
+      setValorFormatado(formatarMoeda(valor));
     } else {
       setValorFormatado("");
     }
@@ -673,15 +687,9 @@ export default function ReceitasPage() {
   }
 
   function statusBadge(status: string) {
-    const colors: Record<string, string> = {
-      pago: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      pendente: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      atrasado: "bg-red-100 text-red-700 border-red-200",
-      cancelado: "bg-gray-100 text-gray-500 border-gray-200",
-    };
     return (
       <span
-        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${colors[status] || colors.pendente}`}
+        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium sm:text-xs ${STATUS_BADGE_COLORS[status] || STATUS_BADGE_COLORS.pendente}`}
       >
         {STATUS_LABELS[status] || status}
       </span>
@@ -689,19 +697,19 @@ export default function ReceitasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-28 md:pb-8">
+    <div className="min-h-[100dvh] overflow-hidden bg-background pb-28 pt-[env(safe-area-inset-top)] md:pb-8">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-4 py-3 md:py-4">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight md:text-xl">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-bold tracking-tight sm:text-xl">
               Receitas
             </h1>
-            <p className="text-xs text-muted-foreground md:text-sm">
+            <p className="text-xs text-muted-foreground sm:text-sm">
               Fluxo de caixa entradas
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {modoSelecao && (
               <Button
                 variant="ghost"
@@ -718,7 +726,7 @@ export default function ReceitasPage() {
                 variant="outline"
                 size="sm"
                 onClick={iniciarModoSelecao}
-                className="hidden md:flex h-9 px-3 text-xs"
+                className="hidden h-9 px-3 text-xs md:flex"
               >
                 <CheckCheck className="mr-1 h-3.5 w-3.5" />
                 Selecionar
@@ -728,7 +736,7 @@ export default function ReceitasPage() {
               <Button
                 onClick={abrirNovo}
                 size="sm"
-                className="hidden md:flex bg-emerald-600 hover:bg-emerald-700 h-9 px-3 text-xs"
+                className="hidden h-9 bg-emerald-600 px-3 text-xs hover:bg-emerald-700 md:flex"
               >
                 <Plus className="mr-1 h-3.5 w-3.5" />
                 Novo
@@ -738,100 +746,115 @@ export default function ReceitasPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="w-full px-4 pt-4">
         {carregando ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            {/* KPI Skeleton */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl border bg-card p-4"
-                >
-                  <Skeleton className="mb-2 h-3 w-16" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
+                <Card key={i}>
+                  <CardContent className="p-3 sm:p-4">
+                    <Skeleton className="mb-2 h-3 w-16" />
+                    <Skeleton className="h-5 w-24" />
+                  </CardContent>
+                </Card>
               ))}
             </div>
-            <Skeleton className="h-11 w-full rounded-xl" />
+            {/* Search Skeleton */}
+            <Skeleton className="h-11 w-full" />
+            {/* Filter Skeleton */}
             <div className="flex gap-2 overflow-hidden">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-8 w-24 shrink-0 rounded-full" />
               ))}
             </div>
+            {/* Card Skeleton */}
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-xl border bg-card p-4">
-                  <Skeleton className="h-4 w-4 shrink-0 rounded" />
-                  <Skeleton className="h-3 w-3 shrink-0 rounded-full" />
-                  <Skeleton className="h-4 w-32 flex-1" />
-                  <Skeleton className="h-4 w-20 shrink-0" />
-                </div>
+                <Card key={i}>
+                  <CardContent className="flex items-center gap-3 p-3">
+                    <Skeleton className="h-2.5 w-2.5 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <Skeleton className="h-3.5 w-32" />
+                      <Skeleton className="h-2.5 w-20" />
+                    </div>
+                    <Skeleton className="h-4 w-16 shrink-0" />
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
         ) : (
           <>
-            {/* KPI Cards - 2x2 Grid */}
+            {/* KPI Cards - 2x2 grid on mobile, 4-col on desktop */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-2 gap-3"
+              className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4"
             >
-              <div className="rounded-2xl border bg-card p-3 md:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600 md:h-3.5 md:w-3.5" />
+              <Card className="overflow-hidden">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-emerald-100 p-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 sm:h-5 sm:w-5" />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+                      Recebido
+                    </span>
                   </div>
-                  <span className="text-[10px] font-medium text-muted-foreground md:text-xs">
-                    Recebido
-                  </span>
-                </div>
-                <p className="text-base font-bold text-emerald-600 md:text-lg">
-                  {formatarMoeda(kpis.recebido)}
-                </p>
-              </div>
+                  <p className="mt-1.5 text-lg font-bold text-emerald-600 sm:text-xl">
+                    {formatarMoeda(kpis.recebido)}
+                  </p>
+                </CardContent>
+              </Card>
 
-              <div className="rounded-2xl border bg-card p-3 md:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
-                    <Clock className="h-3 w-3 text-blue-600 md:h-3.5 md:w-3.5" />
+              <Card className="overflow-hidden">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-blue-100 p-1.5">
+                      <Clock className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+                      A receber
+                    </span>
                   </div>
-                  <span className="text-[10px] font-medium text-muted-foreground md:text-xs">
-                    A receber
-                  </span>
-                </div>
-                <p className="text-base font-bold text-blue-600 md:text-lg">
-                  {formatarMoeda(kpis.aReceber)}
-                </p>
-              </div>
+                  <p className="mt-1.5 text-lg font-bold text-blue-600 sm:text-xl">
+                    {formatarMoeda(kpis.aReceber)}
+                  </p>
+                </CardContent>
+              </Card>
 
-              <div className="rounded-2xl border bg-card p-3 md:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100">
-                    <AlertTriangle className="h-3 w-3 text-red-600 md:h-3.5 md:w-3.5" />
+              <Card className="overflow-hidden">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-red-100 p-1.5">
+                      <AlertTriangle className="h-4 w-4 text-red-600 sm:h-5 sm:w-5" />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+                      Atrasado
+                    </span>
                   </div>
-                  <span className="text-[10px] font-medium text-muted-foreground md:text-xs">
-                    Atrasado
-                  </span>
-                </div>
-                <p className="text-base font-bold text-red-600 md:text-lg">
-                  {formatarMoeda(kpis.atrasado)}
-                </p>
-              </div>
+                  <p className="mt-1.5 text-lg font-bold text-red-600 sm:text-xl">
+                    {formatarMoeda(kpis.atrasado)}
+                  </p>
+                </CardContent>
+              </Card>
 
-              <div className="rounded-2xl border bg-card p-3 md:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted">
-                    <DollarSign className="h-3 w-3 text-muted-foreground md:h-3.5 md:w-3.5" />
+              <Card className="overflow-hidden">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-muted p-1.5">
+                      <DollarSign className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+                      Total do mês
+                    </span>
                   </div>
-                  <span className="text-[10px] font-medium text-muted-foreground md:text-xs">
-                    Total do mês
-                  </span>
-                </div>
-                <p className="text-base font-bold md:text-lg">
-                  {formatarMoeda(kpis.totalMes)}
-                </p>
-              </div>
+                  <p className="mt-1.5 text-lg font-bold sm:text-xl">
+                    {formatarMoeda(kpis.totalMes)}
+                  </p>
+                </CardContent>
+              </Card>
             </motion.div>
 
             {/* Search */}
@@ -860,17 +883,17 @@ export default function ReceitasPage() {
               </div>
             </motion.div>
 
-            {/* Filter Pills */}
+            {/* Filter Pills - horizontal scroll only on the strip */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-3 -mx-4 overflow-x-auto px-4"
+              className="mt-3 -mx-4 overflow-x-auto px-4 scrollbar-hide"
             >
               <div className="flex gap-2 pb-2" style={{ minWidth: "max-content" }}>
                 <button
                   onClick={() => handleFiltraStatus("todos")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
                     filtroStatus === "todos" && !filtroPeriodo
                       ? "border-foreground bg-foreground text-background"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -882,7 +905,7 @@ export default function ReceitasPage() {
 
                 <button
                   onClick={() => handleFiltraStatus("pago")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
                     filtroStatus === "pago"
                       ? "border-emerald-600 bg-emerald-600 text-white"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -894,7 +917,7 @@ export default function ReceitasPage() {
 
                 <button
                   onClick={() => handleFiltraStatus("pendente")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
                     filtroStatus === "pendente"
                       ? "border-yellow-500 bg-yellow-500 text-white"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -906,7 +929,7 @@ export default function ReceitasPage() {
 
                 <button
                   onClick={() => handleFiltraStatus("atrasado")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
                     filtroStatus === "atrasado"
                       ? "border-red-600 bg-red-600 text-white"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -920,7 +943,7 @@ export default function ReceitasPage() {
 
                 <button
                   onClick={() => handleFiltraPeriodo("este_mes")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
                     filtroPeriodo === "este_mes"
                       ? "border-foreground bg-foreground text-background"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -931,7 +954,7 @@ export default function ReceitasPage() {
 
                 <button
                   onClick={() => handleFiltraPeriodo("proximo_mes")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
                     filtroPeriodo === "proximo_mes"
                       ? "border-foreground bg-foreground text-background"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -942,7 +965,7 @@ export default function ReceitasPage() {
 
                 <button
                   onClick={() => handleFiltraPeriodo("ultimos_30_dias")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
                     filtroPeriodo === "ultimos_30_dias"
                       ? "border-foreground bg-foreground text-background"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
@@ -953,33 +976,35 @@ export default function ReceitasPage() {
               </div>
             </motion.div>
 
-            {/* Desktop Bulk Selection Header */}
-            {receitasFiltradas.length > 0 && modoSelecao && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-2 flex items-center justify-between py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={
-                      selecionadas.size === receitasFiltradas.length &&
-                      receitasFiltradas.length > 0
-                    }
-                    onCheckedChange={toggleTodasSelecao}
-                  />
+            {/* Bulk Selection Header */}
+            <AnimatePresence>
+              {receitasFiltradas.length > 0 && modoSelecao && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-2 flex items-center justify-between overflow-hidden py-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={
+                        selecionadas.size === receitasFiltradas.length &&
+                        receitasFiltradas.length > 0
+                      }
+                      onCheckedChange={toggleTodasSelecao}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {selecionadas.size > 0
+                        ? `${selecionadas.size} selecionada(s)`
+                        : "Selecionar todas"}
+                    </span>
+                  </div>
                   <span className="text-xs text-muted-foreground">
-                    {selecionadas.size > 0
-                      ? `${selecionadas.size} selecionada(s)`
-                      : "Selecionar todas"}
+                    {receitasFiltradas.length} resultado(s)
                   </span>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {receitasFiltradas.length} resultado(s)
-                </span>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {receitasFiltradas.length > 0 && !modoSelecao && (
               <div className="mt-3 flex items-center justify-end">
@@ -989,164 +1014,47 @@ export default function ReceitasPage() {
               </div>
             )}
 
-            {/* Desktop Table (md+) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="mt-2 hidden md:block"
-            >
-              {receitasFiltradas.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                    <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
-                  </div>
-                  <h3 className="mb-1 text-base font-semibold">
-                    Nenhuma receita encontrada
-                  </h3>
-                  <p className="mb-4 text-center text-sm text-muted-foreground">
-                    {busca || filtroStatus !== "todos" || filtroPeriodo
-                      ? "Tente ajustar os filtros"
-                      : "Adicione sua primeira receita"}
-                  </p>
-                  {!busca && filtroStatus === "todos" && !filtroPeriodo && (
-                    <Button
-                      onClick={abrirNovo}
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <Plus className="mr-1 h-4 w-4" />
-                      Adicionar Receita
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-hidden rounded-xl border">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50 text-left text-xs font-medium text-muted-foreground">
-                          {modoSelecao && <th className="w-10 px-3 py-2.5" />}
-                          <th className="px-3 py-2.5">Descrição</th>
-                          <th className="px-3 py-2.5">Cliente</th>
-                          <th className="px-3 py-2.5">Data</th>
-                          <th className="px-3 py-2.5">Vencimento</th>
-                          <th className="px-3 py-2.5">Status</th>
-                          <th className="px-3 py-2.5 text-right">Valor</th>
-                          <th className="w-10 px-3 py-2.5" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <AnimatePresence mode="popLayout">
-                          {paginatedItems.map((receita, index) => (
-                            <motion.tr
-                              key={receita.id}
-                              layout
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, x: -50 }}
-                              transition={{ delay: index * 0.01 }}
-                              onClick={() => abrirDrawer(receita)}
-                              className={`cursor-pointer border-b transition-colors hover:bg-muted/30 ${
-                                selecionadas.has(receita.id)
-                                  ? "bg-emerald-50/50"
-                                  : ""
-                              } ${index % 2 === 0 ? "" : "bg-muted/20"}`}
-                            >
-                              {modoSelecao && (
-                                <td className="px-3 py-3">
-                                  <Checkbox
-                                    checked={selecionadas.has(receita.id)}
-                                    onCheckedChange={() =>
-                                      toggleSelecao(receita.id)
-                                    }
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                </td>
-                              )}
-                              <td className="px-3 py-3">
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_COLORS[receita.status]}`}
-                                  />
-                                  <span className="font-medium">
-                                    {receita.descricao}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-3 text-muted-foreground">
-                                {receita.cliente?.nome || "-"}
-                              </td>
-                              <td className="px-3 py-3 text-muted-foreground">
-                                {formatarData(receita.data)}
-                              </td>
-                              <td className="px-3 py-3 text-muted-foreground">
-                                {receita.data_vencimento
-                                  ? formatarData(receita.data_vencimento)
-                                  : "-"}
-                              </td>
-                              <td className="px-3 py-3">
-                                {statusBadge(receita.status)}
-                              </td>
-                              <td className="px-3 py-3 text-right">
-                                <span
-                                  className={`font-bold ${VALUE_COLORS[receita.status]}`}
-                                >
-                                  {formatarMoeda(receita.valor)}
-                                </span>
-                              </td>
-                              <td className="px-3 py-3">
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                              </td>
-                            </motion.tr>
-                          ))}
-                        </AnimatePresence>
-                      </tbody>
-                    </table>
-                  </div>
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    onPageChange={goToPage}
-                  />
-                </>
-              )}
-            </motion.div>
-
-            {/* Mobile Cards (< md) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="mt-2 space-y-2 md:hidden"
-            >
-              {receitasFiltradas.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                    <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
-                  </div>
-                  <h3 className="mb-1 text-base font-semibold">
-                    Nenhuma receita encontrada
-                  </h3>
-                  <p className="mb-4 text-center text-sm text-muted-foreground">
-                    {busca || filtroStatus !== "todos" || filtroPeriodo
-                      ? "Tente ajustar os filtros"
-                      : "Adicione sua primeira receita"}
-                  </p>
-                  {!busca && filtroStatus === "todos" && !filtroPeriodo && (
-                    <Button
-                      onClick={abrirNovo}
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <Plus className="mr-1 h-4 w-4" />
-                      Adicionar Receita
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <>
+            {/* Empty State */}
+            {receitasFiltradas.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-4"
+              >
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
+                    </div>
+                    <h3 className="mb-1.5 text-base font-semibold">
+                      Nenhuma receita encontrada
+                    </h3>
+                    <p className="mb-4 text-center text-sm text-muted-foreground">
+                      {busca || filtroStatus !== "todos" || filtroPeriodo
+                        ? "Tente ajustar os filtros"
+                        : "Adicione sua primeira receita"}
+                    </p>
+                    {!busca && filtroStatus === "todos" && !filtroPeriodo && (
+                      <Button
+                        onClick={abrirNovo}
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar Receita
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <>
+                {/* Mobile Cards (< md) */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-2 space-y-2 md:hidden"
+                >
                   <AnimatePresence mode="popLayout">
                     {paginatedItems.map((receita, index) => (
                       <motion.div
@@ -1157,61 +1065,161 @@ export default function ReceitasPage() {
                         exit={{ opacity: 0, x: -50 }}
                         transition={{ delay: index * 0.02 }}
                         onClick={() => abrirDrawer(receita)}
-                        className={`flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors ${
+                        className={`cursor-pointer rounded-lg border p-3 transition-colors ${
                           selecionadas.has(receita.id)
                             ? "border-emerald-500 bg-emerald-50/50"
                             : ""
                         }`}
                       >
-                        {modoSelecao && (
-                          <Checkbox
-                            checked={selecionadas.has(receita.id)}
-                            onCheckedChange={() => toggleSelecao(receita.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-5 w-5 shrink-0"
+                        <div className="flex items-start gap-3">
+                          {modoSelecao && (
+                            <Checkbox
+                              checked={selecionadas.has(receita.id)}
+                              onCheckedChange={() => toggleSelecao(receita.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="mt-0.5 h-5 w-5 shrink-0"
+                            />
+                          )}
+
+                          <div
+                            className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[receita.status] || STATUS_DOT_COLORS.pendente}`}
                           />
-                        )}
 
-                        <div
-                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[receita.status] || STATUS_DOT_COLORS.pendente}`}
-                        />
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold">
-                            {receita.descricao}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {receita.cliente?.nome && (
-                              <span className="truncate">
-                                {receita.cliente.nome}
+                          <div className="min-w-0 flex-1 gap-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="min-w-0 truncate text-sm font-semibold">
+                                {receita.descricao}
+                              </p>
+                              <span
+                                className={`shrink-0 text-sm font-bold ${VALUE_COLORS[receita.status] || ""}`}
+                              >
+                                {formatarMoeda(receita.valor)}
                               </span>
-                            )}
-                            {!receita.cliente?.nome && (
-                              <span>{formatarData(receita.data)}</span>
-                            )}
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                                {receita.cliente?.nome || "Sem cliente"}
+                              </span>
+                              <span className="shrink-0 text-[11px] text-muted-foreground">
+                                {formatarData(receita.data)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex shrink-0 items-center gap-2">
-                          <span
-                            className={`text-sm font-bold ${VALUE_COLORS[receita.status] || ""}`}
-                          >
-                            {formatarMoeda(receita.valor)}
-                          </span>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
                         </div>
                       </motion.div>
                     ))}
                   </AnimatePresence>
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    onPageChange={goToPage}
-                  />
-                </>
-              )}
-            </motion.div>
+                  {totalPages > 1 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalItems}
+                      onPageChange={goToPage}
+                    />
+                  )}
+                </motion.div>
+
+                {/* Desktop Table (md+) */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-3 hidden md:block"
+                >
+                  <div className="overflow-x-auto rounded-xl border">
+                    <Table className="min-w-[700px]">
+                      <TableHeader>
+                        <TableRow>
+                          {modoSelecao && <TableHead className="w-10" />}
+                          <TableHead className="w-8" />
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Cliente</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Vencimento</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="w-10" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <AnimatePresence mode="popLayout">
+                          {paginatedItems.map((receita, index) => (
+                            <motion.tr
+                              key={receita.id}
+                              layout
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, x: -50 }}
+                              transition={{ delay: index * 0.01 }}
+                              onClick={() => abrirDrawer(receita)}
+                              className={`cursor-pointer transition-colors hover:bg-muted/30 ${
+                                selecionadas.has(receita.id) ? "bg-emerald-50/50" : ""
+                              } ${index % 2 === 0 ? "" : "bg-muted/20"}`}
+                            >
+                              {modoSelecao && (
+                                <TableCell className="w-10 py-3">
+                                  <Checkbox
+                                    checked={selecionadas.has(receita.id)}
+                                    onCheckedChange={() =>
+                                      toggleSelecao(receita.id)
+                                    }
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </TableCell>
+                              )}
+                              <TableCell className="w-8 py-3">
+                                <div
+                                  className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT_COLORS[receita.status]}`}
+                                />
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <span className="font-medium">
+                                  {receita.descricao}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-3 text-muted-foreground">
+                                {receita.cliente?.nome || "-"}
+                              </TableCell>
+                              <TableCell className="py-3 text-muted-foreground">
+                                {formatarData(receita.data)}
+                              </TableCell>
+                              <TableCell className="py-3 text-muted-foreground">
+                                {receita.data_vencimento
+                                  ? formatarData(receita.data_vencimento)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="py-3">
+                                {statusBadge(receita.status)}
+                              </TableCell>
+                              <TableCell className="py-3 text-right">
+                                <span
+                                  className={`font-bold ${VALUE_COLORS[receita.status]}`}
+                                >
+                                  {formatarMoeda(receita.valor)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="w-10 py-3">
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              </TableCell>
+                            </motion.tr>
+                          ))}
+                        </AnimatePresence>
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {totalPages > 1 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalItems}
+                      onPageChange={goToPage}
+                    />
+                  )}
+                </motion.div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -1221,12 +1229,17 @@ export default function ReceitasPage() {
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.3 }}
-          className="fixed bottom-6 right-4 z-40 md:hidden"
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 25,
+            delay: 0.3,
+          }}
+          className="fixed bottom-20 right-4 z-40 pb-[env(safe-area-inset-bottom)] md:hidden"
         >
           <Button
             onClick={abrirNovo}
-            className="h-14 w-14 rounded-full bg-emerald-600 p-0 shadow-lg hover:bg-emerald-700 active:scale-95 transition-transform"
+            className="h-14 w-14 rounded-full bg-emerald-600 p-0 shadow-lg transition-transform hover:bg-emerald-700 active:scale-95"
           >
             <Plus className="h-6 w-6" />
           </Button>
@@ -1241,6 +1254,7 @@ export default function ReceitasPage() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden"
+            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
           >
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm font-medium">
@@ -1497,7 +1511,7 @@ export default function ReceitasPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[500px]">
+        <DialogContent className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl sm:rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-base md:text-lg">
               {editando ? "Editar Receita" : "Nova Receita"}
@@ -1508,8 +1522,9 @@ export default function ReceitasPage() {
                 : "Preencha os dados para adicionar uma nova receita"}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-4 pb-4">
+            {/* Descrição */}
+            <div className="space-y-1.5">
               <Label htmlFor="descricao" className="text-xs md:text-sm">
                 Descrição *
               </Label>
@@ -1521,35 +1536,28 @@ export default function ReceitasPage() {
                 }
                 placeholder="Ex: Serviço de instalação"
                 required
-                className="h-11 w-full text-sm"
+                className="h-11 w-full min-w-0 text-sm"
               />
             </div>
 
+            {/* Valor + Data */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="valor" className="text-xs md:text-sm">
                   Valor (R$) *
                 </Label>
-                <Input
-                  ref={valorInputRef}
+                <InputMoeda
                   id="valor"
-                  type="text"
-                  inputMode="decimal"
-                  value={valorFormatado}
-                  onChange={handleValorChange}
-                  onBlur={handleValorBlur}
-                  onFocus={(e) => {
-                    const num = parseMoedaParaNumero(e.target.value);
-                    if (num > 0) {
-                      setValorFormatado(String(num).replace(".", ","));
-                    }
+                  value={parseMoedaParaNumero(valorFormatado)}
+                  onChange={(val) => {
+                    setValorFormatado(val > 0 ? formatarMoeda(val) : "");
+                    setForm({ ...form, valor: val > 0 ? String(val) : "" });
                   }}
                   placeholder="R$ 0,00"
-                  required
-                  className="h-11 w-full text-sm"
+                  className="h-11 w-full min-w-0 text-sm"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="data" className="text-xs md:text-sm">
                   Data *
                 </Label>
@@ -1561,13 +1569,14 @@ export default function ReceitasPage() {
                     setForm({ ...form, data: e.target.value })
                   }
                   required
-                  className="h-11 w-full text-sm"
+                  className="h-11 w-full min-w-0 text-sm"
                 />
               </div>
             </div>
 
+            {/* Vencimento + Pagamento */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="data_vencimento" className="text-xs md:text-sm">
                   Data de Vencimento
                 </Label>
@@ -1578,10 +1587,10 @@ export default function ReceitasPage() {
                   onChange={(e) =>
                     setForm({ ...form, data_vencimento: e.target.value })
                   }
-                  className="h-11 w-full text-sm"
+                  className="h-11 w-full min-w-0 text-sm"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="data_pagamento" className="text-xs md:text-sm">
                   Data de Pagamento
                 </Label>
@@ -1592,13 +1601,14 @@ export default function ReceitasPage() {
                   onChange={(e) =>
                     setForm({ ...form, data_pagamento: e.target.value })
                   }
-                  className="h-11 w-full text-sm"
+                  className="h-11 w-full min-w-0 text-sm"
                 />
               </div>
             </div>
 
+            {/* Forma Pgto + Status */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-xs md:text-sm">Forma de Pagamento</Label>
                 <Select
                   value={form.forma_pagamento}
@@ -1606,7 +1616,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, forma_pagamento: value })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1618,7 +1628,7 @@ export default function ReceitasPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-xs md:text-sm">Status</Label>
                 <Select
                   value={form.status}
@@ -1626,7 +1636,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, status: value })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1638,8 +1648,9 @@ export default function ReceitasPage() {
               </div>
             </div>
 
+            {/* Cliente + Recorrência */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-xs md:text-sm">Cliente</Label>
                 <Select
                   value={form.cliente_id}
@@ -1647,7 +1658,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, cliente_id: value })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
                     <SelectValue placeholder="Selecione um cliente" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1660,15 +1671,18 @@ export default function ReceitasPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-xs md:text-sm">Recorrência</Label>
                 <Select
                   value={form.recorrencia_tipo}
                   onValueChange={(value) =>
-                    setForm({ ...form, recorrencia_tipo: value as RecorrenciaTipo })
+                    setForm({
+                      ...form,
+                      recorrencia_tipo: value as RecorrenciaTipo,
+                    })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1683,7 +1697,8 @@ export default function ReceitasPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* Observações */}
+            <div className="space-y-1.5">
               <Label htmlFor="observacoes" className="text-xs md:text-sm">
                 Observações
               </Label>
@@ -1695,13 +1710,17 @@ export default function ReceitasPage() {
                 }
                 placeholder="Observações adicionais..."
                 rows={3}
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full min-w-0 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 
-            <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <DialogFooter className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
               <DialogClose asChild>
-                <Button type="button" variant="outline" className="h-11 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full sm:w-auto"
+                >
                   Cancelar
                 </Button>
               </DialogClose>
@@ -1726,7 +1745,7 @@ export default function ReceitasPage() {
         open={!!excluindo}
         onOpenChange={(open) => !open && setExcluindo(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Receita</AlertDialogTitle>
             <AlertDialogDescription>

@@ -414,7 +414,7 @@ export default function ClientesPage() {
   const isRecorrente = receitasRecorrentes.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
@@ -648,7 +648,7 @@ export default function ClientesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-11 w-11"
                             onClick={() => abrirDialogEditar(cliente)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -656,7 +656,7 @@ export default function ClientesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-11 w-11 text-destructive hover:text-destructive"
                             onClick={() => handleExcluirClick(cliente)}
                             disabled={verificandoRecorrencia}
                           >

@@ -165,7 +165,7 @@ export default function FluxoCaixaPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -323,7 +323,7 @@ export default function FluxoCaixaPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="hidden md:block">
+                  <div className="hidden md:block overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -362,7 +362,7 @@ export default function FluxoCaixaPage() {
                                     <TrendingDown className="h-3.5 w-3.5" />
                                   )}
                                 </div>
-                                <span className="font-medium">{mov.descricao}</span>
+                                <span className="font-medium truncate max-w-[200px]">{mov.descricao}</span>
                               </div>
                             </TableCell>
                             <TableCell>

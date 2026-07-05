@@ -150,7 +150,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
           <p className="text-sm text-muted-foreground">Carregando...</p>
@@ -253,7 +253,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <TooltipProvider>
       <SkipToContent />
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-[100dvh] bg-background">
         {/* Desktop Sidebar */}
       <aside
         role="navigation"

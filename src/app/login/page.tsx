@@ -34,28 +34,36 @@ function LoginForm() {
     e.preventDefault();
     setCarregando(true);
     setErro("");
+    try {
+      const resultado = await entrarComEmail(email, senha);
 
-    const resultado = await entrarComEmail(email, senha);
+      if (resultado.erro) {
+        setErro(resultado.erro);
+        return;
+      }
 
-    if (resultado.erro) {
-      setErro(resultado.erro);
+      toast.success("Login realizado com sucesso!");
+      router.push(redirect);
+      router.refresh();
+    } catch {
+      setErro("Erro ao fazer login. Tente novamente.");
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    toast.success("Login realizado com sucesso!");
-    router.push(redirect);
-    router.refresh();
   }
 
   async function handleGoogle() {
     setCarregando(true);
     setErro("");
+    try {
+      const resultado = await entrarComGoogle();
 
-    const resultado = await entrarComGoogle();
-
-    if (resultado.erro) {
-      setErro(resultado.erro);
+      if (resultado.erro) {
+        setErro(resultado.erro);
+      }
+    } catch {
+      setErro("Erro ao autenticar com Google. Tente novamente.");
+    } finally {
       setCarregando(false);
     }
   }

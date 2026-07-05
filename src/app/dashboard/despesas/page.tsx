@@ -3,13 +3,20 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
 import { usePagination } from "@/hooks/use-pagination";
+import { Pagination } from "@/components/pagination";
 import {
   FORMAS_PAGAMENTO_DESPESA,
   STATUS_LABELS,
   STATUS_VARIANTS,
 } from "@/lib/constants";
 import type { Despesa as DespesaDB } from "@/types/database";
-import { formatarMoeda, formatarInputMoeda, parseMoeda, toastComDesfazer } from "@/utils";
+import {
+  formatarMoeda,
+  formatarData,
+  formatarInputMoeda,
+  parseMoeda,
+  toastComDesfazer,
+} from "@/utils";
 import {
   atualizarStatusVencidos,
   alterarStatusEmMassa,
@@ -21,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { InputMoeda } from "@/components/ui/input-moeda";
 import {
   Sheet,
   SheetContent,
@@ -54,15 +62,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
@@ -74,13 +73,13 @@ import {
   Filter,
   CreditCard,
   X,
-  CalendarDays,
   Check,
   AlertTriangle,
-  Eye,
-  ChevronLeft,
   ChevronRight,
   ArrowDownCircle,
+  CheckCheck,
+  Clock,
+  DollarSign,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -102,9 +101,23 @@ type Despesa = DespesaDB & {
 
 type FiltroStatus = "todos" | "pago" | "pendente" | "atrasado";
 
+const STATUS_DOT_COLORS: Record<string, string> = {
+  pago: "bg-emerald-500",
+  pendente: "bg-yellow-500",
+  atrasado: "bg-red-500",
+  cancelado: "bg-gray-400",
+};
+
+const VALUE_COLORS: Record<string, string> = {
+  pago: "text-emerald-600",
+  pendente: "text-foreground",
+  atrasado: "text-red-600",
+  cancelado: "text-muted-foreground",
+};
+
 const FORM_DEFAULTS = {
   descricao: "",
-  valor: "",
+  valor: 0,
   data: new Date().toISOString().split("T")[0],
   data_vencimento: "",
   data_pagamento: "",
@@ -116,7 +129,7 @@ const FORM_DEFAULTS = {
   observacoes: "",
   cartao_tipo: "avista" as "avista" | "parcelado",
   cartao_parcelas: "12",
-  cartao_valor_total: "",
+  cartao_valor_total: 0,
 };
 
 export default function DespesasPage() {
@@ -135,9 +148,11 @@ export default function DespesasPage() {
   const [excluindoBtn, setExcluindoBtn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
-  const [acaoEmMassa, setAcaoEmMassa] = useState<"pagar" | "pendente" | "excluir" | null>(null);
+  const [acaoEmMassa, setAcaoEmMassa] = useState<
+    "pagar" | "pendente" | "excluir" | null
+  >(null);
+  const [processandoMassa, setProcessandoMassa] = useState(false);
   const [form, setForm] = useState(FORM_DEFAULTS);
-  const valorRef = useRef<HTMLInputElement>(null);
 
   const {
     currentPage,
@@ -151,10 +166,11 @@ export default function DespesasPage() {
   } = usePagination<Despesa>({ itemsPerPage: 50 });
 
   const valorParcelaCalculado = useMemo(() => {
-    if (form.forma_pagamento !== "credito" || form.cartao_tipo !== "parcelado") return 0;
-    const total = parseFloat(form.cartao_valor_total);
+    if (form.forma_pagamento !== "credito" || form.cartao_tipo !== "parcelado")
+      return 0;
+    const total = form.cartao_valor_total;
     const parcelas = parseInt(form.cartao_parcelas, 10);
-    if (isNaN(total) || isNaN(parcelas) || parcelas <= 0) return 0;
+    if (isNaN(parcelas) || parcelas <= 0) return 0;
     return total / parcelas;
   }, [form.forma_pagamento, form.cartao_tipo, form.cartao_valor_total, form.cartao_parcelas]);
 
@@ -165,8 +181,10 @@ export default function DespesasPage() {
         d.descricao.toLowerCase().includes(busca.toLowerCase()) ||
         d.categoria?.nome?.toLowerCase().includes(busca.toLowerCase()) ||
         d.fornecedor?.toLowerCase().includes(busca.toLowerCase());
-      const categoriaMatch = filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
-      const statusMatch = filtroStatus === "todos" || d.status === filtroStatus;
+      const categoriaMatch =
+        filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
+      const statusMatch =
+        filtroStatus === "todos" || d.status === filtroStatus;
       return buscaMatch && categoriaMatch && statusMatch;
     });
   }, [despesas, busca, filtroCategoria, filtroStatus]);
@@ -183,7 +201,8 @@ export default function DespesasPage() {
           d.descricao.toLowerCase().includes(busca.toLowerCase()) ||
           d.categoria?.nome?.toLowerCase().includes(busca.toLowerCase()) ||
           d.fornecedor?.toLowerCase().includes(busca.toLowerCase());
-        const categoriaMatch = filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
+        const categoriaMatch =
+          filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
         return buscaMatch && categoriaMatch;
       });
       if (status === "todos") return base.length;
@@ -199,7 +218,8 @@ export default function DespesasPage() {
         d.descricao.toLowerCase().includes(busca.toLowerCase()) ||
         d.categoria?.nome?.toLowerCase().includes(busca.toLowerCase()) ||
         d.fornecedor?.toLowerCase().includes(busca.toLowerCase());
-      const categoriaMatch = filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
+      const categoriaMatch =
+        filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
       return buscaMatch && categoriaMatch;
     });
     return {
@@ -207,8 +227,12 @@ export default function DespesasPage() {
       aPagar: filtered
         .filter((d) => d.status === "pendente" || d.status === "atrasado")
         .reduce((a, d) => a + d.valor, 0),
-      pago: filtered.filter((d) => d.status === "pago").reduce((a, d) => a + d.valor, 0),
-      atrasado: filtered.filter((d) => d.status === "atrasado").reduce((a, d) => a + d.valor, 0),
+      pago: filtered
+        .filter((d) => d.status === "pago")
+        .reduce((a, d) => a + d.valor, 0),
+      atrasado: filtered
+        .filter((d) => d.status === "atrasado")
+        .reduce((a, d) => a + d.valor, 0),
       totalQtd: filtered.length,
       pagoQtd: filtered.filter((d) => d.status === "pago").length,
       aPagarQtd: filtered.filter((d) => d.status === "pendente").length,
@@ -243,7 +267,9 @@ export default function DespesasPage() {
           .order("data", { ascending: false }),
         supabase
           .from("categorias_despesas")
-          .select("id, nome, icone, cor, negocio_id, tipo, is_ativo, criado_em")
+          .select(
+            "id, nome, icone, cor, negocio_id, tipo, is_ativo, criado_em"
+          )
           .or(`negocio_id.eq.${negocio.id},negocio_id.is.null`)
           .order("nome"),
       ]);
@@ -266,32 +292,6 @@ export default function DespesasPage() {
     carregarDados();
   }, [carregarDados]);
 
-  function handleValorChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value;
-    const apenasDigitos = raw.replace(/[^\d]/g, "");
-    if (!apenasDigitos) {
-      setForm({ ...form, valor: "" });
-      if (valorRef.current) valorRef.current.value = "";
-      return;
-    }
-    const formatado = formatarInputMoeda(apenasDigitos);
-    setForm({ ...form, valor: apenasDigitos });
-    if (valorRef.current) valorRef.current.value = `R$ ${formatado}`;
-  }
-
-  function handleValorCartaoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value;
-    const apenasDigitos = raw.replace(/[^\d]/g, "");
-    if (!apenasDigitos) {
-      setForm({ ...form, cartao_valor_total: "" });
-      e.target.value = "";
-      return;
-    }
-    const formatado = formatarInputMoeda(apenasDigitos);
-    setForm({ ...form, cartao_valor_total: apenasDigitos });
-    e.target.value = `R$ ${formatado}`;
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -310,8 +310,7 @@ export default function DespesasPage() {
         .single();
       if (!negocio) return;
 
-      const valorNum = parseMoeda(form.valor);
-      if (isNaN(valorNum) || valorNum <= 0) {
+      if (form.valor <= 0) {
         toast.error("Valor inválido");
         return;
       }
@@ -321,7 +320,7 @@ export default function DespesasPage() {
 
       const basePayload = {
         descricao: form.descricao,
-        valor: valorNum,
+        valor: form.valor,
         data: form.data,
         data_vencimento: form.data_vencimento || null,
         data_pagamento:
@@ -330,7 +329,10 @@ export default function DespesasPage() {
             : null,
         status: form.status,
         forma_pagamento: form.forma_pagamento,
-        categoria_id: form.categoria_id && form.categoria_id !== "none" ? form.categoria_id : null,
+        categoria_id:
+          form.categoria_id && form.categoria_id !== "none"
+            ? form.categoria_id
+            : null,
         fornecedor: form.fornecedor || null,
         comprovante_url: form.comprovante_url || null,
         observacoes: form.observacoes,
@@ -341,7 +343,7 @@ export default function DespesasPage() {
             : null,
         cartao_valor_total:
           isCredito && form.cartao_tipo === "parcelado"
-            ? parseFloat(form.cartao_valor_total)
+            ? form.cartao_valor_total
             : null,
       };
 
@@ -357,7 +359,7 @@ export default function DespesasPage() {
         toast.success("Despesa atualizada com sucesso!");
       } else if (isParcelado) {
         const numParcelas = parseInt(form.cartao_parcelas, 10);
-        const valorTotal = parseFloat(form.cartao_valor_total);
+        const valorTotal = form.cartao_valor_total;
         const valorParcela = valorTotal / numParcelas;
         const grupoId = crypto.randomUUID();
         const dataInicio = new Date(form.data_vencimento || form.data);
@@ -412,7 +414,10 @@ export default function DespesasPage() {
     setExcluindoBtn(true);
     try {
       const despesaDeletada = { ...excluindo };
-      const { error } = await supabase.from("despesas").delete().eq("id", excluindo.id);
+      const { error } = await supabase
+        .from("despesas")
+        .delete()
+        .eq("id", excluindo.id);
       if (error) {
         toast.error("Erro ao excluir despesa");
         return;
@@ -455,7 +460,7 @@ export default function DespesasPage() {
     setEditando(d);
     setForm({
       descricao: d.descricao,
-      valor: String(d.valor),
+      valor: d.valor,
       data: d.data,
       data_vencimento: d.data_vencimento || "",
       data_pagamento: d.data_pagamento || "",
@@ -467,7 +472,7 @@ export default function DespesasPage() {
       observacoes: d.observacoes || "",
       cartao_tipo: d.cartao_tipo || "avista",
       cartao_parcelas: String(d.cartao_parcelas || 12),
-      cartao_valor_total: d.cartao_valor_total ? String(d.cartao_valor_total) : "",
+      cartao_valor_total: d.cartao_valor_total || 0,
     });
     setDetalheAberto(false);
     setFormAberto(true);
@@ -504,6 +509,7 @@ export default function DespesasPage() {
   async function executarAcaoEmMassa() {
     if (selecionados.size === 0 || !acaoEmMassa) return;
     const ids = Array.from(selecionados);
+    setProcessandoMassa(true);
     try {
       if (acaoEmMassa === "excluir") {
         await excluirEmMassa("despesas", ids);
@@ -518,7 +524,25 @@ export default function DespesasPage() {
       carregarDados();
     } catch {
       toast.error("Erro ao executar ação em massa");
+    } finally {
+      setProcessandoMassa(false);
     }
+  }
+
+  function statusBadge(status: string) {
+    const colors: Record<string, string> = {
+      pago: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      pendente: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      atrasado: "bg-red-100 text-red-700 border-red-200",
+      cancelado: "bg-gray-100 text-gray-500 border-gray-200",
+    };
+    return (
+      <span
+        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${colors[status] || colors.pendente}`}
+      >
+        {STATUS_LABELS[status] || status}
+      </span>
+    );
   }
 
   const kpiCards = [
@@ -550,617 +574,736 @@ export default function DespesasPage() {
       label: "Atrasado",
       valor: totais.atrasado,
       qtd: totais.atrasadoQtd,
-      icon: AlertTriangle,
+      icon: Clock,
       color: "text-red-600",
       bg: "bg-red-50",
     },
   ];
 
   return (
-    <div className="min-h-[100dvh] pb-24 md:pb-6">
+    <div className="min-h-[100dvh] w-full pb-[max(7rem,env(safe-area-inset-bottom)+4rem)] md:pb-8">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-4 flex items-center justify-between"
-      >
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
-            <ArrowDownCircle className="h-5 w-5 text-emerald-600 sm:h-6 sm:w-6" />
-            Despesas
-          </h1>
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            Gerencie suas saídas
-          </p>
+      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between px-4 py-3 md:py-4">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight md:text-xl">
+              <ArrowDownCircle className="h-5 w-5 shrink-0 text-emerald-600 md:h-6 md:w-6" />
+              Despesas
+            </h1>
+            <p className="text-xs text-muted-foreground md:text-sm">
+              Gerencie suas saídas
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              onClick={abrirNovo}
+              size="sm"
+              className="h-9 bg-emerald-600 px-3 text-xs hover:bg-emerald-700"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Nova Despesa
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={abrirNovo}
-          className="h-11 rounded-full bg-emerald-600 px-4 text-sm hover:bg-emerald-700 sm:rounded-md sm:px-5"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          <span className="hidden sm:inline">Nova Despesa</span>
-          <span className="sm:hidden">Nova</span>
-        </Button>
-      </motion.div>
+      </div>
 
-      {/* KPI Cards - 2x2 grid on mobile, 4 cols on desktop */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4"
-      >
-        {kpiCards.map((kpi) => (
-          <Card key={kpi.label} className="overflow-hidden">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2">
-                <div className={`rounded-lg p-1.5 ${kpi.bg}`}>
-                  <kpi.icon className={`h-3.5 w-3.5 ${kpi.color}`} />
+      <div className="px-4 pt-4">
+        {/* Loading Skeleton */}
+        {carregando ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-2xl border bg-card p-3 sm:p-4">
+                  <Skeleton className="mb-2 h-3 w-16" />
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="mt-1 h-2.5 w-12" />
                 </div>
-                <span className="text-[11px] font-medium text-muted-foreground sm:text-xs">
-                  {kpi.label}
+              ))}
+            </div>
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <div className="flex gap-2 overflow-hidden">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="h-8 w-24 shrink-0 rounded-full"
+                />
+              ))}
+            </div>
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-xl border bg-card p-4"
+                >
+                  <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                  <Skeleton className="h-3 w-3 shrink-0 rounded-full" />
+                  <Skeleton className="h-4 w-32 flex-1" />
+                  <Skeleton className="h-4 w-20 shrink-0" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* KPI Cards - 2x2 grid mobile, 4-col desktop */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+            >
+              {kpiCards.map((kpi) => (
+                <div key={kpi.label} className="rounded-2xl border bg-card p-3 sm:p-4">
+                  <div className="mb-1 flex items-center gap-2">
+                    <div
+                      className={`flex h-6 w-6 items-center justify-center rounded-full ${kpi.bg}`}
+                    >
+                      <kpi.icon
+                        className={`h-3 w-3 ${kpi.color} md:h-3.5 md:w-3.5`}
+                      />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground md:text-xs">
+                      {kpi.label}
+                    </span>
+                  </div>
+                  <p className={`text-base font-bold ${kpi.color} md:text-lg`}>
+                    {formatarMoeda(kpi.valor)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {kpi.qtd} {kpi.qtd === 1 ? "item" : "itens"}
+                  </p>
+                </div>
+              ))}
+            </motion.div>
+
+            {/* Search */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="mt-4"
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar despesa..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="h-11 w-full rounded-xl border bg-card pl-10 pr-10 text-sm"
+                />
+                {busca && (
+                  <button
+                    onClick={() => setBusca("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Filter Bar - Status Pills + Category */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+              className="mt-3 -mx-4 overflow-x-auto px-4 scrollbar-hide"
+            >
+              <div
+                className="flex gap-2 pb-2"
+                style={{ minWidth: "max-content" }}
+              >
+                <button
+                  onClick={() => setFiltroStatus("todos")}
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                    filtroStatus === "todos"
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Todos
+                  <span className="opacity-70">
+                    ({contarPorStatus("todos")})
+                  </span>
+                </button>
+                <button
+                  onClick={() => setFiltroStatus("pago")}
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                    filtroStatus === "pago"
+                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Pagos
+                  <span className="opacity-70">
+                    ({contarPorStatus("pago")})
+                  </span>
+                </button>
+                <button
+                  onClick={() => setFiltroStatus("pendente")}
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                    filtroStatus === "pendente"
+                      ? "border-yellow-500 bg-yellow-500 text-white"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Pendentes
+                  <span className="opacity-70">
+                    ({contarPorStatus("pendente")})
+                  </span>
+                </button>
+                <button
+                  onClick={() => setFiltroStatus("atrasado")}
+                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                    filtroStatus === "atrasado"
+                      ? "border-red-600 bg-red-600 text-white"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Atrasados
+                  <span className="opacity-70">
+                    ({contarPorStatus("atrasado")})
+                  </span>
+                </button>
+
+                <div className="w-px shrink-0 self-stretch bg-border" />
+
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Select
+                    value={filtroCategoria}
+                    onValueChange={setFiltroCategoria}
+                  >
+                    <SelectTrigger className="h-8 w-auto min-w-[140px] rounded-full border-border bg-card text-xs">
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas categorias</SelectItem>
+                      {categorias.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.icone} {cat.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Bulk Action Bar */}
+            <AnimatePresence>
+              {selecionados.size > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-2 mt-2 overflow-hidden"
+                >
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <span className="text-xs font-medium text-emerald-800">
+                      {selecionados.size} selecionado(s)
+                    </span>
+                    <div className="ml-auto flex flex-wrap gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-emerald-300 bg-white px-2.5 text-xs text-emerald-700 hover:bg-emerald-100"
+                        onClick={() => setAcaoEmMassa("pagar")}
+                      >
+                        <Check className="mr-1 h-3 w-3" />
+                        Pago
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-yellow-300 bg-white px-2.5 text-xs text-yellow-700 hover:bg-yellow-50"
+                        onClick={() => setAcaoEmMassa("pendente")}
+                      >
+                        <Clock className="mr-1 h-3 w-3" />
+                        Pendente
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-red-300 bg-white px-2.5 text-xs text-red-700 hover:bg-red-50"
+                        onClick={() => setAcaoEmMassa("excluir")}
+                      >
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        Excluir
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 px-0"
+                        onClick={() => setSelecionados(new Set())}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Results count */}
+            {despesasFiltradas.length > 0 && (
+              <div className="mt-3 flex items-center justify-end">
+                <span className="text-xs text-muted-foreground">
+                  {despesasFiltradas.length} resultado(s)
                 </span>
               </div>
-              <p className={`mt-1.5 text-base font-bold ${kpi.color} sm:text-lg`}>
-                {formatarMoeda(kpi.valor)}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {kpi.qtd} {kpi.qtd === 1 ? "item" : "itens"}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </motion.div>
+            )}
 
-      {/* Smart Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mb-3 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide"
-      >
-        {(["todos", "pago", "pendente", "atrasado"] as FiltroStatus[]).map((st) => (
-          <button
-            key={st}
-            onClick={() => setFiltroStatus(st)}
-            className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
-              filtroStatus === st
-                ? "border-emerald-600 bg-emerald-50 text-emerald-700"
-                : "border-muted bg-background text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <span>
-              {st === "todos"
-                ? "Todos"
-                : st === "pago"
-                  ? "Pagos"
-                  : st === "pendente"
-                    ? "Pendentes"
-                    : "Atrasados"}
-            </span>
-            <span
-              className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] ${
-                filtroStatus === st
-                  ? "bg-emerald-600 text-white"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {contarPorStatus(st)}
-            </span>
-          </button>
-        ))}
-      </motion.div>
-
-      {/* Search + Category Filter */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center"
-      >
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="h-11 pl-10 text-sm"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Filter className="hidden h-4 w-4 text-muted-foreground sm:block" />
-          <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-            <SelectTrigger className="h-11 w-full text-sm sm:w-[200px]">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas categorias</SelectItem>
-              {categorias.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.icone} {cat.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </motion.div>
-
-      {/* Bulk Action Bar */}
-      <AnimatePresence>
-        {selecionados.size > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-3 overflow-hidden"
-          >
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-              <span className="text-xs font-medium text-emerald-800">
-                {selecionados.size} selecionado(s)
-              </span>
-              <div className="flex flex-wrap gap-1.5 ml-auto">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-9 border-emerald-300 bg-white px-2.5 text-xs text-emerald-700 hover:bg-emerald-100"
-                  onClick={() => setAcaoEmMassa("pagar")}
-                >
-                  <Check className="mr-1 h-3 w-3" />
-                  Pago
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-9 border-yellow-300 bg-white px-2.5 text-xs text-yellow-700 hover:bg-yellow-50"
-                  onClick={() => setAcaoEmMassa("pendente")}
-                >
-                  <CalendarDays className="mr-1 h-3 w-3" />
-                  Pendente
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-9 border-red-300 bg-white px-2.5 text-xs text-red-700 hover:bg-red-50"
-                  onClick={() => setAcaoEmMassa("excluir")}
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  Excluir
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-9 w-9 px-0"
-                  onClick={() => setSelecionados(new Set())}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Loading Skeleton */}
-      {carregando ? (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-3">
-                  <Skeleton className="mb-2 h-3 w-16" />
-                  <Skeleton className="mb-1 h-5 w-20" />
-                  <Skeleton className="h-2.5 w-12" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="flex items-center gap-3 p-3">
-                  <Skeleton className="h-9 w-9 rounded-full" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-32" />
-                    <Skeleton className="h-2.5 w-20" />
-                  </div>
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                  <Skeleton className="h-5 w-14" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      ) : despesasFiltradas.length === 0 ? (
-        /* Empty State */
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <ArrowDownCircle className="mb-3 h-12 w-12 text-muted-foreground/30" />
-              <h3 className="mb-1.5 text-base font-semibold">Nenhuma despesa encontrada</h3>
-              <p className="mb-4 text-center text-sm text-muted-foreground">
-                {busca || filtroCategoria !== "todas" || filtroStatus !== "todos"
-                  ? "Tente ajustar os filtros"
-                  : "Adicione sua primeira despesa"}
-              </p>
-              {!busca && filtroCategoria === "todas" && filtroStatus === "todos" && (
-                <Button onClick={abrirNovo} className="h-11 bg-emerald-600 hover:bg-emerald-700">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Despesa
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-          {/* Mobile Cards */}
-          <div className="space-y-2 md:hidden">
-            {paginatedItems.map((d, index) => (
+            {/* Empty State */}
+            {despesasFiltradas.length === 0 && (
               <motion.div
-                key={d.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-2"
               >
-                <Card
-                  className={`cursor-pointer transition-colors ${
-                    selecionados.has(d.id) ? "border-emerald-400 bg-emerald-50/30" : ""
-                  }`}
-                  onClick={() => abrirDetalhe(d)}
-                >
-                  <CardContent className="relative p-3">
-                    <div className="flex items-start gap-3">
-                      <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm"
-                        style={{
-                          backgroundColor: d.categoria?.cor ? `${d.categoria.cor}18` : undefined,
-                          color: d.categoria?.cor || undefined,
-                        }}
+                <div className="flex flex-col items-center justify-center rounded-2xl border bg-card py-16">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                    <ArrowDownCircle className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                  <h3 className="mb-1 text-base font-semibold">
+                    Nenhuma despesa encontrada
+                  </h3>
+                  <p className="mb-4 text-center text-sm text-muted-foreground">
+                    {busca || filtroCategoria !== "todas" || filtroStatus !== "todos"
+                      ? "Tente ajustar os filtros"
+                      : "Adicione sua primeira despesa"}
+                  </p>
+                  {!busca &&
+                    filtroCategoria === "todas" &&
+                    filtroStatus === "todos" && (
+                      <Button
+                        onClick={abrirNovo}
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700"
                       >
-                        {d.categoria?.icone || <ArrowDownCircle className="h-4 w-4" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">
-                              {d.descricao}
-                              {d.parcela_numero && d.parcela_total && (
-                                <span className="ml-1 text-[10px] text-muted-foreground">
-                                  ({d.parcela_numero}/{d.parcela_total})
-                                </span>
-                              )}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                              {d.fornecedor && <span className="mr-1">{d.fornecedor}</span>}
-                              {new Date(d.data_vencimento || d.data).toLocaleDateString("pt-BR")}
-                              {d.forma_pagamento && (
-                                <span className="ml-1">
-                                  {FORMAS_PAGAMENTO_DESPESA[d.forma_pagamento] || ""}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-sm font-bold text-red-600">
-                            -{formatarMoeda(d.valor)}
-                          </p>
-                        </div>
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <span
-                            className={`inline-block h-2 w-2 rounded-full ${
-                              d.status === "pago"
-                                ? "bg-emerald-500"
-                                : d.status === "atrasado"
-                                  ? "bg-red-500"
-                                  : d.status === "pendente"
-                                    ? "bg-amber-500"
-                                    : "bg-gray-400"
-                            }`}
+                        <Plus className="mr-1 h-4 w-4" />
+                        Adicionar Despesa
+                      </Button>
+                    )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Desktop Table */}
+            {despesasFiltradas.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mt-2 hidden md:block"
+              >
+                <div className="overflow-hidden rounded-xl border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50 text-left text-xs font-medium text-muted-foreground">
+                        <th className="w-10 px-3 py-2.5">
+                          <Checkbox
+                            checked={
+                              paginatedItems.length > 0 &&
+                              selecionados.size === paginatedItems.length
+                            }
+                            onCheckedChange={toggleTodos}
                           />
-                          <span className="text-[11px] font-medium text-muted-foreground">
-                            {STATUS_LABELS[d.status] || d.status}
-                          </span>
-                          {d.categoria && (
-                            <span
-                              className="ml-auto rounded-full border px-1.5 py-0.5 text-[10px]"
-                              style={{
-                                borderColor: d.categoria.cor || undefined,
-                                color: d.categoria.cor || undefined,
-                              }}
-                            >
-                              {d.categoria.nome}
+                        </th>
+                        <th className="px-3 py-2.5">Descrição</th>
+                        <th className="hidden lg:table-cell px-3 py-2.5">
+                          Categoria
+                        </th>
+                        <th className="hidden lg:table-cell px-3 py-2.5">
+                          Fornecedor
+                        </th>
+                        <th className="px-3 py-2.5">Vencimento</th>
+                        <th className="hidden lg:table-cell px-3 py-2.5">
+                          Forma Pgto
+                        </th>
+                        <th className="px-3 py-2.5">Status</th>
+                        <th className="px-3 py-2.5 text-right">Valor</th>
+                        <th className="w-10 px-3 py-2.5" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <AnimatePresence mode="popLayout">
+                        {paginatedItems.map((d, index) => (
+                          <motion.tr
+                            key={d.id}
+                            layout
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: -50 }}
+                            transition={{ delay: index * 0.01 }}
+                            onClick={() => abrirDetalhe(d)}
+                            className={`cursor-pointer border-b transition-colors hover:bg-muted/30 ${
+                              selecionados.has(d.id) ? "bg-emerald-50/50" : ""
+                            } ${index % 2 === 0 ? "" : "bg-muted/20"}`}
+                          >
+                            <td className="px-3 py-3">
+                              <Checkbox
+                                checked={selecionados.has(d.id)}
+                                onCheckedChange={() => toggleSelecionado(d.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </td>
+                            <td className="px-3 py-3">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_COLORS[d.status] || STATUS_DOT_COLORS.pendente}`}
+                                />
+                                <div className="min-w-0">
+                                  <p className="font-medium">
+                                    {d.descricao}
+                                    {d.parcela_numero &&
+                                      d.parcela_total && (
+                                        <span className="ml-1 text-xs text-muted-foreground">
+                                          ({d.parcela_numero}/
+                                          {d.parcela_total})
+                                        </span>
+                                      )}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground sm:hidden">
+                                    {formatarData(
+                                      d.data_vencimento || d.data
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="hidden px-3 py-3 lg:table-cell">
+                              {d.categoria ? (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-1"
+                                  style={{
+                                    borderColor: d.categoria.cor || undefined,
+                                    color: d.categoria.cor || undefined,
+                                  }}
+                                >
+                                  {d.categoria.icone && (
+                                    <span>{d.categoria.icone}</span>
+                                  )}
+                                  {d.categoria.nome}
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  -
+                                </span>
+                              )}
+                            </td>
+                            <td className="hidden px-3 py-3 text-muted-foreground lg:table-cell">
+                              {d.fornecedor || "-"}
+                            </td>
+                            <td className="px-3 py-3 text-muted-foreground">
+                              {d.data_vencimento
+                                ? formatarData(d.data_vencimento)
+                                : formatarData(d.data)}
+                            </td>
+                            <td className="hidden px-3 py-3 text-muted-foreground lg:table-cell">
+                              {FORMAS_PAGAMENTO_DESPESA[
+                                d.forma_pagamento || ""
+                              ] ||
+                                d.forma_pagamento ||
+                                "-"}
+                            </td>
+                            <td className="px-3 py-3">
+                              {statusBadge(d.status)}
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <span
+                                className={`font-bold ${VALUE_COLORS[d.status] || ""}`}
+                              >
+                                {formatarMoeda(d.valor)}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3">
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  onPageChange={goToPage}
+                />
+              </motion.div>
+            )}
+
+            {/* Mobile Cards */}
+            {despesasFiltradas.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mt-2 space-y-2 md:hidden"
+              >
+                <AnimatePresence mode="popLayout">
+                  {paginatedItems.map((d, index) => (
+                    <motion.div
+                      key={d.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -50 }}
+                      transition={{ delay: index * 0.02 }}
+                      onClick={() => abrirDetalhe(d)}
+                      className={`rounded-xl border bg-card p-4 transition-colors ${
+                        selecionados.has(d.id)
+                          ? "border-emerald-500 bg-emerald-50/50"
+                          : ""
+                      }`}
+                    >
+                      {/* Row 1: dot + name + value */}
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[d.status] || STATUS_DOT_COLORS.pendente}`}
+                        />
+                        <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                          {d.descricao}
+                          {d.parcela_numero && d.parcela_total && (
+                            <span className="ml-1 text-[10px] text-muted-foreground">
+                              ({d.parcela_numero}/{d.parcela_total})
                             </span>
                           )}
+                        </p>
+                        <span
+                          className={`shrink-0 text-sm font-bold ${VALUE_COLORS[d.status] || "text-foreground"}`}
+                        >
+                          {formatarMoeda(d.valor)}
+                        </span>
+                      </div>
+
+                      {/* Row 2: date + payment + status */}
+                      <div className="mt-1.5 flex items-center gap-2 pl-[18px] text-xs text-muted-foreground">
+                        <span>
+                          {formatarData(d.data_vencimento || d.data)}
+                        </span>
+                        <span className="text-muted-foreground/40">•</span>
+                        <span className="truncate">
+                          {FORMAS_PAGAMENTO_DESPESA[d.forma_pagamento || ""] ||
+                            d.forma_pagamento ||
+                            "-"}
+                        </span>
+                        <span className="text-muted-foreground/40">•</span>
+                        {statusBadge(d.status)}
+                      </div>
+
+                      {/* Row 3: category + checkbox */}
+                      <div className="mt-2 flex items-center gap-2 pl-[18px]">
+                        {d.categoria && (
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 gap-1 text-[10px]"
+                            style={{
+                              borderColor: d.categoria.cor || undefined,
+                              color: d.categoria.cor || undefined,
+                            }}
+                          >
+                            {d.categoria.icone && (
+                              <span>{d.categoria.icone}</span>
+                            )}
+                            {d.categoria.nome}
+                          </Badge>
+                        )}
+                        {!d.categoria && (
+                          <span className="text-xs text-muted-foreground">
+                            Sem categoria
+                          </span>
+                        )}
+                        <div className="ml-auto flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSelecionado(d.id);
+                            }}
+                            className="flex h-[44px] w-[44px] items-center justify-center"
+                          >
+                            <div
+                              className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+                                selecionados.has(d.id)
+                                  ? "border-emerald-600 bg-emerald-600"
+                                  : "border-muted-foreground/40 bg-white"
+                              }`}
+                            >
+                              {selecionados.has(d.id) && (
+                                <Check className="h-3 w-3 text-white" />
+                              )}
+                            </div>
+                          </button>
                         </div>
                       </div>
-                    </div>
-                    {/* Bulk select checkbox - always visible */}
-                    <div className="absolute right-2 top-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSelecionado(d.id);
-                        }}
-                        className="flex h-10 w-10 items-center justify-center"
-                      >
-                        <div
-                          className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                            selecionados.has(d.id)
-                              ? "border-emerald-600 bg-emerald-600"
-                              : "border-muted-foreground/40 bg-white"
-                          }`}
-                        >
-                          {selecionados.has(d.id) && (
-                            <Check className="h-3 w-3 text-white" />
-                          )}
-                        </div>
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  onPageChange={goToPage}
+                />
               </motion.div>
-            ))}
-          </div>
+            )}
+          </>
+        )}
+      </div>
 
-          {/* Desktop Table */}
-          <div className="hidden md:block">
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={
-                            paginatedItems.length > 0 &&
-                            selecionados.size === paginatedItems.length
-                          }
-                          onCheckedChange={toggleTodos}
-                        />
-                      </TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="hidden lg:table-cell">Categoria</TableHead>
-                      <TableHead className="hidden lg:table-cell">Fornecedor</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead className="hidden sm:table-cell">Vencimento</TableHead>
-                      <TableHead className="hidden lg:table-cell">Forma Pgto</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <AnimatePresence>
-                      {paginatedItems.map((d, index) => (
-                        <motion.tr
-                          key={d.id}
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ delay: index * 0.02 }}
-                          className={`cursor-pointer border-b transition-colors hover:bg-muted/50 ${
-                            selecionados.has(d.id) ? "bg-emerald-50/50" : ""
-                          }`}
-                          onClick={() => abrirDetalhe(d)}
-                        >
-                          <TableCell>
-                            <Checkbox
-                              checked={selecionados.has(d.id)}
-                              onCheckedChange={() => toggleSelecionado(d.id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">
-                                {d.descricao}
-                                {d.parcela_numero && d.parcela_total && (
-                                  <span className="ml-1 text-xs text-muted-foreground">
-                                    ({d.parcela_numero}/{d.parcela_total})
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground sm:hidden">
-                                {new Intl.DateTimeFormat("pt-BR").format(
-                                  new Date(d.data_vencimento || d.data)
-                                )}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {d.categoria ? (
-                              <Badge
-                                variant="outline"
-                                className="gap-1"
-                                style={{
-                                  borderColor: d.categoria.cor || undefined,
-                                  color: d.categoria.cor || undefined,
-                                }}
-                              >
-                                {d.categoria.icone && <span>{d.categoria.icone}</span>}
-                                {d.categoria.nome}
-                              </Badge>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-muted-foreground">
-                            {d.fornecedor || "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-red-600">
-                            -{formatarMoeda(d.valor)}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-muted-foreground">
-                            {d.data_vencimento
-                              ? new Intl.DateTimeFormat("pt-BR").format(
-                                  new Date(d.data_vencimento)
-                                )
-                              : new Intl.DateTimeFormat("pt-BR").format(new Date(d.data))}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-muted-foreground">
-                            {FORMAS_PAGAMENTO_DESPESA[d.forma_pagamento || ""] ||
-                              d.forma_pagamento ||
-                              "-"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={STATUS_VARIANTS[d.status] || "outline"}>
-                              {STATUS_LABELS[d.status] || d.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9"
-                                onClick={() => abrirEdicao(d)}
-                                title="Editar"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 text-destructive hover:text-destructive"
-                                onClick={() => setExcluindo(d)}
-                                title="Excluir"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-3 flex items-center justify-between rounded-lg border bg-card px-3 py-2">
-              <p className="text-xs text-muted-foreground">
-                {totalItems} itens · Página {currentPage} de {totalPages}
-              </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  disabled={currentPage <= 1}
-                  onClick={prevPage}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  disabled={currentPage >= totalPages}
-                  onClick={nextPage}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+      {/* Mobile FAB */}
+      {!carregando && despesasFiltradas.length > 0 && (
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 25,
+            delay: 0.3,
+          }}
+          className="fixed bottom-6 right-4 z-40 md:hidden"
+        >
+          <Button
+            onClick={abrirNovo}
+            className="h-14 w-14 rounded-full bg-emerald-600 p-0 shadow-lg transition-transform hover:bg-emerald-700 active:scale-95"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
         </motion.div>
       )}
 
-      {/* Detail Sheet - Mobile Bottom Drawer */}
+      {/* Detail Drawer */}
       <Sheet open={detalheAberto} onOpenChange={setDetalheAberto}>
-        <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl sm:rounded-t-none">
+        <SheetContent
+          side="bottom"
+          className="max-h-[85vh] overflow-y-auto rounded-t-2xl sm:max-w-none"
+        >
           {despesaDetalhe && (
             <>
-              <SheetHeader className="mb-4 pb-0">
-                <SheetTitle className="text-left text-base">
+              <SheetHeader className="pb-2">
+                <SheetTitle className="text-left text-base md:text-lg">
                   {despesaDetalhe.descricao}
                 </SheetTitle>
-                <SheetDescription className="text-left text-xs">
+                <SheetDescription className="text-left text-xs md:text-sm">
                   Detalhes da despesa
                 </SheetDescription>
               </SheetHeader>
-              <div className="space-y-4">
-                {/* Valor em destaque */}
-                <div className="flex items-center justify-between rounded-xl bg-red-50 p-4">
-                  <div>
-                    <p className="text-xs text-red-600/80">Valor</p>
-                    <p className="text-2xl font-bold text-red-600">
-                      -{formatarMoeda(despesaDetalhe.valor)}
-                    </p>
+
+              <div className="space-y-4 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`h-3 w-3 rounded-full ${STATUS_DOT_COLORS[despesaDetalhe.status] || STATUS_DOT_COLORS.pendente}`}
+                    />
+                    {statusBadge(despesaDetalhe.status)}
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge variant={STATUS_VARIANTS[despesaDetalhe.status] || "outline"}>
-                      {STATUS_LABELS[despesaDetalhe.status] || despesaDetalhe.status}
-                    </Badge>
-                    {despesaDetalhe.parcela_numero && despesaDetalhe.parcela_total && (
-                      <span className="text-[10px] text-muted-foreground">
-                        Parcela {despesaDetalhe.parcela_numero}/{despesaDetalhe.parcela_total}
-                      </span>
-                    )}
-                  </div>
+                  <span
+                    className={`text-xl font-bold md:text-2xl ${VALUE_COLORS[despesaDetalhe.status] || "text-foreground"}`}
+                  >
+                    {formatarMoeda(despesaDetalhe.valor)}
+                  </span>
                 </div>
 
-                {/* Info grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <InfoItem
-                    label="Data"
-                    value={new Date(despesaDetalhe.data).toLocaleDateString("pt-BR")}
-                  />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
+                  <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                    <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                      Data
+                    </p>
+                    <p className="text-xs font-medium md:text-sm">
+                      {formatarData(despesaDetalhe.data)}
+                    </p>
+                  </div>
                   {despesaDetalhe.data_vencimento && (
-                    <InfoItem
-                      label="Vencimento"
-                      value={new Date(despesaDetalhe.data_vencimento).toLocaleDateString(
-                        "pt-BR"
-                      )}
-                    />
+                    <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                      <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                        Vencimento
+                      </p>
+                      <p className="text-xs font-medium md:text-sm">
+                        {formatarData(despesaDetalhe.data_vencimento)}
+                      </p>
+                    </div>
                   )}
                   {despesaDetalhe.data_pagamento && (
-                    <InfoItem
-                      label="Pagamento"
-                      value={new Date(despesaDetalhe.data_pagamento).toLocaleDateString(
-                        "pt-BR"
-                      )}
-                    />
+                    <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                      <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                        Pagamento
+                      </p>
+                      <p className="text-xs font-medium md:text-sm">
+                        {formatarData(despesaDetalhe.data_pagamento)}
+                      </p>
+                    </div>
                   )}
                   {despesaDetalhe.fornecedor && (
-                    <InfoItem label="Fornecedor" value={despesaDetalhe.fornecedor} />
+                    <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                      <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                        Fornecedor
+                      </p>
+                      <p className="truncate text-xs font-medium md:text-sm">
+                        {despesaDetalhe.fornecedor}
+                      </p>
+                    </div>
                   )}
                   {despesaDetalhe.forma_pagamento && (
-                    <InfoItem
-                      label="Forma Pgto"
-                      value={
-                        FORMAS_PAGAMENTO_DESPESA[despesaDetalhe.forma_pagamento] ||
-                        despesaDetalhe.forma_pagamento
-                      }
-                    />
+                    <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                      <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                        Forma Pgto
+                      </p>
+                      <p className="text-xs font-medium md:text-sm">
+                        {FORMAS_PAGAMENTO_DESPESA[
+                          despesaDetalhe.forma_pagamento
+                        ] || despesaDetalhe.forma_pagamento}
+                      </p>
+                    </div>
                   )}
                   {despesaDetalhe.categoria && (
-                    <InfoItem
-                      label="Categoria"
-                      value={`${despesaDetalhe.categoria.icone} ${despesaDetalhe.categoria.nome}`}
-                    />
+                    <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                      <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                        Categoria
+                      </p>
+                      <p className="text-xs font-medium md:text-sm">
+                        {despesaDetalhe.categoria.icone}{" "}
+                        {despesaDetalhe.categoria.nome}
+                      </p>
+                    </div>
                   )}
                   {despesaDetalhe.cartao_tipo && (
-                    <InfoItem
-                      label="Cartão"
-                      value={
-                        despesaDetalhe.cartao_tipo === "parcelado"
+                    <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                      <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                        Cartão
+                      </p>
+                      <p className="text-xs font-medium md:text-sm">
+                        {despesaDetalhe.cartao_tipo === "parcelado"
                           ? `Parcelado (${despesaDetalhe.cartao_parcelas}x)`
-                          : "À vista"
-                      }
-                    />
+                          : "À vista"}
+                      </p>
+                    </div>
                   )}
                   {despesaDetalhe.cartao_valor_total && (
-                    <InfoItem
-                      label="Valor Total Cartão"
-                      value={formatarMoeda(despesaDetalhe.cartao_valor_total)}
-                    />
+                    <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                      <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                        Valor Total Cartão
+                      </p>
+                      <p className="text-xs font-medium md:text-sm">
+                        {formatarMoeda(despesaDetalhe.cartao_valor_total)}
+                      </p>
+                    </div>
                   )}
+                  {despesaDetalhe.parcela_numero &&
+                    despesaDetalhe.parcela_total && (
+                      <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
+                        <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
+                          Parcela
+                        </p>
+                        <p className="text-xs font-medium md:text-sm">
+                          {despesaDetalhe.parcela_numero}/
+                          {despesaDetalhe.parcela_total}
+                        </p>
+                      </div>
+                    )}
                 </div>
 
                 {despesaDetalhe.observacoes && (
@@ -1174,8 +1317,7 @@ export default function DespesasPage() {
                   </div>
                 )}
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-2 pb-4">
+                <div className="flex gap-2 pb-4 pt-2">
                   <Button
                     variant="outline"
                     className="h-11 flex-1"
@@ -1204,9 +1346,11 @@ export default function DespesasPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={formAberto} onOpenChange={setFormAberto}>
-        <DialogContent className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl sm:rounded-xl">
+        <DialogContent className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl sm:rounded-xl">
           <DialogHeader>
-            <DialogTitle>{editando ? "Editar Despesa" : "Nova Despesa"}</DialogTitle>
+            <DialogTitle>
+              {editando ? "Editar Despesa" : "Nova Despesa"}
+            </DialogTitle>
             <DialogDescription>
               {editando
                 ? "Atualize as informações da despesa"
@@ -1222,7 +1366,9 @@ export default function DespesasPage() {
               <Input
                 id="descricao"
                 value={form.descricao}
-                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, descricao: e.target.value })
+                }
                 placeholder="Ex: Compra de materiais"
                 className="h-11 text-sm"
                 required
@@ -1237,30 +1383,26 @@ export default function DespesasPage() {
               <Input
                 id="fornecedor"
                 value={form.fornecedor}
-                onChange={(e) => setForm({ ...form, fornecedor: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, fornecedor: e.target.value })
+                }
                 placeholder="Nome do fornecedor"
                 className="h-11 text-sm"
               />
             </div>
 
-            {/* Valor + Data Criação */}
+            {/* Valor + Data */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="valor" className="text-xs">
                   Valor (R$) *
                 </Label>
-                <Input
-                  ref={valorRef}
+                <InputMoeda
                   id="valor"
-                  type="text"
-                  inputMode="decimal"
-                  defaultValue={
-                    form.valor ? `R$ ${formatarInputMoeda(form.valor)}` : ""
-                  }
-                  onChange={handleValorChange}
+                  value={form.valor}
+                  onChange={(v) => setForm({ ...form, valor: v })}
                   placeholder="R$ 0,00"
                   className="h-11 text-sm"
-                  required
                 />
               </div>
               <div className="space-y-1.5">
@@ -1271,7 +1413,9 @@ export default function DespesasPage() {
                   id="data"
                   type="date"
                   value={form.data}
-                  onChange={(e) => setForm({ ...form, data: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, data: e.target.value })
+                  }
                   className="h-11 text-sm"
                   required
                 />
@@ -1288,7 +1432,9 @@ export default function DespesasPage() {
                   id="data_vencimento"
                   type="date"
                   value={form.data_vencimento}
-                  onChange={(e) => setForm({ ...form, data_vencimento: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, data_vencimento: e.target.value })
+                  }
                   className="h-11 text-sm"
                 />
               </div>
@@ -1301,7 +1447,9 @@ export default function DespesasPage() {
                     id="data_pagamento"
                     type="date"
                     value={form.data_pagamento}
-                    onChange={(e) => setForm({ ...form, data_pagamento: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, data_pagamento: e.target.value })
+                    }
                     className="h-11 text-sm"
                   />
                 </div>
@@ -1339,7 +1487,8 @@ export default function DespesasPage() {
                     setForm({
                       ...form,
                       forma_pagamento: v,
-                      cartao_tipo: v === "credito" ? form.cartao_tipo : "avista",
+                      cartao_tipo:
+                        v === "credito" ? form.cartao_tipo : "avista",
                     })
                   }
                 >
@@ -1347,11 +1496,13 @@ export default function DespesasPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(FORMAS_PAGAMENTO_DESPESA).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                    {Object.entries(FORMAS_PAGAMENTO_DESPESA).map(
+                      ([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -1389,7 +1540,9 @@ export default function DespesasPage() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setForm({ ...form, cartao_tipo: "avista" })}
+                    onClick={() =>
+                      setForm({ ...form, cartao_tipo: "avista" })
+                    }
                     className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
                       form.cartao_tipo === "avista"
                         ? "border-blue-600 bg-blue-600 text-white"
@@ -1400,7 +1553,9 @@ export default function DespesasPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setForm({ ...form, cartao_tipo: "parcelado" })}
+                    onClick={() =>
+                      setForm({ ...form, cartao_tipo: "parcelado" })
+                    }
                     className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
                       form.cartao_tipo === "parcelado"
                         ? "border-blue-600 bg-blue-600 text-white"
@@ -1415,7 +1570,10 @@ export default function DespesasPage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="cartao_parcelas" className="text-xs">
+                        <Label
+                          htmlFor="cartao_parcelas"
+                          className="text-xs"
+                        >
                           Nº Parcelas
                         </Label>
                         <Input
@@ -1425,29 +1583,30 @@ export default function DespesasPage() {
                           max="48"
                           value={form.cartao_parcelas}
                           onChange={(e) =>
-                            setForm({ ...form, cartao_parcelas: e.target.value })
+                            setForm({
+                              ...form,
+                              cartao_parcelas: e.target.value,
+                            })
                           }
                           className="h-11 text-sm"
                           required
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="cartao_valor_total" className="text-xs">
+                        <Label
+                          htmlFor="cartao_valor_total"
+                          className="text-xs"
+                        >
                           Valor Total (R$)
                         </Label>
-                        <Input
+                        <InputMoeda
                           id="cartao_valor_total"
-                          type="text"
-                          inputMode="decimal"
-                          defaultValue={
-                            form.cartao_valor_total
-                              ? `R$ ${formatarInputMoeda(form.cartao_valor_total)}`
-                              : ""
+                          value={form.cartao_valor_total}
+                          onChange={(v) =>
+                            setForm({ ...form, cartao_valor_total: v })
                           }
-                          onChange={handleValorCartaoChange}
                           placeholder="R$ 0,00"
                           className="h-11 text-sm"
-                          required
                         />
                       </div>
                     </div>
@@ -1471,7 +1630,9 @@ export default function DespesasPage() {
               <Input
                 id="comprovante_url"
                 value={form.comprovante_url}
-                onChange={(e) => setForm({ ...form, comprovante_url: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, comprovante_url: e.target.value })
+                }
                 placeholder="URL do comprovante"
                 className="h-11 text-sm"
               />
@@ -1485,7 +1646,9 @@ export default function DespesasPage() {
               <Textarea
                 id="observacoes"
                 value={form.observacoes}
-                onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, observacoes: e.target.value })
+                }
                 placeholder="Observações adicionais..."
                 className="min-h-[60px] text-sm"
                 rows={2}
@@ -1494,7 +1657,11 @@ export default function DespesasPage() {
 
             <DialogFooter className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
               <DialogClose asChild>
-                <Button type="button" variant="outline" className="h-11 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full sm:w-auto"
+                >
                   Cancelar
                 </Button>
               </DialogClose>
@@ -1503,7 +1670,11 @@ export default function DespesasPage() {
                 disabled={submitting}
                 className="h-11 w-full bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
               >
-                {submitting ? "Salvando..." : editando ? "Salvar" : "Adicionar"}
+                {submitting
+                  ? "Salvando..."
+                  : editando
+                    ? "Salvar"
+                    : "Adicionar"}
               </Button>
             </DialogFooter>
           </form>
@@ -1516,12 +1687,14 @@ export default function DespesasPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Despesa</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir &quot;{excluindo?.descricao}&quot;? Esta ação não pode ser
-              desfeita.
+              Tem certeza que deseja excluir &quot;{excluindo?.descricao}
+              &quot;? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="h-11">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="h-11">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleExcluir}
               disabled={excluindoBtn}
@@ -1534,7 +1707,10 @@ export default function DespesasPage() {
       </AlertDialog>
 
       {/* Bulk Action Confirmation */}
-      <AlertDialog open={!!acaoEmMassa} onOpenChange={(o) => !o && setAcaoEmMassa(null)}>
+      <AlertDialog
+        open={!!acaoEmMassa}
+        onOpenChange={(o) => !o && setAcaoEmMassa(null)}
+      >
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -1553,46 +1729,23 @@ export default function DespesasPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="h-11">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="h-11">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={executarAcaoEmMassa}
+              disabled={processandoMassa}
               className={`h-11 ${
                 acaoEmMassa === "excluir"
                   ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   : "bg-emerald-600 hover:bg-emerald-700"
               }`}
             >
-              Confirmar
+              {processandoMassa ? "Processando..." : "Confirmar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* FAB - Mobile only */}
-      <div className="fixed bottom-6 right-4 z-40 md:hidden">
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-        >
-          <Button
-            onClick={abrirNovo}
-            className="h-14 w-14 rounded-full bg-emerald-600 shadow-lg hover:bg-emerald-700 hover:shadow-xl"
-            size="icon"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
-
-function InfoItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-      <p className="truncate text-sm">{value}</p>
     </div>
   );
 }

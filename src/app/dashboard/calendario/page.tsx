@@ -327,7 +327,7 @@ export default function CalendarioPage() {
   const temEventosNoMes = Object.keys(eventosPorDia).length > 0;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-[100dvh] bg-background pb-24">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-3 py-3 sm:px-4 sm:py-4">

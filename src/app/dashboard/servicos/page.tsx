@@ -280,7 +280,7 @@ export default function ServicosPage() {
   const totalFiltrado = servicosFiltrados.reduce((acc, s) => acc + s.valor, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

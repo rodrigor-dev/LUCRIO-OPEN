@@ -19,17 +19,20 @@ function RecuperarSenhaForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setCarregando(true);
+    try {
+      const resultado = await recuperarSenha(email);
 
-    const resultado = await recuperarSenha(email);
+      if (resultado.erro) {
+        setErro(resultado.erro);
+        return;
+      }
 
-    if (resultado.erro) {
-      setErro(resultado.erro);
+      setEnviado(true);
+    } catch {
+      setErro("Erro ao enviar e-mail. Tente novamente.");
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    setEnviado(true);
-    setCarregando(false);
   }
 
   return (

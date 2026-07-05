@@ -351,7 +351,7 @@ export default function ConfiguracoesPage() {
       : "Sem Plano";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background pb-24 md:pb-6">
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -976,7 +976,7 @@ export default function ConfiguracoesPage() {
                                 Anual
                                 <span className="text-lg font-bold text-green-600">{formatarMoeda(139.99)}</span>
                               </CardTitle>
-                              <CardDescription className="text-xs">por ano (R$ 11,67/mês)</CardDescription>
+                              <CardDescription className="text-xs">por ano ({formatarMoeda(11.67)}/mês)</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-0">
                               <ul className="text-xs text-muted-foreground space-y-1 mb-4">

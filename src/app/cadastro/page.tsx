@@ -27,39 +27,45 @@ function CadastroForm() {
     e.preventDefault();
     setCarregando(true);
     setErro("");
+    try {
+      if (senha !== confirmarSenha) {
+        setErro("As senhas não coincidem.");
+        return;
+      }
 
-    if (senha !== confirmarSenha) {
-      setErro("As senhas não coincidem.");
+      if (senha.length < 8) {
+        setErro("A senha deve ter no mínimo 8 caracteres.");
+        return;
+      }
+
+      const resultado = await criarConta(email, senha, nome);
+
+      if (resultado.erro) {
+        setErro(resultado.erro);
+        return;
+      }
+
+      toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+      router.push("/login");
+    } catch {
+      setErro("Erro ao criar conta. Tente novamente.");
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    if (senha.length < 8) {
-      setErro("A senha deve ter no mínimo 8 caracteres.");
-      setCarregando(false);
-      return;
-    }
-
-    const resultado = await criarConta(email, senha, nome);
-
-    if (resultado.erro) {
-      setErro(resultado.erro);
-      setCarregando(false);
-      return;
-    }
-
-    toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-    router.push("/login");
   }
 
   async function handleGoogle() {
     setCarregando(true);
     setErro("");
+    try {
+      const resultado = await entrarComGoogle();
 
-    const resultado = await entrarComGoogle();
-
-    if (resultado.erro) {
-      setErro(resultado.erro);
+      if (resultado.erro) {
+        setErro(resultado.erro);
+      }
+    } catch {
+      setErro("Erro ao autenticar com Google. Tente novamente.");
+    } finally {
       setCarregando(false);
     }
   }

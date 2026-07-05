@@ -23,29 +23,31 @@ function RedefinirSenhaForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setCarregando(true);
+    try {
+      if (senha.length < 8) {
+        toast.error("A senha deve ter no mínimo 8 caracteres.");
+        return;
+      }
 
-    if (senha.length < 8) {
-      toast.error("A senha deve ter no mínimo 8 caracteres.");
+      if (senha !== confirmarSenha) {
+        toast.error("As senhas não coincidem.");
+        return;
+      }
+
+      const resultado = await redefinirSenha(senha);
+
+      if (resultado.erro) {
+        toast.error(resultado.erro);
+        return;
+      }
+
+      toast.success("Senha redefinida com sucesso!");
+      router.push("/login");
+    } catch {
+      toast.error("Erro ao redefinir senha. Tente novamente.");
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    if (senha !== confirmarSenha) {
-      toast.error("As senhas não coincidem.");
-      setCarregando(false);
-      return;
-    }
-
-    const resultado = await redefinirSenha(senha);
-
-    if (resultado.erro) {
-      toast.error(resultado.erro);
-      setCarregando(false);
-      return;
-    }
-
-    toast.success("Senha redefinida com sucesso!");
-    router.push("/login");
   }
 
   return (

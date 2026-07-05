@@ -615,8 +615,8 @@ export default function DashboardPage() {
 
   if (carregando) {
     return (
-      <div className="space-y-6">
-        <div>
+    <div className="space-y-6">
+      <div>
           <Skeleton className="h-8 w-48 mb-2" />
           <Skeleton className="h-4 w-64" />
         </div>
@@ -638,7 +638,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">

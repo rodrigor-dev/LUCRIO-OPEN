@@ -481,7 +481,7 @@ export default function PropostasPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Orcamentos</h1>
@@ -725,7 +725,7 @@ export default function PropostasPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-11 w-11"
                           onClick={() => setPropostaVisualizando(proposta)}
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -734,7 +734,7 @@ export default function PropostasPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-11 w-11"
                             onClick={() => abrirDialogEditar(proposta)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -744,7 +744,7 @@ export default function PropostasPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-blue-600 hover:text-blue-700"
+                            className="h-11 w-11 text-blue-600 hover:text-blue-700"
                             onClick={() => enviarProposta(proposta)}
                           >
                             <Send className="h-3.5 w-3.5" />
@@ -753,7 +753,7 @@ export default function PropostasPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-11 w-11"
                           onClick={() => duplicarProposta(proposta)}
                         >
                           <Copy className="h-3.5 w-3.5" />
@@ -768,7 +768,7 @@ export default function PropostasPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              className="h-11 w-11 text-destructive hover:text-destructive"
                               onClick={() => setPropostaDeletando(proposta)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />

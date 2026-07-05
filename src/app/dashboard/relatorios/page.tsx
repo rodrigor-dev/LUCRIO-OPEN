@@ -294,7 +294,7 @@ export default function RelatoriosPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Relatórios</h1>
@@ -461,12 +461,14 @@ export default function RelatoriosPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
-          <TabsTrigger value="por-cliente">Por Cliente</TabsTrigger>
-          <TabsTrigger value="por-categoria">Por Categoria</TabsTrigger>
-          <TabsTrigger value="por-periodo">Por Período</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-full sm:w-auto">
+            <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
+            <TabsTrigger value="por-cliente">Por Cliente</TabsTrigger>
+            <TabsTrigger value="por-categoria">Por Categoria</TabsTrigger>
+            <TabsTrigger value="por-periodo">Por Período</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="visao-geral" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
