@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { authService, type UserProfile } from "@/services/auth.service";
 import AdminSidebar, { AdminMobileSidebar } from "@/components/admin/admin-sidebar";
 import AdminTopbar from "@/components/admin/admin-topbar";
 import CommandPalette from "@/components/command-palette";
-import type { Usuario } from "@/types/database";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -17,7 +17,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const supabase = createClient();
 
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuario, setUsuario] = useState<UserProfile | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -25,27 +25,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   useEffect(() => {
     async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const authUser = await authService.getAuthUser();
 
-      if (!user) {
+      if (!authUser) {
         router.push("/login");
         return;
       }
 
-      const { data: usuarioData } = await supabase
-        .from("usuarios")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const perfil = await authService.getUserProfile(authUser.id);
 
-      if (!usuarioData || !usuarioData.is_admin) {
+      if (!perfil || !authService.isUserAdmin(perfil)) {
         router.push("/dashboard");
         return;
       }
 
-      setUsuario(usuarioData);
+      setUsuario(perfil);
       setAuthorized(true);
       setLoading(false);
     }

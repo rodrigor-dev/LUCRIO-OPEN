@@ -50,6 +50,7 @@ export async function updateSession(request: NextRequest) {
   );
   const rotaPublica = ehRotaExataPublica || ehRotaComPrefixoPublico;
 
+  // Rotas não-autenticadas redirecionam para login
   if (!user && !rotaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -57,13 +58,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Usuário logado não acessa login/cadastro
   if (user && (pathname === "/login" || pathname === "/cadastro")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
-  // For admin routes, check is_admin
+  // Verificação de admin para rotas /admin/*
   if (pathname.startsWith("/admin")) {
     if (!user) {
       const url = request.nextUrl.clone();
@@ -71,12 +73,23 @@ export async function updateSession(request: NextRequest) {
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
-    const { data: usuario } = await supabase
-      .from("usuarios")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
-    if (!usuario?.is_admin) {
+
+    // Query robusta: tenta is_admin com fallback seguro
+    try {
+      const { data: usuario, error } = await supabase
+        .from("usuarios")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+
+      // Se houve erro na query ou usuário não existe ou não é admin
+      if (error || !usuario || usuario.is_admin !== true) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      // Em caso de qualquer exceção, negar acesso
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);

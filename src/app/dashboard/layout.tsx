@@ -24,6 +24,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { authService, type UserProfile } from "@/services/auth.service";
 import PWAUpdater from "@/components/pwa-updater";
 import InstallBanner from "@/components/install-banner";
 import BottomNav from "@/components/bottom-nav";
@@ -44,7 +45,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import SubscriptionGuard from "@/components/subscription-guard";
-import type { Usuario, Negocio } from "@/types/database";
+import type { Negocio } from "@/types/database";
 
 interface NavItem {
   href: string;
@@ -74,7 +75,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const supabase = createClient();
 
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuario, setUsuario] = useState<UserProfile | null>(null);
   const [negocio, setNegocio] = useState<Negocio | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -83,29 +84,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     async function loadUser() {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const authUser = await authService.getAuthUser();
 
-        if (!user) {
+        if (!authUser) {
           router.push("/login");
           return;
         }
 
-        const { data: usuarioData } = await supabase
-          .from("usuarios")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        const [perfil, negocioData] = await Promise.all([
+          authService.getUserProfile(authUser.id),
+          supabase
+            .from("negocios")
+            .select("*")
+            .eq("usuario_id", authUser.id)
+            .single(),
+        ]);
 
-        const { data: negocioData } = await supabase
-          .from("negocios")
-          .select("*")
-          .eq("usuario_id", user.id)
-          .single();
-
-        setUsuario(usuarioData);
-        setNegocio(negocioData);
+        setUsuario(perfil);
+        setNegocio(negocioData.data);
       } catch {
         /* silent */
       } finally {
@@ -443,7 +439,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           aria-label="Conteúdo principal"
           className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
         >
-          <SubscriptionGuard isAdmin={usuario?.is_admin === true}>{children}</SubscriptionGuard>
+          <SubscriptionGuard isAdmin={authService.isUserAdmin(usuario)}>{children}</SubscriptionGuard>
         </main>
         <BottomNav />
       </div>

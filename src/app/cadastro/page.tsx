@@ -45,8 +45,14 @@ function CadastroForm() {
         return;
       }
 
-      toast.success("Conta criada! Verifique seu e-mail para confirmar.");
-      router.push("/login");
+      if (resultado.requiresEmailConfirmation) {
+        toast.success("Conta criada! Verifique seu e-mail para confirmar o cadastro.");
+        router.push("/login");
+        return;
+      }
+
+      toast.success("Conta criada com sucesso!");
+      router.push("/dashboard");
     } catch {
       setErro("Erro ao criar conta. Tente novamente.");
     } finally {

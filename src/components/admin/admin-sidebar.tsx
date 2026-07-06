@@ -52,6 +52,7 @@ const navItems: NavItem[] = [
   { label: "Configuracoes", href: "/admin/configuracoes", icon: Settings },
   { label: "Atualizacoes", href: "/admin/atualizacoes", icon: RefreshCw },
   { label: "Backups", href: "/admin/backups", icon: Database },
+  { label: "Diagnostico", href: "/admin/debug", icon: ShieldCheck },
 ];
 
 interface AdminSidebarProps {
