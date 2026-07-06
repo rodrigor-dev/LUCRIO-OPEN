@@ -10,6 +10,7 @@ import {
   formatarMoeda,
   formatarData,
   formatarInputMoeda,
+  parseMoeda,
   toastComDesfazer,
 } from "@/utils";
 import {
@@ -126,12 +127,6 @@ const STATUS_BADGE_COLORS: Record<string, string> = {
   atrasado: "bg-red-100 text-red-700 border-red-200",
   cancelado: "bg-gray-100 text-gray-500 border-gray-200",
 };
-
-function parseMoedaParaNumero(valor: string): number {
-  const limpo = valor.replace(/[^\d,]/g, "").replace(",", ".");
-  const num = parseFloat(limpo);
-  return isNaN(num) ? 0 : num;
-}
 
 export default function ReceitasPage() {
   const supabase = useSupabase();
@@ -316,12 +311,12 @@ export default function ReceitasPage() {
     const raw = e.target.value;
     const formatado = formatarInputMoeda(raw);
     setValorFormatado(formatado);
-    const numero = parseMoedaParaNumero(formatado);
+    const numero = parseMoeda(formatado);
     setForm({ ...form, valor: numero > 0 ? String(numero) : "" });
   }
 
   function handleValorBlur() {
-    const numero = parseMoedaParaNumero(valorFormatado);
+    const numero = parseMoeda(valorFormatado);
     if (numero > 0) {
       setValorFormatado(formatarMoeda(numero));
     }
@@ -356,7 +351,7 @@ export default function ReceitasPage() {
 
       if (!negocio) return;
 
-      const valorNum = parseMoedaParaNumero(valorFormatado);
+      const valorNum = parseMoeda(valorFormatado);
       if (valorNum <= 0) {
         toast.error("Valor inválido");
         return;
@@ -1552,7 +1547,7 @@ export default function ReceitasPage() {
                 </Label>
                 <InputMoeda
                   id="valor"
-                  value={parseMoedaParaNumero(valorFormatado)}
+                  value={parseMoeda(valorFormatado)}
                   onChange={(val) => {
                     setValorFormatado(val > 0 ? formatarMoeda(val) : "");
                     setForm({ ...form, valor: val > 0 ? String(val) : "" });

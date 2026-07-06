@@ -66,13 +66,18 @@ export async function obterFinanceiroAdmin(): Promise<AdminFinanceiro> {
   const cancelados = assinaturas.filter((a) => a.status === "cancelado").length;
   const trials = assinaturas.filter((a) => a.status === "trial").length;
 
-  const { data: clientesFixos } = await supabase
-    .from("clientes")
-    .select("valor_mensal")
-    .eq("tipo", "fixo")
-    .eq("is_ativo", true);
-
-  const mrr = clientesFixos?.reduce((acc, c) => acc + (Number(c.valor_mensal) || 0), 0) || 0;
+  // Calculate MRR from active subscriptions and plan prices
+  let mrr = 0;
+  if (planos.length > 0) {
+    const activePlanPrice = planos.find((p) => p.is_ativo)?.preco_mensal || 0;
+    mrr = ativos * activePlanPrice;
+  } else {
+    // Fallback: count active subscriptions × average plan price
+    const mediaPreco = planos.length > 0
+      ? planos.reduce((acc, p) => acc + (Number(p.preco_mensal) || 0), 0) / planos.length
+      : 0;
+    mrr = ativos * mediaPreco;
+  }
 
   return {
     mrr,
