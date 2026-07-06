@@ -1,5 +1,5 @@
 -- Migration 007: Funções SQL SECURITY DEFINER para painel admin
--- Bypassa RLS para admin ver dados reais de todas as tabelas
+-- EXECUTE TODO O CONTEÚDO DESTE ARQUIVO NO SQL EDITOR DO SUPABASE
 
 -- ============================================================
 -- 1. Stats do dashboard admin
@@ -21,7 +21,7 @@ BEGIN
     SELECT
         (SELECT COUNT(*) FROM usuarios)::BIGINT,
         (SELECT COUNT(*) FROM usuarios WHERE is_ativo = true)::BIGINT,
-        (SELECT COUNT(*) FROM usuarios WHERE is_ativo = false)::BIGINT,
+        (SELECT COUNT(*) FROM usuarios WHERE is_ativo = false OR is_ativo IS NULL)::BIGINT,
         (SELECT COUNT(*) FROM usuarios WHERE criado_em::date = CURRENT_DATE)::BIGINT,
         (SELECT COUNT(*) FROM usuarios WHERE criado_em >= date_trunc('month', CURRENT_DATE))::BIGINT,
         (SELECT COUNT(*) FROM negocios)::BIGINT,
@@ -52,18 +52,12 @@ BEGIN
     SELECT COUNT(*) INTO v_cancelados FROM assinaturas WHERE status = 'cancelado';
     SELECT COUNT(*) INTO v_trials FROM assinaturas WHERE status = 'trial';
 
-    -- MRR: soma dos preços dos planos das assinaturas ativas
     SELECT COALESCE(SUM(p.preco_mensal), 0) INTO v_mrr
     FROM assinaturas a
     JOIN planos p ON p.id = a.plano_id
     WHERE a.status = 'ativo';
 
-    RETURN QUERY SELECT
-        v_mrr,
-        v_mrr * 12,
-        v_ativos,
-        v_cancelados,
-        v_trials;
+    RETURN QUERY SELECT v_mrr, v_mrr * 12, v_ativos, v_cancelados, v_trials;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -76,6 +70,7 @@ RETURNS TABLE (
     email TEXT,
     nome TEXT,
     avatar_url TEXT,
+    telefone TEXT,
     is_admin BOOLEAN,
     is_ativo BOOLEAN,
     is_bloqueado BOOLEAN,
@@ -92,8 +87,9 @@ BEGIN
         u.email,
         u.nome,
         u.avatar_url,
+        u.telefone,
         u.is_admin,
-        u.is_ativo,
+        COALESCE(u.is_ativo, true),
         COALESCE(u.is_bloqueado, false),
         COALESCE(u.is_suspendido, false),
         u.trial_termina_em,
@@ -147,7 +143,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 5. Listar planos (admin)
+-- 5. Listar planos COMPLETO (admin) - todos os campos
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_planos()
 RETURNS TABLE (
@@ -157,11 +153,21 @@ RETURNS TABLE (
     descricao TEXT,
     preco_mensal NUMERIC,
     preco_anual NUMERIC,
+    moeda TEXT,
+    funcionalidades JSONB,
+    max_clientes INTEGER,
+    max_servicos INTEGER,
     is_ativo BOOLEAN,
     is_destaque BOOLEAN,
     ordem INTEGER,
-    funcionalidades JSONB,
-    criado_em TIMESTAMPTZ
+    limite_clientes INTEGER,
+    limite_receitas INTEGER,
+    limite_despesas INTEGER,
+    limite_armazenamento_mb INTEGER,
+    limite_usuarios INTEGER,
+    cor TEXT,
+    criado_em TIMESTAMPTZ,
+    atualizado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -172,13 +178,23 @@ BEGIN
         p.descricao,
         p.preco_mensal,
         p.preco_anual,
+        p.moeda,
+        p.funcionalidades,
+        p.max_clientes,
+        p.max_servicos,
         p.is_ativo,
         COALESCE(p.is_destaque, false),
         COALESCE(p.ordem, 0),
-        p.funcionalidades,
-        p.criado_em
+        COALESCE(p.limite_clientes, -1),
+        COALESCE(p.limite_receitas, -1),
+        COALESCE(p.limite_despesas, -1),
+        COALESCE(p.limite_armazenamento_mb, 100),
+        COALESCE(p.limite_usuarios, 1),
+        COALESCE(p.cor, '#6366f1'),
+        p.criado_em,
+        p.atualizado_em
     FROM planos p
-    ORDER BY p.ordem;
+    ORDER BY COALESCE(p.ordem, 0);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -192,23 +208,27 @@ RETURNS TABLE (
     descricao TEXT,
     tipo_desconto TEXT,
     valor_desconto NUMERIC,
+    plano_permitido_id UUID,
     max_utilizacoes INTEGER,
     utilizacoes INTEGER,
+    data_inicio TIMESTAMPTZ,
+    data_fim TIMESTAMPTZ,
+    dias_gratis INTEGER,
+    meses_gratis INTEGER,
+    is_vitalicio BOOLEAN,
+    primeiro_pagamento_gratis BOOLEAN,
+    uso_unico BOOLEAN,
     is_ativo BOOLEAN,
     criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        c.id,
-        c.codigo,
-        c.descricao,
-        c.tipo_desconto,
-        c.valor_desconto,
-        c.max_utilizacoes,
-        c.utilizacoes,
-        c.is_ativo,
-        c.criado_em
+        c.id, c.codigo, c.descricao, c.tipo_desconto, c.valor_desconto,
+        c.plano_permitido_id, c.max_utilizacoes, c.utilizacoes,
+        c.data_inicio, c.data_fim, c.dias_gratis, c.meses_gratis,
+        c.is_vitalicio, c.primeiro_pagamento_gratis, c.uso_unico,
+        c.is_ativo, c.criado_em
     FROM cupons c
     ORDER BY c.criado_em DESC;
 END;
@@ -232,17 +252,8 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        a.id,
-        a.usuario_id,
-        a.usuario_email,
-        a.acao,
-        a.entidade,
-        a.entidade_id,
-        a.dados_antes,
-        a.dados_depois,
-        a.ip_address,
-        a.criado_em
+    SELECT a.id, a.usuario_id, a.usuario_email, a.acao, a.entidade,
+           a.entidade_id, a.dados_antes, a.dados_depois, a.ip_address, a.criado_em
     FROM auditoria a
     ORDER BY a.criado_em DESC
     LIMIT p_limit;
@@ -258,22 +269,17 @@ RETURNS TABLE (
     nivel TEXT,
     mensagem TEXT,
     detalhes JSONB,
+    usuario_id UUID,
     usuario_email TEXT,
     rota TEXT,
+    metodo_http TEXT,
     status_code INTEGER,
     criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        l.id,
-        l.nivel,
-        l.mensagem,
-        l.detalhes,
-        l.usuario_email,
-        l.rota,
-        l.status_code,
-        l.criado_em
+    SELECT l.id, l.nivel, l.mensagem, l.detalhes, l.usuario_id,
+           l.usuario_email, l.rota, l.metodo_http, l.status_code, l.criado_em
     FROM system_logs l
     ORDER BY l.criado_em DESC
     LIMIT p_limit;
@@ -281,7 +287,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 9. Listar tickets suporte (admin)
+-- 9. Listar tickets suporte COM mensagens e dados do usuario (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_tickets()
 RETURNS TABLE (
@@ -292,23 +298,20 @@ RETURNS TABLE (
     status TEXT,
     prioridade TEXT,
     categoria TEXT,
+    notas_internas TEXT,
     criado_em TIMESTAMPTZ,
+    atualizado_em TIMESTAMPTZ,
     usuario_nome TEXT,
-    usuario_email TEXT
+    usuario_email TEXT,
+    usuario_avatar TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        t.id,
-        t.usuario_id,
-        t.assunto,
-        t.mensagem,
-        t.status,
-        t.prioridade,
-        t.categoria,
-        t.criado_em,
-        u.nome,
-        u.email
+        t.id, t.usuario_id, t.assunto, t.mensagem, t.status,
+        t.prioridade, t.categoria, t.notas_internas,
+        t.criado_em, t.atualizado_em,
+        u.nome, u.email, u.avatar_url
     FROM suporte_tickets t
     LEFT JOIN usuarios u ON u.id = t.usuario_id
     ORDER BY t.criado_em DESC;
@@ -316,169 +319,124 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 10. Listar avisos (admin)
+-- 10. Mensagens de um ticket (admin)
+-- ============================================================
+CREATE OR REPLACE FUNCTION get_ticket_mensagens(p_ticket_id UUID)
+RETURNS TABLE (
+    id UUID,
+    ticket_id UUID,
+    remetente_id UUID,
+    remetente_tipo TEXT,
+    mensagem TEXT,
+    criado_em TIMESTAMPTZ,
+    remetente_nome TEXT,
+    remetente_email TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        m.id, m.ticket_id, m.remetente_id, m.remetente_tipo,
+        m.mensagem, m.criado_em,
+        u.nome, u.email
+    FROM suporte_mensagens m
+    LEFT JOIN usuarios u ON u.id = m.remetente_id
+    WHERE m.ticket_id = p_ticket_id
+    ORDER BY m.criado_em ASC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
+-- 11. Listar avisos (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_avisos()
 RETURNS TABLE (
-    id UUID,
-    titulo TEXT,
-    mensagem TEXT,
-    tipo TEXT,
-    destinatario TEXT,
-    is_ativo BOOLEAN,
-    criado_em TIMESTAMPTZ
+    id UUID, titulo TEXT, mensagem TEXT, tipo TEXT,
+    destinatario TEXT, is_ativo BOOLEAN, criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        a.id,
-        a.titulo,
-        a.mensagem,
-        a.tipo,
-        a.destinatario,
-        a.is_ativo,
-        a.criado_em
-    FROM avisos_globais a
-    ORDER BY a.criado_em DESC;
+    SELECT a.id, a.titulo, a.mensagem, a.tipo, a.destinatario, a.is_ativo, a.criado_em
+    FROM avisos_globais a ORDER BY a.criado_em DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 11. Listar feature flags (admin)
+-- 12. Feature flags (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_feature_flags()
 RETURNS TABLE (
-    id UUID,
-    chave TEXT,
-    descricao TEXT,
-    is_ativo BOOLEAN,
-    destinatario TEXT,
-    criado_em TIMESTAMPTZ
+    id UUID, chave TEXT, descricao TEXT, is_ativo BOOLEAN,
+    destinatario TEXT, criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        f.id,
-        f.chave,
-        f.descricao,
-        f.is_ativo,
-        f.destinatario,
-        f.criado_em
-    FROM feature_flags f
-    ORDER BY f.criado_em DESC;
+    SELECT f.id, f.chave, f.descricao, f.is_ativo, f.destinatario, f.criado_em
+    FROM feature_flags f ORDER BY f.criado_em DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 12. Listar configs globais (admin)
+-- 13. Configuracoes (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_configuracoes()
 RETURNS TABLE (
-    id UUID,
-    chave TEXT,
-    valor TEXT,
-    tipo TEXT,
-    descricao TEXT,
-    criado_em TIMESTAMPTZ
+    id UUID, chave TEXT, valor TEXT, tipo TEXT,
+    descricao TEXT, criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        c.id,
-        c.chave,
-        c.valor,
-        c.tipo,
-        c.descricao,
-        c.criado_em
-    FROM configuracoes_globais c
-    ORDER BY c.chave;
+    SELECT c.id, c.chave, c.valor, c.tipo, c.descricao, c.criado_em
+    FROM configuracoes_globais c ORDER BY c.chave;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 13. Listar backups (admin)
+-- 14. Backups (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_backups()
 RETURNS TABLE (
-    id UUID,
-    nome TEXT,
-    tamanho_bytes BIGINT,
-    status TEXT,
-    tipo TEXT,
-    criado_em TIMESTAMPTZ
+    id UUID, nome TEXT, tamanho_bytes BIGINT, status TEXT,
+    tipo TEXT, criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        b.id,
-        b.nome,
-        b.tamanho_bytes,
-        b.status,
-        b.tipo,
-        b.criado_em
-    FROM backups b
-    ORDER BY b.criado_em DESC;
+    SELECT b.id, b.nome, b.tamanho_bytes, b.status, b.tipo, b.criado_em
+    FROM backups b ORDER BY b.criado_em DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 14. Listar atualizações (admin)
+-- 15. Atualizacoes (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_atualizacoes()
 RETURNS TABLE (
-    id UUID,
-    versao TEXT,
-    titulo TEXT,
-    descricao TEXT,
-    tipo TEXT,
-    is_visivel BOOLEAN,
-    criado_em TIMESTAMPTZ
+    id UUID, versao TEXT, titulo TEXT, descricao TEXT,
+    tipo TEXT, is_visivel BOOLEAN, criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        a.id,
-        a.versao,
-        a.titulo,
-        a.descricao,
-        a.tipo,
-        a.is_visivel,
-        a.criado_em
-    FROM atualizacoes a
-    ORDER BY a.criado_em DESC;
+    SELECT a.id, a.versao, a.titulo, a.descricao, a.tipo, a.is_visivel, a.criado_em
+    FROM atualizacoes a ORDER BY a.criado_em DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 15. Listar roles (admin)
+-- 16. Roles (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_all_roles()
 RETURNS TABLE (
-    id UUID,
-    nome TEXT,
-    slug TEXT,
-    descricao TEXT,
-    permissoes JSONB,
-    is_sistema BOOLEAN,
-    criado_em TIMESTAMPTZ
+    id UUID, nome TEXT, slug TEXT, descricao TEXT,
+    permissoes JSONB, is_sistema BOOLEAN, criado_em TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        r.id,
-        r.nome,
-        r.slug,
-        r.descricao,
-        r.permissoes,
-        r.is_sistema,
-        r.criado_em
-    FROM roles r
-    ORDER BY r.nome;
+    SELECT r.id, r.nome, r.slug, r.descricao, r.permissoes, r.is_sistema, r.criado_em
+    FROM roles r ORDER BY r.nome;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 16. Dados para gráficos: crescimento mensal de usuarios
+-- 17. Chart: crescimento mensal de usuarios
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_usuario_crescimento_mensal()
 RETURNS TABLE (mes TEXT, total BIGINT) AS $$
@@ -500,7 +458,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 17. Dados para gráficos: receita mensal real
+-- 18. Chart: receita mensal real
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_receita_mensal()
 RETURNS TABLE (mes TEXT, receita NUMERIC) AS $$
@@ -524,7 +482,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 18. Dados para gráficos: distribuição de planos
+-- 19. Chart: distribuicao de planos
 -- ============================================================
 CREATE OR REPLACE FUNCTION get_plano_distribuicao()
 RETURNS TABLE (nome TEXT, value BIGINT) AS $$
@@ -542,7 +500,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 19. Salvar configuração (admin)
+-- 20. Salvar configuracao (admin)
 -- ============================================================
 CREATE OR REPLACE FUNCTION save_configuracao(p_chave TEXT, p_valor TEXT)
 RETURNS VOID AS $$

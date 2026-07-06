@@ -324,7 +324,7 @@ export default function Home() {
               Planos simples e transparentes
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-slate-500">
-              Comece grátis e escale conforme seu negócio cresce.
+              Teste grátis por 7 dias. Cancele quando quiser.
             </p>
           </motion.div>
           <motion.div
@@ -336,32 +336,36 @@ export default function Home() {
           >
             <Card className="relative overflow-hidden border-2 border-emerald-200 shadow-xl shadow-emerald-100/50">
               <div className="absolute right-4 top-4">
-                <Badge className="bg-emerald-500 text-white">Popular</Badge>
+                <Badge className="bg-emerald-500 text-white">7 dias grátis</Badge>
               </div>
               <CardHeader className="text-center">
                 <CardTitle className="text-xl text-slate-900">
-                  Plano Básico
+                  Plano PRO
                 </CardTitle>
                 <CardDescription>
-                  Tudo que você precisa para começar
+                  Tudo que você precisa para gerenciar seu negócio
                 </CardDescription>
                 <div className="mt-4">
                   <span className="text-5xl font-bold text-slate-900">
-                    R$ 29,90
+                    R$ 14,99
                   </span>
                   <span className="text-slate-500">/mês</span>
                 </div>
+                <p className="mt-2 text-sm text-emerald-600 font-medium">
+                  ou R$ 139,90/ano (economize 22%)
+                </p>
               </CardHeader>
               <Separator />
               <CardContent className="pt-6">
                 <ul className="space-y-3">
                   {[
-                    "Dashboard financeiro completo",
-                    "Gestão de clientes ilimitada",
+                    "Clientes ilimitados",
+                    "Receitas e despesas",
+                    "Calendário financeiro",
+                    "Relatórios avançados",
                     "Propostas comerciais em PDF",
-                    "Relatórios detalhados",
-                    "Acesso via PWA no celular",
-                    "Suporte por e-mail",
+                    "Suporte prioritário",
+                    "Acesso PWA no celular",
                     "Atualizações gratuitas",
                   ].map((feature) => (
                     <li key={feature} className="flex items-center gap-3">
@@ -377,7 +381,7 @@ export default function Home() {
                     size="lg"
                     className="w-full bg-emerald-500 text-white hover:bg-emerald-600"
                   >
-                    Comece agora
+                    Teste grátis por 7 dias
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>

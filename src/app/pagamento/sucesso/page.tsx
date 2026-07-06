@@ -30,8 +30,21 @@ function PagamentoSucessoInner() {
         }
 
         if (status === "approved" || status === "authorized") {
-          const plano = searchParams?.get("plano") ?? "mensal";
-          const diasPlano = plano === "anual" ? 365 : 30;
+          const planoParam = searchParams?.get("plano") ?? "mensal";
+          const diasPlano = planoParam === "anual" ? 365 : 30;
+
+          const { data: planoPro } = await supabase
+            .from("planos")
+            .select("id")
+            .eq("slug", "pro")
+            .eq("is_ativo", true)
+            .single();
+
+          if (!planoPro) {
+            console.error("Plano PRO nao encontrado");
+            setSucesso(false);
+            return;
+          }
 
           const { data: assinatura } = await supabase
             .from("assinaturas")
@@ -45,7 +58,7 @@ function PagamentoSucessoInner() {
               .from("assinaturas")
               .update({
                 status: "ativo",
-                plano_id: plano,
+                plano_id: planoPro.id,
                 intent_pagamento_id: pagamentoId,
                 trial_termina: new Date().toISOString(),
                 ultimo_pagamento: new Date().toISOString(),
@@ -56,7 +69,7 @@ function PagamentoSucessoInner() {
           } else {
             await supabase.from("assinaturas").insert({
               usuario_id: user.id,
-              plano_id: plano,
+              plano_id: planoPro.id,
               status: "ativo",
               intent_pagamento_id: pagamentoId,
               trial_termina: new Date().toISOString(),

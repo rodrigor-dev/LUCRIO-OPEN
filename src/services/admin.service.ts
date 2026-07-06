@@ -221,15 +221,55 @@ export async function listarLogs(filtros?: { nivel?: string; limit?: number }) {
 // ============================================================
 // SUPORTE
 // ============================================================
-export async function listarTickets(filtros?: { status?: string }) {
+interface TicketRaw {
+  id: string;
+  usuario_id: string;
+  assunto: string;
+  mensagem: string;
+  status: string;
+  prioridade: string;
+  categoria: string;
+  notas_internas: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  usuario_nome: string | null;
+  usuario_email: string | null;
+  usuario_avatar: string | null;
+}
+
+export async function listarTickets(filtros?: { status?: string }): Promise<TicketSuporte[]> {
   const { data, error } = await supabase.rpc("get_all_tickets" as never);
   if (error) {
     console.error("[AdminService] get_all_tickets error:", error);
     return [];
   }
-  let tickets = (data || []) as TicketSuporte[];
+  let tickets: TicketSuporte[] = (data || []).map((t: TicketRaw) => ({
+    id: t.id,
+    usuario_id: t.usuario_id,
+    assunto: t.assunto,
+    mensagem: t.mensagem,
+    status: t.status as TicketSuporte["status"],
+    prioridade: t.prioridade as TicketSuporte["prioridade"],
+    categoria: t.categoria,
+    notas_internas: t.notas_internas,
+    criado_em: t.criado_em,
+    atualizado_em: t.atualizado_em,
+    usuario: t.usuario_nome || t.usuario_email
+      ? { nome: t.usuario_nome || "N/A", email: t.usuario_email || "", avatar_url: t.usuario_avatar }
+      : undefined,
+    mensagens: [],
+  }));
   if (filtros?.status) tickets = tickets.filter((t) => t.status === filtros.status);
   return tickets;
+}
+
+export async function obterMensagensTicket(ticketId: string) {
+  const { data, error } = await supabase.rpc("get_ticket_mensagens" as never, { p_ticket_id: ticketId });
+  if (error) {
+    console.error("[AdminService] get_ticket_mensagens error:", error);
+    return [];
+  }
+  return (data || []) as import("@/types/admin").MensagemSuporte[];
 }
 
 export async function atualizarTicket(id: string, dados: Partial<TicketSuporte>) {
@@ -237,10 +277,12 @@ export async function atualizarTicket(id: string, dados: Partial<TicketSuporte>)
   if (error) throw error;
 }
 
-export async function enviarMensagemSuporte(ticketId: string, mensagem: string, remetenteId: string) {
+export async function enviarMensagemSuporte(ticketId: string, mensagem: string, _remetenteId?: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id || _remetenteId || "00000000-0000-0000-0000-000000000000";
   const { error } = await supabase.from("suporte_mensagens").insert({
     ticket_id: ticketId,
-    remetente_id: remetenteId,
+    remetente_id: userId,
     remetente_tipo: "admin",
     mensagem,
   });

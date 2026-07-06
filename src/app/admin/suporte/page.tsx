@@ -42,6 +42,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatarDataHora } from "@/utils";
 import {
   listarTickets,
+  obterMensagensTicket,
   atualizarTicket,
   enviarMensagemSuporte,
 } from "@/services/admin.service";
@@ -144,6 +145,17 @@ export default function AdminSuportePage() {
     }
   }, [ticketSel?.mensagens?.length]);
 
+  const selecionarTicket = useCallback(async (ticket: TicketSuporte) => {
+    setTicketSel(ticket);
+    setNotasInternas(ticket.notas_internas || "");
+    try {
+      const mensagens = await obterMensagensTicket(ticket.id);
+      setTicketSel((prev) => prev?.id === ticket.id ? { ...prev, mensagens } : prev);
+    } catch {
+      console.error("Erro ao carregar mensagens do ticket");
+    }
+  }, []);
+
   const ticketsFiltrados = tickets.filter((t) => {
     const matchAba = abaAtiva === "todos" || t.status === abaAtiva;
     const matchBusca =
@@ -163,12 +175,10 @@ export default function AdminSuportePage() {
     if (!resposta.trim() || !ticketSel) return;
     try {
       setEnviando(true);
-      await enviarMensagemSuporte(ticketSel.id, resposta.trim(), "admin");
+      await enviarMensagemSuporte(ticketSel.id, resposta.trim());
       setResposta("");
-      await carregar();
-      const updated = await listarTickets();
-      const sel = updated.find((t) => t.id === ticketSel.id);
-      if (sel) setTicketSel(sel);
+      const mensagens = await obterMensagensTicket(ticketSel.id);
+      setTicketSel((prev) => prev?.id === ticketSel.id ? { ...prev, mensagens } : prev);
     } catch {
       console.error("Erro ao enviar resposta");
     } finally {
@@ -527,10 +537,7 @@ export default function AdminSuportePage() {
                         <motion.div
                           key={ticket.id}
                           className="flex items-center gap-4 p-4 cursor-pointer transition-colors hover:bg-muted/50"
-                          onClick={() => {
-                            setTicketSel(ticket);
-                            setNotasInternas(ticket.notas_internas || "");
-                          }}
+                          onClick={() => selecionarTicket(ticket)}
                           whileHover={{ x: 4 }}
                           transition={{ duration: 0.15 }}
                         >
