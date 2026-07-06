@@ -36,6 +36,9 @@ import {
   obterFinanceiroAdmin,
   listarAuditoria,
   listarTickets,
+  obterCrescimentoUsuarios,
+  obterReceitaMensal,
+  obterDistribuicaoPlanos,
 } from "@/services/admin.service";
 import type { AdminStats, AdminFinanceiro, Auditoria } from "@/types/admin";
 import {
@@ -142,74 +145,38 @@ function ChartSkeleton() {
   );
 }
 
-function gerarDadosCrescimento(totalAtual: number) {
-  const agora = new Date();
-  const dados: { mes: string; total: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
-    const fator = (6 - i) / 6;
-    dados.push({
-      mes: MESES[d.getMonth()],
-      total: Math.max(0, Math.round(totalAtual * fator * 0.6)),
-    });
-  }
-  dados[dados.length - 1].total = totalAtual;
-  return dados;
-}
-
-function gerarDadosReceita(mrrAtual: number) {
-  const agora = new Date();
-  const dados: { mes: string; receita: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
-    const fator = (6 - i) / 6;
-    dados.push({
-      mes: MESES[d.getMonth()],
-      receita: Math.round(mrrAtual * fator * 0.7),
-    });
-  }
-  dados[dados.length - 1].receita = mrrAtual;
-  return dados;
-}
-
-function gerarDadosPlanos(totalUsuarios: number) {
-  if (totalUsuarios === 0) {
-    return [
-      { nome: "Basico", value: 0 },
-      { nome: "Profissional", value: 0 },
-      { nome: "Empresarial", value: 0 },
-    ];
-  }
-  return [
-    { nome: "Basico", value: Math.round(totalUsuarios * 0.45) },
-    { nome: "Profissional", value: Math.round(totalUsuarios * 0.35) },
-    { nome: "Empresarial", value: Math.round(totalUsuarios * 0.2) },
-  ];
-}
-
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [financeiro, setFinanceiro] = useState<AdminFinanceiro | null>(null);
   const [auditoria, setAuditoria] = useState<Auditoria[]>([]);
   const [ticketsAbertos, setTicketsAbertos] = useState(0);
+  const [crescimentoData, setCrescimentoData] = useState<{ mes: string; total: number }[]>([]);
+  const [receitaData, setReceitaData] = useState<{ mes: string; receita: number }[]>([]);
+  const [planosData, setPlanosData] = useState<{ nome: string; value: number }[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     async function carregar() {
       try {
-        const [statsData, financeiroData, auditoriaData, ticketsData] =
+        const [statsData, financeiroData, auditoriaData, ticketsData, crescimento, receita, planos] =
           await Promise.all([
             obterStatsAdmin(),
             obterFinanceiroAdmin(),
             listarAuditoria({ limit: 10 }),
             listarTickets({ status: "aberto" }),
+            obterCrescimentoUsuarios(),
+            obterReceitaMensal(),
+            obterDistribuicaoPlanos(),
           ]);
 
         setStats(statsData);
         setFinanceiro(financeiroData);
         setAuditoria(auditoriaData);
         setTicketsAbertos(ticketsData.length);
+        setCrescimentoData(crescimento);
+        setReceitaData(receita);
+        setPlanosData(planos);
       } catch (err) {
         console.error("Erro ao carregar dados do admin:", err);
         setErro("Erro ao carregar dados do painel administrativo.");
@@ -221,9 +188,9 @@ export default function AdminDashboardPage() {
     carregar();
   }, []);
 
-  const crescimentoUsuarios = gerarDadosCrescimento(stats?.total_usuarios || 0);
-  const receitaMensal = gerarDadosReceita(financeiro?.mrr || 0);
-  const distribuicaoPlanos = gerarDadosPlanos(stats?.total_usuarios || 0);
+  const crescimentoUsuarios = crescimentoData.length > 0 ? crescimentoData : [];
+  const receitaMensal = receitaData.length > 0 ? receitaData : [];
+  const distribuicaoPlanos = planosData.length > 0 ? planosData : [];
   const statusAssinaturas = stats
     ? [
         { nome: "Ativos", value: financeiro?.total_assinaturas_ativas || 0 },

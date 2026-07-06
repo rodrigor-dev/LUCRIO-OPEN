@@ -122,7 +122,7 @@ function TableSkeleton() {
 }
 
 export default function AdminCuponsPage() {
-  const [cupons, setCupons] = useState<(Cupom & { plano: PlanoAdmin | null })[]>([]);
+  const [cupons, setCupons] = useState<Cupom[]>([]);
   const [planos, setPlanos] = useState<PlanoAdmin[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
@@ -158,8 +158,7 @@ export default function AdminCuponsPage() {
     const termo = busca.toLowerCase();
     return (
       c.codigo.toLowerCase().includes(termo) ||
-      c.descricao?.toLowerCase().includes(termo) ||
-      c.plano?.nome?.toLowerCase().includes(termo)
+      c.descricao?.toLowerCase().includes(termo)
     );
   });
 
