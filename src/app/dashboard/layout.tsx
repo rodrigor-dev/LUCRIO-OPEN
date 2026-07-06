@@ -443,7 +443,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           aria-label="Conteúdo principal"
           className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
         >
-          <SubscriptionGuard>{children}</SubscriptionGuard>
+          <SubscriptionGuard isAdmin={usuario?.is_admin === true}>{children}</SubscriptionGuard>
         </main>
         <BottomNav />
       </div>

@@ -13,9 +13,10 @@ const DEFAULT_EXCLUDED = ["/dashboard/configuracoes"];
 interface SubscriptionGuardProps {
   children: React.ReactNode;
   excludePaths?: string[];
+  isAdmin?: boolean;
 }
 
-export default function SubscriptionGuard({ children, excludePaths }: SubscriptionGuardProps) {
+export default function SubscriptionGuard({ children, excludePaths, isAdmin }: SubscriptionGuardProps) {
   const sub = useSubscription();
   const pathname = usePathname();
 
@@ -27,7 +28,7 @@ export default function SubscriptionGuard({ children, excludePaths }: Subscripti
   }
 
   const shouldBlock =
-    !isExcluded && (
+    !isAdmin && !isExcluded && (
       sub.is_expired ||
       (sub.is_trial && (sub.days_remaining ?? 0) <= 0) ||
       (!sub.is_valid && !sub.is_trial)
