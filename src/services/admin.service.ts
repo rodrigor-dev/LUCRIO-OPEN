@@ -58,7 +58,7 @@ export async function obterStatsAdmin(): Promise<AdminStats> {
 
 export async function obterFinanceiroAdmin(): Promise<AdminFinanceiro> {
   const [assinaturas, planos] = await Promise.all([
-    supabase.from("assinaturas").select("status, valor: null").then((r) => r.data || []),
+    supabase.from("assinaturas").select("status").then((r) => r.data || []),
     supabase.from("planos").select("preco_mensal, preco_anual, is_ativo").then((r) => r.data || []),
   ]);
 
@@ -256,7 +256,7 @@ export async function listarLogs(filtros?: { nivel?: string; limit?: number }) {
 export async function listarTickets(filtros?: { status?: string }) {
   let query = supabase
     .from("suporte_tickets")
-    .select("*, usuario:usuarios(nome, email, avatar_url), mensagens:suporte_mensagens(*)")
+    .select("*")
     .order("criado_em", { ascending: false });
   if (filtros?.status) query = query.eq("status", filtros.status);
   const { data, error } = await query;

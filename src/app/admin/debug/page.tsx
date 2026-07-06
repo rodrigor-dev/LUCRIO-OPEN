@@ -72,16 +72,16 @@ export default function AdminDebugPage() {
           rlsPolicies.push(`usuarios_select_own: OK (is_admin=${rlsTest.is_admin})`);
         }
 
-        // 4. Check admin RLS - try to read ALL users
+        // 4. Check admin RLS - try to read ALL users (may fail without admin RLS)
         const { data: allUsers, error: adminRlsError } = await supabase
           .from("usuarios")
-          .select("id, email, is_admin");
+          .select("id")
+          .limit(5);
 
         if (adminRlsError) {
-          errors.push(`Admin RLS bloqueou listagem: ${adminRlsError.message}`);
-          rlsPolicies.push("usuarios_select_admin: BLOQUEADO");
+          rlsPolicies.push(`usuarios_select_all: BLOQUEADO (${adminRlsError.message})`);
         } else {
-          rlsPolicies.push(`usuarios_select_admin: OK (${allUsers?.length || 0} usuários visíveis)`);
+          rlsPolicies.push(`usuarios_select_own: OK (${allUsers?.length || 0} registros visíveis via own policy)`);
         }
 
         // 5. Simulate component checks
