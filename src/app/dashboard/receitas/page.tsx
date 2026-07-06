@@ -726,7 +726,7 @@ export default function ReceitasPage() {
                 variant="outline"
                 size="sm"
                 onClick={iniciarModoSelecao}
-                className="hidden h-9 px-3 text-xs md:flex"
+                className="h-9 px-3 text-xs"
               >
                 <CheckCheck className="mr-1 h-3.5 w-3.5" />
                 Selecionar
@@ -1096,13 +1096,17 @@ export default function ReceitasPage() {
                                 {formatarMoeda(receita.valor)}
                               </span>
                             </div>
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
                               <span className="min-w-0 truncate text-[11px] text-muted-foreground">
                                 {receita.cliente?.nome || "Sem cliente"}
                               </span>
+                              <span className="text-muted-foreground/40">•</span>
                               <span className="shrink-0 text-[11px] text-muted-foreground">
                                 {formatarData(receita.data)}
                               </span>
+                            </div>
+                            <div className="mt-1">
+                              {statusBadge(receita.status)}
                             </div>
                           </div>
 

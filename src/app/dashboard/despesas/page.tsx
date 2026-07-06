@@ -148,6 +148,7 @@ export default function DespesasPage() {
   const [excluindoBtn, setExcluindoBtn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [modoSelecao, setModoSelecao] = useState(false);
   const [acaoEmMassa, setAcaoEmMassa] = useState<
     "pagar" | "pendente" | "excluir" | null
   >(null);
@@ -494,6 +495,7 @@ export default function DespesasPage() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      if (next.size === 0) setModoSelecao(false);
       return next;
     });
   }
@@ -501,9 +503,19 @@ export default function DespesasPage() {
   function toggleTodos() {
     if (selecionados.size === paginatedItems.length) {
       setSelecionados(new Set());
+      setModoSelecao(false);
     } else {
       setSelecionados(new Set(paginatedItems.map((d) => d.id)));
     }
+  }
+
+  function iniciarModoSelecao() {
+    setModoSelecao(true);
+  }
+
+  function cancelarModoSelecao() {
+    setModoSelecao(false);
+    setSelecionados(new Set());
   }
 
   async function executarAcaoEmMassa() {
@@ -595,14 +607,38 @@ export default function DespesasPage() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              onClick={abrirNovo}
-              size="sm"
-              className="h-9 bg-emerald-600 px-3 text-xs hover:bg-emerald-700"
-            >
-              <Plus className="mr-1 h-3.5 w-3.5" />
-              Nova Despesa
-            </Button>
+            {modoSelecao && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelarModoSelecao}
+                className="h-9 px-3 text-xs"
+              >
+                <X className="mr-1 h-3.5 w-3.5" />
+                Cancelar
+              </Button>
+            )}
+            {!modoSelecao && despesasFiltradas.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={iniciarModoSelecao}
+                className="h-9 px-3 text-xs"
+              >
+                <CheckCheck className="mr-1 h-3.5 w-3.5" />
+                Selecionar
+              </Button>
+            )}
+            {!modoSelecao && (
+              <Button
+                onClick={abrirNovo}
+                size="sm"
+                className="hidden h-9 bg-emerald-600 px-3 text-xs hover:bg-emerald-700 md:flex"
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                Nova Despesa
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -789,14 +825,14 @@ export default function DespesasPage() {
               </div>
             </motion.div>
 
-            {/* Bulk Action Bar */}
+            {/* Bulk Action Bar - Desktop only */}
             <AnimatePresence>
               {selecionados.size > 0 && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-2 mt-2 overflow-hidden"
+                  className="mb-2 mt-2 hidden overflow-hidden md:block"
                 >
                   <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                     <span className="text-xs font-medium text-emerald-800">
@@ -1116,28 +1152,30 @@ export default function DespesasPage() {
                             Sem categoria
                           </span>
                         )}
-                        <div className="ml-auto flex-shrink-0">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleSelecionado(d.id);
-                            }}
-                            className="flex h-[44px] w-[44px] items-center justify-center"
-                          >
-                            <div
-                              className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                                selecionados.has(d.id)
-                                  ? "border-emerald-600 bg-emerald-600"
-                                  : "border-muted-foreground/40 bg-white"
-                              }`}
+                        {modoSelecao && (
+                          <div className="ml-auto flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSelecionado(d.id);
+                              }}
+                              className="flex h-[44px] w-[44px] items-center justify-center"
                             >
-                              {selecionados.has(d.id) && (
-                                <Check className="h-3 w-3 text-white" />
-                              )}
-                            </div>
-                          </button>
-                        </div>
+                              <div
+                                className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+                                  selecionados.has(d.id)
+                                    ? "border-emerald-600 bg-emerald-600"
+                                    : "border-muted-foreground/40 bg-white"
+                                }`}
+                              >
+                                {selecionados.has(d.id) && (
+                                  <Check className="h-3 w-3 text-white" />
+                                )}
+                              </div>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   ))}
@@ -1155,7 +1193,7 @@ export default function DespesasPage() {
       </div>
 
       {/* Mobile FAB */}
-      {!carregando && despesasFiltradas.length > 0 && (
+      {!carregando && despesasFiltradas.length > 0 && !modoSelecao && (
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -1165,7 +1203,7 @@ export default function DespesasPage() {
             damping: 25,
             delay: 0.3,
           }}
-          className="fixed bottom-6 right-4 z-40 md:hidden"
+          className="fixed bottom-20 right-4 z-40 pb-[env(safe-area-inset-bottom)] md:hidden"
         >
           <Button
             onClick={abrirNovo}
@@ -1175,6 +1213,63 @@ export default function DespesasPage() {
           </Button>
         </motion.div>
       )}
+
+      {/* Mobile Bottom Bulk Action Bar */}
+      <AnimatePresence>
+        {selecionados.size > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden"
+            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {selecionados.size} selecionado(s)
+              </span>
+              <button
+                onClick={cancelarModoSelecao}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Limpar
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                onClick={() => setAcaoEmMassa("pagar")}
+                disabled={processandoMassa}
+              >
+                <CheckCheck className="mr-1 h-4 w-4" />
+                Pago
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800"
+                onClick={() => setAcaoEmMassa("pendente")}
+                disabled={processandoMassa}
+              >
+                <Clock className="mr-1 h-4 w-4" />
+                Pendente
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                onClick={() => setAcaoEmMassa("excluir")}
+                disabled={processandoMassa}
+              >
+                <Trash2 className="mr-1 h-4 w-4" />
+                Excluir
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Detail Drawer */}
       <Sheet open={detalheAberto} onOpenChange={setDetalheAberto}>
