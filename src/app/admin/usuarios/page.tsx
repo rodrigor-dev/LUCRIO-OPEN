@@ -11,6 +11,7 @@ import {
   UserCheck,
   UserX,
   ShieldCheck,
+  Shield,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -23,6 +24,11 @@ import {
   Receipt,
   FolderOpen,
   Download,
+  Crown,
+  Gift,
+  Key,
+  Calendar,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -79,6 +85,11 @@ import {
   suspenderUsuario,
   reativarUsuario,
   excluirUsuario,
+  liberarAcesso,
+  acessoSistematico,
+  estenderTrial,
+  tornarAdmin,
+  obterAssinaturaUsuario,
 } from "@/services/admin.service";
 import { formatarData, formatarDataHora, formatarMoeda } from "@/utils";
 import type { UsuarioAdmin, PlanoAdmin } from "@/types/admin";
@@ -172,6 +183,12 @@ export default function AdminUsuariosPage() {
   const [editDialog, setEditDialog] = useState<UsuarioAdmin | null>(null);
   const [editForm, setEditForm] = useState({ nome: "", email: "", telefone: "" });
   const [salvando, setSalvando] = useState(false);
+  const [acessoDialog, setAcessoDialog] = useState<UsuarioAdmin | null>(null);
+  const [acessoDias, setAcessoDias] = useState(30);
+  const [vitalicioDialog, setVitalicioDialog] = useState<UsuarioAdmin | null>(null);
+  const [trialDialog, setTrialDialog] = useState<UsuarioAdmin | null>(null);
+  const [trialDias, setTrialDias] = useState(7);
+  const [assinaturaInfo, setAssinaturaInfo] = useState<Record<string, unknown> | null>(null);
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
@@ -226,10 +243,15 @@ export default function AdminUsuariosPage() {
   const openDetail = async (usuario: UsuarioAdmin) => {
     setSheetOpen(true);
     try {
-      const detalhe = await obterUsuario(usuario.id);
+      const [detalhe, assinatura] = await Promise.all([
+        obterUsuario(usuario.id),
+        obterAssinaturaUsuario(usuario.id),
+      ]);
       setUsuarioDetail(detalhe);
+      setAssinaturaInfo(assinatura);
     } catch {
       setUsuarioDetail(usuario);
+      setAssinaturaInfo(null);
     }
   };
 
@@ -285,6 +307,87 @@ export default function AdminUsuariosPage() {
       toast.error("Erro ao excluir usuario");
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const handleConcederAcesso = async () => {
+    if (!acessoDialog) return;
+    setSalvando(true);
+    try {
+      const { data: planoPro } = await import("@/lib/supabase/client").then(m =>
+        m.createClient().from("planos").select("id").eq("slug", "pro").eq("is_ativo", true).single()
+      );
+      if (!planoPro) { toast.error("Plano PRO nao encontrado"); return; }
+      await liberarAcesso(acessoDialog.id, acessoDias, planoPro.id);
+      toast.success(`Acesso concedido por ${acessoDias} dias`);
+      setAcessoDialog(null);
+      await carregarDados();
+      if (usuarioDetail?.id === acessoDialog.id) {
+        const atualizado = await obterUsuario(acessoDialog.id);
+        setUsuarioDetail(atualizado);
+        const assinatura = await obterAssinaturaUsuario(acessoDialog.id);
+        setAssinaturaInfo(assinatura);
+      }
+    } catch {
+      toast.error("Erro ao conceder acesso");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleAcessoVitalicio = async () => {
+    if (!vitalicioDialog) return;
+    setSalvando(true);
+    try {
+      await acessoSistematico(vitalicioDialog.id);
+      toast.success("Acesso vitalicio concedido com sucesso");
+      setVitalicioDialog(null);
+      await carregarDados();
+      if (usuarioDetail?.id === vitalicioDialog.id) {
+        const atualizado = await obterUsuario(vitalicioDialog.id);
+        setUsuarioDetail(atualizado);
+        const assinatura = await obterAssinaturaUsuario(vitalicioDialog.id);
+        setAssinaturaInfo(assinatura);
+      }
+    } catch {
+      toast.error("Erro ao conceder acesso vitalicio");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleEstenderTrial = async () => {
+    if (!trialDialog) return;
+    setSalvando(true);
+    try {
+      await estenderTrial(trialDialog.id, trialDias);
+      toast.success(`Trial estendido em ${trialDias} dias`);
+      setTrialDialog(null);
+      await carregarDados();
+      if (usuarioDetail?.id === trialDialog.id) {
+        const atualizado = await obterUsuario(trialDialog.id);
+        setUsuarioDetail(atualizado);
+        const assinatura = await obterAssinaturaUsuario(trialDialog.id);
+        setAssinaturaInfo(assinatura);
+      }
+    } catch {
+      toast.error("Erro ao estender trial");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const handleTornarAdmin = async (usuario: UsuarioAdmin) => {
+    try {
+      await tornarAdmin(usuario.id, !usuario.is_admin);
+      toast.success(usuario.is_admin ? "Admin removido com sucesso" : "Admin concedido com sucesso");
+      await carregarDados();
+      if (usuarioDetail?.id === usuario.id) {
+        const atualizado = await obterUsuario(usuario.id);
+        setUsuarioDetail(atualizado);
+      }
+    } catch {
+      toast.error("Erro ao alterar admin");
     }
   };
 
@@ -573,7 +676,7 @@ export default function AdminUsuariosPage() {
 
       <Sheet open={sheetOpen} onOpenChange={(open) => {
         setSheetOpen(open);
-        if (!open) setUsuarioDetail(null);
+        if (!open) { setUsuarioDetail(null); setAssinaturaInfo(null); }
       }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
@@ -594,76 +697,56 @@ export default function AdminUsuariosPage() {
                 <div>
                   <h3 className="text-lg font-semibold">{usuarioDetail.nome}</h3>
                   <p className="text-sm text-muted-foreground">{usuarioDetail.email}</p>
-                  {getStatusBadge(getStatus(usuarioDetail))}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <FolderOpen className="h-3.5 w-3.5" />
-                    Total Clientes
+                  <div className="flex items-center gap-2 mt-1">
+                    {getStatusBadge(getStatus(usuarioDetail))}
+                    {usuarioDetail.is_admin && (
+                      <Badge variant="default" className="gap-1">
+                        <Crown className="h-3 w-3" /> Admin
+                      </Badge>
+                    )}
                   </div>
-                  <p className="mt-1 text-xl font-bold">
-                    {usuarioDetail._count?.clientes ?? 0}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <DollarSign className="h-3.5 w-3.5" />
-                    Total Receitas
-                  </div>
-                  <p className="mt-1 text-xl font-bold">
-                    {usuarioDetail._count?.receitas ?? 0}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Receipt className="h-3.5 w-3.5" />
-                    Total Despesas
-                  </div>
-                  <p className="mt-1 text-xl font-bold">
-                    {usuarioDetail._count?.despesas ?? 0}
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    Membro desde
-                  </div>
-                  <p className="mt-1 text-sm font-medium">
-                    {formatarData(usuarioDetail.criado_em)}
-                  </p>
                 </div>
               </div>
 
               <Separator />
 
               <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Informacoes da Assinatura</h4>
-                {usuarioDetail.plano ? (
-                  <div className="rounded-lg border p-4 space-y-2">
+                <h4 className="font-semibold text-sm">Assinatura</h4>
+                {assinaturaInfo ? (
+                  <div className="rounded-lg border p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{usuarioDetail.plano.nome}</span>
-                      <Badge variant="secondary">{formatarMoeda(usuarioDetail.plano.preco_mensal)}/mes</Badge>
+                      <span className="text-sm font-medium">
+                        {(assinaturaInfo.plano as Record<string, unknown>)?.nome as string || "Plano PRO"}
+                      </span>
+                      <Badge variant={
+                        assinaturaInfo.status === "ativo" ? "default" :
+                        assinaturaInfo.status === "trial" ? "secondary" : "outline"
+                      }>
+                        {assinaturaInfo.status === "ativo" && "Ativo"}
+                        {assinaturaInfo.status === "trial" && "Trial"}
+                        {assinaturaInfo.status === "cancelado" && "Cancelado"}
+                      </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <p>Clientes: {usuarioDetail.plano.limite_clientes}</p>
-                      <p>Receitas: {usuarioDetail.plano.limite_receitas}</p>
-                      <p>Despesas: {usuarioDetail.plano.limite_despesas}</p>
+                      {!!assinaturaInfo.status && assinaturaInfo.status === "trial" && !!assinaturaInfo.trial_termina && (
+                        <p>Trial termina: <strong>{formatarDataHora(String(assinaturaInfo.trial_termina))}</strong></p>
+                      )}
+                      {!!assinaturaInfo.fim_periodo && (
+                        <p>Valido ate: <strong>{formatarDataHora(String(assinaturaInfo.fim_periodo))}</strong></p>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum plano ativo
-                  </p>
+                  <div className="rounded-lg border border-dashed p-4 text-center">
+                    <p className="text-sm text-muted-foreground">Nenhuma assinatura encontrada</p>
+                  </div>
                 )}
               </div>
 
+              <Separator />
+
               <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Informacoes de Acesso</h4>
+                <h4 className="font-semibold text-sm">Acesso e Permissoes</h4>
                 <div className="rounded-lg border divide-y">
                   <div className="flex items-center justify-between p-3 text-sm">
                     <span className="text-muted-foreground">Telefone</span>
@@ -688,8 +771,50 @@ export default function AdminUsuariosPage() {
 
               <Separator />
 
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm">Acoes</h4>
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Gerenciar Acesso</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => setAcessoDialog(usuarioDetail)}
+                  >
+                    <Key className="mr-2 h-3.5 w-3.5" />
+                    Conceder Acesso
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-amber-600 hover:bg-amber-700"
+                    onClick={() => setVitalicioDialog(usuarioDetail)}
+                  >
+                    <Crown className="mr-2 h-3.5 w-3.5" />
+                    Acesso Vitalicio
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTrialDialog(usuarioDetail)}
+                  >
+                    <Gift className="mr-2 h-3.5 w-3.5" />
+                    Estender Trial
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTornarAdmin(usuarioDetail)}
+                  >
+                    <Shield className="mr-2 h-3.5 w-3.5" />
+                    {usuarioDetail.is_admin ? "Remover Admin" : "Tornar Admin"}
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Outras Acoes</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
@@ -812,7 +937,142 @@ export default function AdminUsuariosPage() {
               Cancelar
             </Button>
             <Button variant="destructive" onClick={handleExcluir} disabled={salvando}>
-              {salvando ? "Excluindo..." : "Excluir"}
+              {salvando ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Excluindo...</>
+              ) : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!acessoDialog} onOpenChange={(open) => { if (!open) setAcessoDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-emerald-600" />
+              Conceder Acesso
+            </DialogTitle>
+            <DialogDescription>
+              Conceder acesso ao sistema para <strong>{acessoDialog?.nome}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Dias de acesso</label>
+              <div className="flex gap-2">
+                {[7, 14, 30, 60, 90].map((d) => (
+                  <Button
+                    key={d}
+                    variant={acessoDias === d ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setAcessoDias(d)}
+                  >
+                    {d}d
+                  </Button>
+                ))}
+              </div>
+              <Input
+                type="number"
+                min="1"
+                max="3650"
+                value={acessoDias}
+                onChange={(e) => setAcessoDias(parseInt(e.target.value) || 30)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {acessoDias} dias = {acessoDias >= 365 ? `${(acessoDias / 365).toFixed(1)} anos` : `${acessoDias} dias`}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAcessoDialog(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConcederAcesso} disabled={salvando} className="bg-emerald-600 hover:bg-emerald-700">
+              {salvando ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Concedendo...</>
+              ) : (
+                <><Key className="mr-2 h-4 w-4" /> Conceder Acesso</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!vitalicioDialog} onOpenChange={(open) => { if (!open) setVitalicioDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-amber-600" />
+              Acesso Vitalicio
+            </DialogTitle>
+            <DialogDescription>
+              Conceder acesso vitalicio para <strong>{vitalicioDialog?.nome}</strong>?
+              Esta acao da acesso permanente ao sistema sem necessidade de pagamento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <p>O usuario tera acesso ilimitado ao plano PRO para sempre.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVitalicioDialog(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAcessoVitalicio} disabled={salvando} className="bg-amber-600 hover:bg-amber-700">
+              {salvando ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Concedendo...</>
+              ) : (
+                <><Crown className="mr-2 h-4 w-4" /> Conceder Vitalicio</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!trialDialog} onOpenChange={(open) => { if (!open) setTrialDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-purple-600" />
+              Estender Trial
+            </DialogTitle>
+            <DialogDescription>
+              Estender o periodo de trial de <strong>{trialDialog?.nome}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Dias adicionais</label>
+              <div className="flex gap-2">
+                {[3, 7, 14, 30].map((d) => (
+                  <Button
+                    key={d}
+                    variant={trialDias === d ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTrialDias(d)}
+                  >
+                    +{d}d
+                  </Button>
+                ))}
+              </div>
+              <Input
+                type="number"
+                min="1"
+                max="90"
+                value={trialDias}
+                onChange={(e) => setTrialDias(parseInt(e.target.value) || 7)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTrialDialog(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEstenderTrial} disabled={salvando} className="bg-purple-600 hover:bg-purple-700">
+              {salvando ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Estendendo...</>
+              ) : (
+                <><Gift className="mr-2 h-4 w-4" /> Estender Trial</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -491,6 +491,77 @@ export async function liberarAcesso(usuarioId: string, dias: number, planoId: st
   }
 }
 
+export async function acessoSistematico(usuarioId: string) {
+  const { data: planoPro } = await supabase
+    .from("planos").select("id").eq("slug", "pro").eq("is_ativo", true).single();
+  if (!planoPro) throw new Error("Plano PRO nao encontrado");
+
+  const inicio = new Date();
+  const fim = new Date();
+  fim.setFullYear(fim.getFullYear() + 100);
+
+  const { data: existente } = await supabase
+    .from("assinaturas").select("id").eq("usuario_id", usuarioId)
+    .in("status", ["trial", "ativo"]).single();
+
+  if (existente) {
+    await supabase.from("assinaturas").update({
+      status: "ativo", plano_id: planoPro.id,
+      fim_periodo: fim.toISOString(), trial_termina: inicio.toISOString(),
+    }).eq("id", existente.id);
+  } else {
+    await supabase.from("assinaturas").insert({
+      usuario_id: usuarioId, plano_id: planoPro.id, status: "ativo",
+      trial_termina: inicio.toISOString(), inicio_periodo: inicio.toISOString(),
+      fim_periodo: fim.toISOString(),
+    });
+  }
+}
+
+export async function estenderTrial(usuarioId: string, dias: number) {
+  const { data: existente } = await supabase
+    .from("assinaturas").select("id, trial_termina").eq("usuario_id", usuarioId)
+    .in("status", ["trial"]).single();
+
+  const base = existente?.trial_termina ? new Date(existente.trial_termina) : new Date();
+  base.setDate(base.getDate() + dias);
+
+  if (existente) {
+    await supabase.from("assinaturas").update({
+      trial_termina: base.toISOString(),
+    }).eq("id", existente.id);
+  } else {
+    const { data: planoPro } = await supabase
+      .from("planos").select("id").eq("slug", "pro").eq("is_ativo", true).single();
+    if (!planoPro) throw new Error("Plano PRO nao encontrado");
+    const fim = new Date();
+    fim.setDate(fim.getDate() + dias);
+    await supabase.from("assinaturas").insert({
+      usuario_id: usuarioId, plano_id: planoPro.id, status: "trial",
+      trial_termina: base.toISOString(), inicio_periodo: new Date().toISOString(),
+      fim_periodo: fim.toISOString(),
+    });
+  }
+}
+
+export async function tornarAdmin(usuarioId: string, is_admin: boolean) {
+  const { error } = await supabase.from("usuarios").update({ is_admin }).eq("id", usuarioId);
+  if (error) throw error;
+}
+
+export async function obterAssinaturaUsuario(usuarioId: string) {
+  const { data, error } = await supabase
+    .from("assinaturas")
+    .select("*, plano:planos(nome, slug, preco_mensal)")
+    .eq("usuario_id", usuarioId)
+    .in("status", ["trial", "ativo", "cancelado"])
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .single();
+  if (error) return null;
+  return data;
+}
+
 // ============================================================
 // CHART DATA
 // ============================================================
