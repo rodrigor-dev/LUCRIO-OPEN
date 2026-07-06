@@ -50,7 +50,7 @@ export async function updateSession(request: NextRequest) {
   );
   const rotaPublica = ehRotaExataPublica || ehRotaComPrefixoPublico;
 
-  // Rotas não-autenticadas redirecionam para login
+  // Não autenticado → login
   if (!user && !rotaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -58,14 +58,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Usuário logado não acessa login/cadastro
+  // Logado em login/cadastro → dashboard
   if (user && (pathname === "/login" || pathname === "/cadastro")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
-  // Verificação de admin para rotas /admin/*
+  // Verificação de admin para /admin/*
   if (pathname.startsWith("/admin")) {
     if (!user) {
       const url = request.nextUrl.clone();
@@ -74,22 +74,14 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Query robusta: tenta is_admin com fallback seguro
-    try {
-      const { data: usuario, error } = await supabase
-        .from("usuarios")
-        .select("is_admin")
-        .eq("id", user.id)
-        .single();
+    // Usar query direta com select que já funciona via RLS own
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
 
-      // Se houve erro na query ou usuário não existe ou não é admin
-      if (error || !usuario || usuario.is_admin !== true) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
-        return NextResponse.redirect(url);
-      }
-    } catch {
-      // Em caso de qualquer exceção, negar acesso
+    if (!usuario || usuario.is_admin !== true) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);

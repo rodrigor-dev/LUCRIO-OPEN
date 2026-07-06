@@ -114,7 +114,21 @@ export async function GET(request: Request) {
         }
       }
 
-      return NextResponse.redirect(`${origin}${redirect}`);
+      // Verificar se é admin para redirecionar
+      let finalRedirect = redirect;
+      if (user) {
+        const { data: usuario } = await supabase
+          .from("usuarios")
+          .select("is_admin")
+          .eq("id", user.id)
+          .single();
+
+        if (usuario?.is_admin === true) {
+          finalRedirect = "/admin";
+        }
+      }
+
+      return NextResponse.redirect(`${origin}${finalRedirect}`);
     }
   }
 

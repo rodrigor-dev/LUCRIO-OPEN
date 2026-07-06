@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
-import { entrarComEmail, entrarComGoogle } from "@/services/auth.service";
+import { entrarComEmail, entrarComGoogle, authService } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +40,18 @@ function LoginForm() {
       if (resultado.erro) {
         setErro(resultado.erro);
         return;
+      }
+
+      // Verificar se é admin e redirecionar
+      const authUser = await authService.getAuthUser();
+      if (authUser) {
+        const isAdmin = await authService.isAdmin(authUser.id);
+        if (isAdmin) {
+          toast.success("Login realizado! Redirecionando para o painel admin...");
+          router.push("/admin");
+          router.refresh();
+          return;
+        }
       }
 
       toast.success("Login realizado com sucesso!");
