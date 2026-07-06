@@ -750,7 +750,7 @@ export default function ReceitasPage() {
         {carregando ? (
           <div className="space-y-4">
             {/* KPI Skeleton */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i}>
                   <CardContent className="p-3 sm:p-4">
@@ -790,7 +790,7 @@ export default function ReceitasPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4"
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
             >
               <Card className="overflow-hidden">
                 <CardContent className="p-3 sm:p-4">

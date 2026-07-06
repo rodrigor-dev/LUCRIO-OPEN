@@ -257,6 +257,10 @@ export default function PropostasPage() {
       novosItens[index].total =
         novosItens[index].quantidade * novosItens[index].valor_unitario;
     }
+    if (campo === "quantidade" && typeof valor === "number" && valor <= 0 && novosItens.length > 1) {
+      setItens(novosItens.filter((_, i) => i !== index));
+      return;
+    }
     setItens(novosItens);
   }
 
@@ -267,6 +271,8 @@ export default function PropostasPage() {
   function removerItem(index: number) {
     if (itens.length > 1) {
       setItens(itens.filter((_, i) => i !== index));
+    } else {
+      setItens([{ descricao: "", quantidade: 1, valor_unitario: 0, total: 0 }]);
     }
   }
 
@@ -318,7 +324,7 @@ export default function PropostasPage() {
         .eq("id", propostaEditando.id);
 
       if (error) {
-        toast.error("Erro ao atualizar orcamento.");
+        toast.error("Erro ao atualizar orçamento.");
         setSalvando(false);
         return;
       }
@@ -344,7 +350,7 @@ export default function PropostasPage() {
         await supabase.from("itens_proposta").insert(itensParaInserir);
       }
 
-      toast.success("Orcamento atualizado com sucesso!");
+      toast.success("Orçamento atualizado com sucesso!");
     } else {
       const { data: proposta, error } = await supabase
         .from("propostas")
@@ -357,7 +363,7 @@ export default function PropostasPage() {
         .single();
 
       if (error) {
-        toast.error("Erro ao criar orcamento.");
+        toast.error("Erro ao criar orçamento.");
         setSalvando(false);
         return;
       }
@@ -376,7 +382,7 @@ export default function PropostasPage() {
         await supabase.from("itens_proposta").insert(itensParaInserir);
       }
 
-      toast.success("Orcamento criado com sucesso!");
+      toast.success("Orçamento criado com sucesso!");
     }
 
     fecharDialog();
@@ -392,15 +398,15 @@ export default function PropostasPage() {
       const { error } = await supabase.from("propostas").delete().eq("id", propostaDeletando.id);
 
       if (error) {
-        toast.error("Erro ao excluir orcamento.");
+        toast.error("Erro ao excluir orçamento.");
         return;
       }
 
-      toast.success("Orcamento excluido com sucesso!");
+      toast.success("Orçamento excluído com sucesso!");
       setPropostaDeletando(null);
       carregarDados();
     } catch {
-      toast.error("Erro ao excluir orcamento.");
+      toast.error("Erro ao excluir orçamento.");
     }
   }
 
@@ -412,14 +418,14 @@ export default function PropostasPage() {
         .eq("id", proposta.id);
 
       if (error) {
-        toast.error("Erro ao enviar orcamento.");
+        toast.error("Erro ao enviar orçamento.");
         return;
       }
 
-      toast.success("Orcamento enviado com sucesso!");
+      toast.success("Orçamento enviado com sucesso!");
       carregarDados();
     } catch {
-      toast.error("Erro ao enviar orcamento.");
+      toast.error("Erro ao enviar orçamento.");
     }
   }
 
@@ -458,7 +464,7 @@ export default function PropostasPage() {
         .single();
 
       if (error) {
-        toast.error("Erro ao duplicar orcamento.");
+        toast.error("Erro ao duplicar orçamento.");
         return;
       }
 
@@ -473,10 +479,10 @@ export default function PropostasPage() {
         await supabase.from("itens_proposta").insert(novosItens);
       }
 
-      toast.success("Orcamento duplicado com sucesso!");
+      toast.success("Orçamento duplicado com sucesso!");
       carregarDados();
     } catch {
-      toast.error("Erro ao duplicar orcamento.");
+      toast.error("Erro ao duplicar orçamento.");
     }
   }
 
@@ -484,14 +490,14 @@ export default function PropostasPage() {
     <div className="space-y-6 pb-24 md:pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Orcamentos</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Orçamentos</h1>
           <p className="text-sm text-muted-foreground">
-            Gerencie seus {propostas.length} orcamento{propostas.length !== 1 ? "s" : ""}
+            Gerencie seus {propostas.length} orçamento{propostas.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Button onClick={abrirDialogNova} className="gap-2">
           <Plus className="h-4 w-4" />
-          Novo Orcamento
+          Novo Orçamento
         </Button>
       </div>
 
@@ -530,17 +536,17 @@ export default function PropostasPage() {
           <CardContent className="flex flex-col items-center justify-center py-16">
             <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <h3 className="mb-1 text-lg font-semibold">
-              Nenhum orcamento encontrado
+              Nenhum orçamento encontrado
             </h3>
             <p className="mb-4 text-sm text-muted-foreground">
               {busca || filtroStatus !== "todos"
                 ? "Tente buscar com outros termos ou filtros."
-                : "Crie seu primeiro orcamento."}
+                : "Crie seu primeiro orçamento."}
             </p>
             {!busca && filtroStatus === "todos" && (
               <Button onClick={abrirDialogNova} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Criar Orcamento
+                Criar Orçamento
               </Button>
             )}
           </CardContent>
@@ -650,9 +656,9 @@ export default function PropostasPage() {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Excluir orcamento</AlertDialogTitle>
+                                  <AlertDialogTitle>Excluir orçamento</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Tem certeza que deseja excluir o orcamento{" "}
+                                    Tem certeza que deseja excluir o orçamento{" "}
                                     <strong>{proposta.numero_proposta}</strong>? Esta acao nao
                                     pode ser desfeita.
                                   </AlertDialogDescription>
@@ -776,9 +782,9 @@ export default function PropostasPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir orcamento</AlertDialogTitle>
+                              <AlertDialogTitle>Excluir orçamento</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Tem certeza que deseja excluir o orcamento{" "}
+                                Tem certeza que deseja excluir o orçamento{" "}
                                 <strong>{proposta.numero_proposta}</strong>? Esta acao nao pode
                                 ser desfeita.
                               </AlertDialogDescription>
@@ -808,7 +814,7 @@ export default function PropostasPage() {
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
-              {propostaEditando ? "Editar Orcamento" : "Novo Orcamento"}
+              {propostaEditando ? "Editar Orçamento" : "Novo Orçamento"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -867,17 +873,15 @@ export default function PropostasPage() {
                         onFocus={scrollToInput}
                         className="flex-1 min-w-0"
                       />
-                      {itens.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
-                          onClick={() => removerItem(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
+                        onClick={() => removerItem(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                     <div className="flex gap-2">
                       <Input
@@ -974,7 +978,7 @@ export default function PropostasPage() {
             <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-4">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
-                Total do Orcamento
+                Total do Orçamento
               </div>
               <span className="text-xl font-bold">
                 {formatarMoeda(total)}
@@ -995,7 +999,7 @@ export default function PropostasPage() {
                   ? "Salvando..."
                   : propostaEditando
                     ? "Salvar Alteracoes"
-                    : "Criar Orcamento"}
+                    : "Criar Orçamento"}
               </Button>
             </DialogFooter>
           </form>

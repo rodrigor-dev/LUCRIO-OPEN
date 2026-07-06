@@ -685,7 +685,7 @@ export default function DespesasPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
             >
               {kpiCards.map((kpi) => (
                 <div key={kpi.label} className="rounded-2xl border bg-card p-3 sm:p-4">
