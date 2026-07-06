@@ -161,8 +161,22 @@ export async function listarUsuariosAssinaturas() {
 }
 
 export async function atualizarAssinatura(id: string, dados: Record<string, unknown>) {
-  const { error } = await supabase.from("assinaturas").update(dados).eq("id", id);
-  if (error) throw error;
+  if (dados.status === "cancelado") {
+    const { error } = await supabase.rpc("cancelar_assinatura" as never, { p_assinatura_id: id });
+    if (error) throw error;
+  } else if (dados.status === "ativo" && !dados.fim_periodo) {
+    const { error } = await supabase.rpc("reativar_assinatura" as never, { p_assinatura_id: id });
+    if (error) throw error;
+  } else if (dados.fim_periodo) {
+    const { error } = await supabase.rpc("estender_periodo" as never, {
+      p_assinatura_id: id,
+      p_dias: Math.ceil((new Date(dados.fim_periodo as string).getTime() - Date.now()) / 86400000),
+    });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("assinaturas").update(dados).eq("id", id);
+    if (error) throw error;
+  }
 }
 
 // ============================================================
@@ -465,97 +479,47 @@ export async function contarLogsPorNivel() {
 // ============================================================
 // LIBERACAO MANUAL
 // ============================================================
-export async function liberarAcesso(usuarioId: string, dias: number, planoId: string) {
-  const inicio = new Date();
-  const fim = new Date();
-  if (dias === -1) {
-    fim.setFullYear(fim.getFullYear() + 100);
-  } else {
-    fim.setDate(fim.getDate() + dias);
-  }
-
-  const { data: existente } = await supabase
-    .from("assinaturas")
-    .select("id")
-    .eq("usuario_id", usuarioId)
-    .in("status", ["trial", "ativo"])
-    .single();
-
-  if (existente) {
-    await supabase.from("assinaturas").update({
-      status: "ativo",
-      plano_id: planoId,
-      fim_periodo: fim.toISOString(),
-      trial_termina: inicio.toISOString(),
-    }).eq("id", existente.id);
-  } else {
-    await supabase.from("assinaturas").insert({
-      usuario_id: usuarioId,
-      plano_id: planoId,
-      status: "ativo",
-      trial_termina: inicio.toISOString(),
-      inicio_periodo: inicio.toISOString(),
-      fim_periodo: fim.toISOString(),
-    });
+export async function liberarAcesso(usuarioId: string, dias: number, _planoId?: string) {
+  const { error } = await supabase.rpc("conceder_acesso" as never, {
+    p_usuario_id: usuarioId,
+    p_dias: dias,
+  });
+  if (error) {
+    console.error("[AdminService] conceder_acesso error:", error);
+    throw error;
   }
 }
 
 export async function acessoSistematico(usuarioId: string) {
-  const { data: planoPro } = await supabase
-    .from("planos").select("id").eq("slug", "pro").eq("is_ativo", true).single();
-  if (!planoPro) throw new Error("Plano PRO nao encontrado");
-
-  const inicio = new Date();
-  const fim = new Date();
-  fim.setFullYear(fim.getFullYear() + 100);
-
-  const { data: existente } = await supabase
-    .from("assinaturas").select("id").eq("usuario_id", usuarioId)
-    .in("status", ["trial", "ativo"]).single();
-
-  if (existente) {
-    await supabase.from("assinaturas").update({
-      status: "ativo", plano_id: planoPro.id,
-      fim_periodo: fim.toISOString(), trial_termina: inicio.toISOString(),
-    }).eq("id", existente.id);
-  } else {
-    await supabase.from("assinaturas").insert({
-      usuario_id: usuarioId, plano_id: planoPro.id, status: "ativo",
-      trial_termina: inicio.toISOString(), inicio_periodo: inicio.toISOString(),
-      fim_periodo: fim.toISOString(),
-    });
+  const { error } = await supabase.rpc("acesso_vitalicio" as never, {
+    p_usuario_id: usuarioId,
+  });
+  if (error) {
+    console.error("[AdminService] acesso_vitalicio error:", error);
+    throw error;
   }
 }
 
 export async function estenderTrial(usuarioId: string, dias: number) {
-  const { data: existente } = await supabase
-    .from("assinaturas").select("id, trial_termina").eq("usuario_id", usuarioId)
-    .in("status", ["trial"]).single();
-
-  const base = existente?.trial_termina ? new Date(existente.trial_termina) : new Date();
-  base.setDate(base.getDate() + dias);
-
-  if (existente) {
-    await supabase.from("assinaturas").update({
-      trial_termina: base.toISOString(),
-    }).eq("id", existente.id);
-  } else {
-    const { data: planoPro } = await supabase
-      .from("planos").select("id").eq("slug", "pro").eq("is_ativo", true).single();
-    if (!planoPro) throw new Error("Plano PRO nao encontrado");
-    const fim = new Date();
-    fim.setDate(fim.getDate() + dias);
-    await supabase.from("assinaturas").insert({
-      usuario_id: usuarioId, plano_id: planoPro.id, status: "trial",
-      trial_termina: base.toISOString(), inicio_periodo: new Date().toISOString(),
-      fim_periodo: fim.toISOString(),
-    });
+  const { error } = await supabase.rpc("estender_trial" as never, {
+    p_usuario_id: usuarioId,
+    p_dias: dias,
+  });
+  if (error) {
+    console.error("[AdminService] estender_trial error:", error);
+    throw error;
   }
 }
 
 export async function tornarAdmin(usuarioId: string, is_admin: boolean) {
-  const { error } = await supabase.from("usuarios").update({ is_admin }).eq("id", usuarioId);
-  if (error) throw error;
+  const { error } = await supabase.rpc("toggle_admin" as never, {
+    p_usuario_id: usuarioId,
+    p_is_admin: is_admin,
+  });
+  if (error) {
+    console.error("[AdminService] toggle_admin error:", error);
+    throw error;
+  }
 }
 
 export async function obterAssinaturaUsuario(usuarioId: string) {

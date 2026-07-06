@@ -314,11 +314,7 @@ export default function AdminUsuariosPage() {
     if (!acessoDialog) return;
     setSalvando(true);
     try {
-      const { data: planoPro } = await import("@/lib/supabase/client").then(m =>
-        m.createClient().from("planos").select("id").eq("slug", "pro").eq("is_ativo", true).single()
-      );
-      if (!planoPro) { toast.error("Plano PRO nao encontrado"); return; }
-      await liberarAcesso(acessoDialog.id, acessoDias, planoPro.id);
+      await liberarAcesso(acessoDialog.id, acessoDias);
       toast.success(`Acesso concedido por ${acessoDias} dias`);
       setAcessoDialog(null);
       await carregarDados();
