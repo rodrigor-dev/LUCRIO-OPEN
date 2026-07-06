@@ -593,7 +593,7 @@ export default function DespesasPage() {
   ];
 
   return (
-    <div className="min-h-[100dvh] w-full pb-[max(7rem,env(safe-area-inset-bottom)+4rem)] md:pb-8">
+    <div className="space-y-4 pb-[max(7rem,env(safe-area-inset-bottom)+4rem)] md:pb-6">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-4 py-3 md:py-4">
@@ -643,7 +643,7 @@ export default function DespesasPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="space-y-4">
         {/* Loading Skeleton */}
         {carregando ? (
           <div className="space-y-4">
@@ -742,7 +742,7 @@ export default function DespesasPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-3 -mx-4 overflow-x-auto px-4 scrollbar-hide"
+              className="mt-3 overflow-x-auto scrollbar-hide"
             >
               <div
                 className="flex gap-2 pb-2"

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda, gerarNumeroOrcamento } from "@/utils";
+import { gerarPDFOrcamento } from "@/utils/pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -144,6 +147,10 @@ export default function PropostasPage() {
   const [propostaVisualizando, setPropostaVisualizando] = useState<Proposta | null>(null);
   const [propostaDeletando, setPropostaDeletando] = useState<Proposta | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [pdfDialogAberto, setPdfDialogAberto] = useState(false);
+  const [propostaPdf, setPropostaPdf] = useState<Proposta | null>(null);
+  const [pdfEmpresa, setPdfEmpresa] = useState("");
+  const [pdfCliente, setPdfCliente] = useState("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [itens, setItens] = useState<ItemProposta[]>([
     { descricao: "", quantidade: 1, valor_unitario: 0, total: 0 },
@@ -608,6 +615,19 @@ export default function PropostasPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPropostaPdf(proposta);
+                                setPdfCliente(proposta.cliente?.nome || "");
+                                setPdfDialogAberto(true);
+                              }}
+                              title="Exportar PDF"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
                             {proposta.status === "rascunho" && (
                               <Button
                                 variant="ghost"
@@ -735,6 +755,18 @@ export default function PropostasPage() {
                           onClick={() => setPropostaVisualizando(proposta)}
                         >
                           <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-11 w-11"
+                          onClick={() => {
+                            setPropostaPdf(proposta);
+                            setPdfCliente(proposta.cliente?.nome || "");
+                            setPdfDialogAberto(true);
+                          }}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
                         </Button>
                         {proposta.status === "rascunho" && (
                           <Button
@@ -1158,6 +1190,60 @@ export default function PropostasPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Export Dialog */}
+      <Dialog open={pdfDialogAberto} onOpenChange={setPdfDialogAberto}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Exportar PDF</DialogTitle>
+            <DialogDescription>Preencha para gerar o orçamento em PDF</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome da Empresa</Label>
+              <Input value={pdfEmpresa} onChange={(e) => setPdfEmpresa(e.target.value)} placeholder="Sua empresa" className="h-11" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome do Cliente</Label>
+              <Input value={pdfCliente} onChange={(e) => setPdfCliente(e.target.value)} placeholder="Cliente" className="h-11" />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" className="h-11">Cancelar</Button>
+            </DialogClose>
+            <Button
+              className="h-11 bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => {
+                if (!propostaPdf) return;
+                gerarPDFOrcamento({
+                  numero: propostaPdf.numero_proposta || "0000",
+                  empresa: pdfEmpresa,
+                  cliente: pdfCliente || propostaPdf.cliente?.nome || "",
+                  data: new Date(propostaPdf.criado_em).toLocaleDateString("pt-BR"),
+                  validade: propostaPdf.validade || "30 dias",
+                  itens: (propostaPdf.itens_proposta || []).map((item) => ({
+                    descricao: item.descricao,
+                    quantidade: item.quantidade,
+                    valor_unitario: item.valor_unitario,
+                    total: item.total,
+                  })),
+                  subtotal: propostaPdf.subtotal,
+                  desconto: propostaPdf.desconto || 0,
+                  frete: propostaPdf.frete || 0,
+                  total: propostaPdf.total,
+                  condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
+                  observacoes: propostaPdf.observacoes || undefined,
+                });
+                setPdfDialogAberto(false);
+                toast.success("PDF gerado com sucesso!");
+              }}
+            >
+              Gerar PDF
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

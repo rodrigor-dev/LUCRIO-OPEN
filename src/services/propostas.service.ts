@@ -94,7 +94,7 @@ export async function excluirProposta(id: string): Promise<void> {
 
 export async function duplicarProposta(id: string): Promise<PropostaComercial> {
   const proposta = await obterProposta(id);
-  if (!proposta) throw new Error("Orcamento nao encontrado");
+  if (!proposta) throw new Error("Orçamento não encontrado");
 
   const propostaData = proposta as PropostaComercial & {
     cliente?: { id: string };

@@ -34,14 +34,23 @@ export function parseMoeda(valor: string): number {
 }
 
 export function formatarInputMoeda(valor: string): string {
-  let numeros = valor.replace(/[^\d]/g, "");
-  numeros = numeros.replace(/^0+(\d)/, "$1");
-  if (!numeros) return "";
-  while (numeros.length < 3) numeros = "0" + numeros;
-  const centavos = numeros.slice(-2);
-  const reais = numeros.slice(0, -2);
-  const reaisFormatado = reais.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${reaisFormatado},${centavos}`;
+  const temVirgula = valor.includes(",");
+  let normalizado = valor.replace(/\./g, ",");
+  let apenasDigitosVirgula = normalizado.replace(/[^\d,]/g, "");
+  const partes = apenasDigitosVirgula.split(",");
+  if (partes.length > 2) {
+    apenasDigitosVirgula = partes[0] + "," + partes.slice(1).join("");
+  }
+  const partesFinais = apenasDigitosVirgula.split(",");
+  const inteiros = (partesFinais[0] || "").replace(/^0+(\d)/, "$1") || "";
+  let centavos = partesFinais[1] || "";
+  if (centavos.length > 2) centavos = centavos.slice(0, 2);
+  if (!inteiros && !centavos) return "";
+  const inteirosFormatado = (inteiros || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (temVirgula || partes.length > 1) {
+    return `${inteirosFormatado},${centavos.padEnd(2, "0")}`;
+  }
+  return inteirosFormatado;
 }
 
 export function formatarMoedaSemSimbolo(valor: number): string {

@@ -697,7 +697,7 @@ export default function ReceitasPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] overflow-hidden bg-background pb-28 pt-[env(safe-area-inset-top)] md:pb-8">
+    <div className="space-y-4 pb-28 md:pb-6">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-4 py-3 md:py-4">
@@ -746,7 +746,7 @@ export default function ReceitasPage() {
         </div>
       </div>
 
-      <div className="w-full px-4 pt-4">
+      <div className="space-y-4">
         {carregando ? (
           <div className="space-y-4">
             {/* KPI Skeleton */}
@@ -888,7 +888,7 @@ export default function ReceitasPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-3 -mx-4 overflow-x-auto px-4 scrollbar-hide"
+              className="mt-3 overflow-x-auto scrollbar-hide"
             >
               <div className="flex gap-2 pb-2" style={{ minWidth: "max-content" }}>
                 <button
