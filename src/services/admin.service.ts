@@ -151,6 +151,15 @@ export async function listarAssinaturas(filtros?: { status?: string }) {
   return assinaturas;
 }
 
+export async function listarUsuariosAssinaturas() {
+  const { data, error } = await supabase.rpc("get_usuarios_assinaturas" as never);
+  if (error) {
+    console.error("[AdminService] get_usuarios_assinaturas error:", error);
+    return [];
+  }
+  return data || [];
+}
+
 export async function atualizarAssinatura(id: string, dados: Record<string, unknown>) {
   const { error } = await supabase.from("assinaturas").update(dados).eq("id", id);
   if (error) throw error;
