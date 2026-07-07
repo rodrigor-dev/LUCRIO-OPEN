@@ -1216,9 +1216,9 @@ export default function PropostasPage() {
             </DialogClose>
             <Button
               className="h-11 bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => {
+              onClick={async () => {
                 if (!propostaPdf) return;
-                gerarPDFOrcamento({
+                await gerarPDFOrcamento({
                   numero: propostaPdf.numero_proposta || "0000",
                   empresa: pdfEmpresa,
                   cliente: pdfCliente || propostaPdf.cliente?.nome || "",

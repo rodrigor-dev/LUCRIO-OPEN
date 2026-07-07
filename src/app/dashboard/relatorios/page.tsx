@@ -152,7 +152,8 @@ export default function RelatoriosPage() {
         supabase
           .from("servicos")
           .select("id", { count: "exact" })
-          .eq("negocio_id", negocio.id),
+          .eq("negocio_id", negocio.id)
+          .gte("data", dataInicio),
       ]);
 
     const receitas = receitasRes.data || [];
@@ -257,7 +258,7 @@ export default function RelatoriosPage() {
       })
       .join("\n");
 
-    const blob = new Blob([cabecalho + linhas], {
+    const blob = new Blob(["\uFEFF" + cabecalho + linhas], {
       type: "text/csv;charset=utf-8;",
     });
     const link = document.createElement("a");

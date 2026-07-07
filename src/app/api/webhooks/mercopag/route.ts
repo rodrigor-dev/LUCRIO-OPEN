@@ -55,6 +55,19 @@ export async function POST(request: Request) {
     }
 
     const corpoRaw = await request.text();
+    const headerAssinatura = request.headers.get("x-signature");
+    const webhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+
+    if (webhookSecret) {
+      const assinaturaValida = await verificarAssinatura(corpoRaw, headerAssinatura, webhookSecret);
+      if (!assinaturaValida) {
+        console.error("[WEBHOOK] Assinatura inválida, ignorando");
+        return NextResponse.json({ ok: false }, { status: 401 });
+      }
+    } else {
+      console.warn("[WEBHOOK] MERCADO_PAGO_WEBHOOK_SECRET não configurado, pulando verificação");
+    }
+
     const corpo = JSON.parse(corpoRaw);
 
     console.log("[WEBHOOK] Notificação recebida:", JSON.stringify(corpo).slice(0, 500));
@@ -109,21 +122,18 @@ export async function POST(request: Request) {
     const statusSupabase = statusMap[status] || "pendente";
     console.log(`[WEBHOOK] Pagamento ${pagamentoId}: ${status} → ${statusSupabase}`);
 
-    // Atualizar assinatura
     const { data, error } = await supabase
-      .from("assinaturas")
-      .update({ 
-        status: statusSupabase,
-        ultimo_pagamento: status === "approved" ? new Date().toISOString() : undefined,
-      })
-      .eq("intent_pagamento_id", String(pagamentoId))
-      .select("id");
+      .rpc("webhook_atualizar_assinatura", {
+        p_pagamento_id: String(pagamentoId),
+        p_status: statusSupabase,
+        p_pago: status === "approved",
+      });
 
     if (error) {
       console.error("[WEBHOOK] Erro ao atualizar:", error.message);
     }
 
-    if (!data || data.length === 0) {
+    if (!data) {
       console.log(`[WEBHOOK] Nenhuma assinatura encontrada com pagamento_id: ${pagamentoId}`);
     }
 

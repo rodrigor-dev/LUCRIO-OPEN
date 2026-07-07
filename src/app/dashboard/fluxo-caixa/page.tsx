@@ -157,12 +157,21 @@ export default function FluxoCaixaPage() {
   const saldo = totalEntradas - totalSaidas;
 
   let saldoAcumulado = 0;
-  const movimentacoesComSaldo = movimentacoes.map((m) => {
+  const saldoPorData = new Map<string, number>();
+  const ordenadas = [...movimentacoes].sort(
+    (a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()
+  );
+  for (const m of ordenadas) {
     if (m.status === "pago") {
       saldoAcumulado += m.tipo === "entrada" ? m.valor : -m.valor;
     }
-    return { ...m, saldoAcumulado };
-  });
+    saldoPorData.set(m.id, saldoAcumulado);
+  }
+
+  const movimentacoesComSaldo = movimentacoes.map((m) => ({
+    ...m,
+    saldoAcumulado: saldoPorData.get(m.id) ?? 0,
+  }));
 
   return (
     <div className="space-y-6 pb-24 md:pb-6">
@@ -290,7 +299,7 @@ export default function FluxoCaixaPage() {
                   {formatarMoeda(saldo)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {totalSaidas > 0 ? `${((saldo / totalEntradas) * 100).toFixed(1)}%` : "—"} margem
+                  {totalEntradas > 0 ? `${((saldo / totalEntradas) * 100).toFixed(1)}%` : "—"} margem
                 </p>
               </CardContent>
             </Card>

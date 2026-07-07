@@ -109,16 +109,30 @@ export async function GET(request: Request) {
             .maybeSingle();
 
           if (!existenteAssinatura) {
-            // Buscar plano PRO por UUID (não hardcoded)
-            const { data: plano } = await supabase
+            // Buscar plano PRO por slug, fallback para plano mais barato
+            let planoId: string | null = null;
+
+            const { data: planoPro } = await supabase
               .from("planos")
               .select("id")
+              .eq("slug", "pro")
               .eq("is_ativo", true)
-              .order("preco_mensal", { ascending: true })
-              .limit(1)
-              .single();
+              .maybeSingle();
 
-            if (plano) {
+            if (planoPro) {
+              planoId = planoPro.id;
+            } else {
+              const { data: planoBarato } = await supabase
+                .from("planos")
+                .select("id")
+                .eq("is_ativo", true)
+                .order("preco_mensal", { ascending: true })
+                .limit(1)
+                .maybeSingle();
+              planoId = planoBarato?.id ?? null;
+            }
+
+            if (planoId) {
               const trialTermina = new Date();
               trialTermina.setDate(trialTermina.getDate() + 7);
 
@@ -126,7 +140,7 @@ export async function GET(request: Request) {
                 .from("assinaturas")
                 .insert({
                   usuario_id: user.id,
-                  plano_id: plano.id,
+                  plano_id: planoId,
                   status: "trial",
                   trial_termina: trialTermina.toISOString(),
                   inicio_periodo: new Date().toISOString(),

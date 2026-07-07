@@ -192,7 +192,7 @@ class AuthService {
     });
 
     if (error) {
-      return { erro: error.message };
+      return { erro: this.traduzirErro(error.message) };
     }
 
     if (data.user) {
@@ -310,7 +310,7 @@ class AuthService {
     });
 
     if (error) {
-      return { erro: error.message };
+      return { erro: this.traduzirErro(error.message) };
     }
 
     return {};
@@ -325,7 +325,7 @@ class AuthService {
     });
 
     if (error) {
-      return { erro: error.message };
+      return { erro: this.traduzirErro(error.message) };
     }
 
     return {};
