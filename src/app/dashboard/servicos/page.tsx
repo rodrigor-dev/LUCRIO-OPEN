@@ -445,9 +445,9 @@ export default function ServicosPage() {
             </Card>
           ) : (
             <Card>
-              <CardContent className="p-0">
-                <div className="hidden md:block">
-                  <Table>
+                <CardContent className="p-0">
+                  <div className="hidden overflow-x-auto md:block">
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>

@@ -742,7 +742,7 @@ export default function DespesasPage() {
                 transition={{ delay: 0.2 }}
                 className="mt-2 hidden md:block"
               >
-                <div className="overflow-hidden rounded-xl border">
+                <div className="overflow-x-auto rounded-xl border">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/50 text-left text-xs font-medium text-muted-foreground">

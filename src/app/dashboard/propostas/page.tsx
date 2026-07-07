@@ -560,7 +560,7 @@ export default function PropostasPage() {
         </Card>
       ) : (
         <>
-          <div className="hidden md:block">
+          <div className="hidden overflow-x-auto md:block">
             <Card>
               <Table>
                 <TableHeader>
