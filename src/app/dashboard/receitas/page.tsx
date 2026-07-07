@@ -796,7 +796,6 @@ export default function ReceitasPage() {
                 ]}
                 activeValue={filtroPeriodo || filtroStatus}
                 onSelect={(value) => {
-                  if (value === "__divider__") return;
                   if (["este_mes", "proximo_mes", "ultimos_30_dias"].includes(value)) {
                     handleFiltraPeriodo(value);
                   } else {

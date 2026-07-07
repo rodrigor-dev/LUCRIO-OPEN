@@ -662,8 +662,8 @@ export default function DespesasPage() {
               transition={{ delay: 0.15 }}
               className="mt-3"
             >
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                   <FinanceiroFilterBar
                     filters={[
                       { label: "Todos", value: "todos", count: contarPorStatus("todos") },

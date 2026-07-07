@@ -19,28 +19,38 @@ export function FinanceiroFilterBar({
   onSelect,
 }: FinanceiroFilterBarProps) {
   return (
-    <div className="overflow-x-auto scrollbar-hide">
-      <div className="flex gap-2 pb-2" style={{ minWidth: "max-content" }}>
-        {filters.map((filter) => {
-          const isActive = activeValue === filter.value;
+    <div className="flex flex-wrap gap-2">
+      {filters.map((filter) => {
+        // Itens divisores (ex: { value: "__divider__" }) são apenas um
+        // separador visual, nunca um botão clicável.
+        if (filter.value === "__divider__") {
           return (
-            <button
-              key={filter.value}
-              onClick={() => onSelect(filter.value)}
-              className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                isActive
-                  ? filter.color || "border-foreground bg-foreground text-background"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {filter.label}
-              {filter.count !== undefined && (
-                <span className="opacity-70">({filter.count})</span>
-              )}
-            </button>
+            <div
+              key="divider"
+              aria-hidden="true"
+              className="mx-0.5 hidden h-8 w-px shrink-0 self-center bg-border sm:block"
+            />
           );
-        })}
-      </div>
+        }
+
+        const isActive = activeValue === filter.value;
+        return (
+          <button
+            key={filter.value}
+            onClick={() => onSelect(filter.value)}
+            className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
+              isActive
+                ? filter.color || "border-foreground bg-foreground text-background"
+                : "border-border bg-card text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {filter.label}
+            {filter.count !== undefined && (
+              <span className="opacity-70">({filter.count})</span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
