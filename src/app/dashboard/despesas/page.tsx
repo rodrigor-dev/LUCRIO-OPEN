@@ -538,12 +538,12 @@ export default function DespesasPage() {
   ];
 
   return (
-    <div className="space-y-4 pb-[max(7rem,env(safe-area-inset-bottom)+4rem)] md:pb-6">
+    <div className="space-y-5 pb-[max(7rem,env(safe-area-inset-bottom)+4rem)] md:pb-6">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-4 py-3 md:py-4">
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight md:text-xl">
+            <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight md:text-xl">
               <ArrowDownCircle className="h-5 w-5 shrink-0 text-emerald-600 md:h-6 md:w-6" />
               Despesas
             </h1>
@@ -630,7 +630,7 @@ export default function DespesasPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
             >
               {kpiCards.map((kpi) => (
                 <FinanceiroKpiCard
@@ -650,7 +650,6 @@ export default function DespesasPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="mt-4"
             >
               <FinanceiroSearch value={busca} onChange={setBusca} placeholder="Buscar despesa..." />
             </motion.div>
@@ -660,7 +659,6 @@ export default function DespesasPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-3"
             >
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                 <div className="min-w-0 flex-1">
@@ -709,7 +707,7 @@ export default function DespesasPage() {
 
             {/* Results count */}
             {despesasFiltradas.length > 0 && (
-              <div className="mt-3 flex items-center justify-end">
+              <div className="flex items-center justify-end">
                 <span className="text-xs text-muted-foreground">
                   {despesasFiltradas.length} resultado(s)
                 </span>
@@ -887,7 +885,7 @@ export default function DespesasPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="mt-2 space-y-2 md:hidden"
+                className="space-y-2.5 md:hidden"
               >
                 <AnimatePresence mode="popLayout">
                   {paginatedItems.map((d, index) => (
@@ -910,23 +908,23 @@ export default function DespesasPage() {
                         <div
                           className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[d.status] || STATUS_DOT_COLORS.pendente}`}
                         />
-                        <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                        <p className="min-w-0 flex-1 truncate text-[15px] font-semibold">
                           {d.descricao}
                           {d.parcela_numero && d.parcela_total && (
-                            <span className="ml-1 text-[10px] text-muted-foreground">
+                            <span className="ml-1 text-[11px] text-muted-foreground">
                               ({d.parcela_numero}/{d.parcela_total})
                             </span>
                           )}
                         </p>
                         <span
-                          className={`shrink-0 text-sm font-bold ${VALUE_COLORS[d.status] || "text-foreground"}`}
+                          className={`shrink-0 text-[15px] font-bold ${VALUE_COLORS[d.status] || "text-foreground"}`}
                         >
                           {formatarMoeda(d.valor)}
                         </span>
                       </div>
 
                       {/* Row 2: date + payment + status */}
-                      <div className="mt-1.5 flex items-center gap-2 pl-[18px] text-xs text-muted-foreground">
+                      <div className="mt-2 flex items-center gap-2 pl-[18px] text-xs text-muted-foreground">
                         <span>
                           {formatarData(d.data_vencimento || d.data)}
                         </span>
@@ -941,7 +939,7 @@ export default function DespesasPage() {
                       </div>
 
                       {/* Row 3: category + checkbox */}
-                      <div className="mt-2 flex items-center gap-2 pl-[18px]">
+                      <div className="mt-2.5 flex items-center gap-2 pl-[18px]">
                         {d.categoria && (
                           <Badge
                             variant="outline"

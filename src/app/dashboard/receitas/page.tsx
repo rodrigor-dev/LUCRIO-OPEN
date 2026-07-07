@@ -665,12 +665,12 @@ export default function ReceitasPage() {
   }
 
   return (
-    <div className="space-y-4 pb-28 md:pb-6">
+    <div className="space-y-5 pb-28 md:pb-6">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-4 py-3 md:py-4">
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold tracking-tight sm:text-xl">
+            <h1 className="truncate text-xl font-bold tracking-tight sm:text-xl">
               Receitas
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
@@ -718,7 +718,7 @@ export default function ReceitasPage() {
         {carregando ? (
           <div className="space-y-4">
             {/* KPI Skeleton */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i}>
                   <CardContent className="p-3 sm:p-4">
@@ -758,7 +758,7 @@ export default function ReceitasPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
             >
               <FinanceiroKpiCard label="Recebido" valor={kpis.recebido} icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-100" valorColor="text-emerald-600" />
               <FinanceiroKpiCard label="A receber" valor={kpis.aReceber} icon={Clock} iconColor="text-blue-600" iconBg="bg-blue-100" valorColor="text-blue-600" />
@@ -771,7 +771,6 @@ export default function ReceitasPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="mt-4"
             >
               <FinanceiroSearch value={busca} onChange={setBusca} placeholder="Buscar receita..." />
             </motion.div>
@@ -781,7 +780,6 @@ export default function ReceitasPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-3"
             >
               <FinanceiroFilterBar
                 filters={[
@@ -826,7 +824,7 @@ export default function ReceitasPage() {
             </AnimatePresence>
 
             {receitasFiltradas.length > 0 && !modoSelecao && (
-              <div className="mt-3 flex items-center justify-end">
+              <div className="flex items-center justify-end">
                 <span className="text-xs text-muted-foreground">
                   {receitasFiltradas.length} resultado(s)
                 </span>
@@ -856,7 +854,7 @@ export default function ReceitasPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="mt-2 space-y-2 md:hidden"
+                  className="space-y-2.5 md:hidden"
                 >
                   <AnimatePresence mode="popLayout">
                     {paginatedItems.map((receita, index) => (
@@ -868,7 +866,7 @@ export default function ReceitasPage() {
                         exit={{ opacity: 0, x: -50 }}
                         transition={{ delay: index * 0.02 }}
                         onClick={() => abrirDrawer(receita)}
-                        className={`cursor-pointer rounded-lg border p-3 transition-colors ${
+                        className={`cursor-pointer rounded-xl border p-4 transition-colors ${
                           selecionadas.has(receita.id)
                             ? "border-emerald-500 bg-emerald-50/50"
                             : ""
@@ -885,30 +883,30 @@ export default function ReceitasPage() {
                           )}
 
                           <div
-                            className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[receita.status] || STATUS_DOT_COLORS.pendente}`}
+                            className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[receita.status] || STATUS_DOT_COLORS.pendente}`}
                           />
 
                           <div className="min-w-0 flex-1 gap-1">
                             <div className="flex items-start justify-between gap-2">
-                              <p className="min-w-0 truncate text-sm font-semibold">
+                              <p className="min-w-0 truncate text-[15px] font-semibold">
                                 {receita.descricao}
                               </p>
                               <span
-                                className={`shrink-0 text-sm font-bold ${VALUE_COLORS[receita.status] || ""}`}
+                                className={`shrink-0 text-[15px] font-bold ${VALUE_COLORS[receita.status] || ""}`}
                               >
                                 {formatarMoeda(receita.valor)}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                              <span className="min-w-0 truncate text-xs text-muted-foreground">
                                 {receita.cliente?.nome || "Sem cliente"}
                               </span>
                               <span className="text-muted-foreground/40">•</span>
-                              <span className="shrink-0 text-[11px] text-muted-foreground">
+                              <span className="shrink-0 text-xs text-muted-foreground">
                                 {formatarData(receita.data)}
                               </span>
                             </div>
-                            <div className="mt-1">
+                            <div className="mt-1.5">
                               <FinanceiroStatusBadge status={receita.status} />
                             </div>
                           </div>
