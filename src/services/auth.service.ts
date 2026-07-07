@@ -114,7 +114,7 @@ class AuthService {
       password: senha,
       options: {
         data: { nome },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?email=${encodeURIComponent(email)}`,
       },
     });
 

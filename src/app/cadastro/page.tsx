@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Loader2, User, Gift } from "lucide-react";
-import { criarConta, entrarComGoogle } from "@/services/auth.service";
+import { Mail, Lock, Eye, EyeOff, Loader2, User, Gift, CheckCircle2, ArrowLeft } from "lucide-react";
+import { criarConta, entrarComGoogle, recuperarSenha } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,9 @@ function CadastroForm() {
   const [erro, setErro] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+  const [etapaConfirmacao, setEtapaConfirmacao] = useState(false);
+  const [emailConfirmacao, setEmailConfirmacao] = useState("");
+  const [reenviando, setReenviando] = useState(false);
 
   // Salvar codigo de indicacao no sessionStorage
   useEffect(() => {
@@ -57,8 +60,8 @@ function CadastroForm() {
       }
 
       if (resultado.requiresEmailConfirmation) {
-        toast.success("Conta criada! Verifique seu e-mail para confirmar o cadastro.");
-        router.push("/login");
+        setEmailConfirmacao(email);
+        setEtapaConfirmacao(true);
         return;
       }
 
@@ -70,6 +73,22 @@ function CadastroForm() {
       setErro("Erro ao criar conta. Tente novamente.");
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function handleReenviarEmail() {
+    setReenviando(true);
+    try {
+      const resultado = await recuperarSenha(emailConfirmacao);
+      if (resultado.erro) {
+        toast.error(resultado.erro);
+      } else {
+        toast.success("Email reenviado! Verifique sua caixa de entrada.");
+      }
+    } catch {
+      toast.error("Erro ao reenviar email. Tente novamente.");
+    } finally {
+      setReenviando(false);
     }
   }
 
@@ -95,6 +114,92 @@ function CadastroForm() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-emerald-50/20 p-4">
+      {/* Tela de confirmação de email */}
+      {etapaConfirmacao ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="w-full max-w-md space-y-8"
+        >
+          <div className="text-center">
+            <Link href="/" className="inline-block">
+              <h1 className="text-4xl font-bold text-primary">LUCRIO</h1>
+            </Link>
+          </div>
+
+          <Card className="border-border/50 shadow-lg">
+            <CardContent className="p-8 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100"
+              >
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+              </motion.div>
+
+              <h2 className="mb-2 text-xl font-bold">Confirme seu e-mail</h2>
+              <p className="mb-1 text-sm text-muted-foreground">
+                Enviamos um link de confirmação para:
+              </p>
+              <p className="mb-6 text-sm font-semibold text-foreground">
+                {emailConfirmacao}
+              </p>
+
+              <div className="space-y-3 rounded-xl bg-muted/50 p-4 text-left text-sm text-muted-foreground">
+                <p>1. Abra sua caixa de entrada</p>
+                <p>2. Clique no link de confirmação</p>
+                <p>3. Volte aqui e faça login</p>
+              </div>
+
+              <p className="mt-4 text-xs text-muted-foreground">
+                Não encontrou? Verifique a pasta <strong>spam</strong> ou <strong>lixo eletrônico</strong>.
+              </p>
+
+              <div className="mt-6 space-y-3">
+                <Button
+                  onClick={handleReenviarEmail}
+                  disabled={reenviando}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {reenviando ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Reenviando...
+                    </>
+                  ) : (
+                    "Reenviar email de confirmação"
+                  )}
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setEtapaConfirmacao(false);
+                    setErro("");
+                  }}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Voltar ao cadastro
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Já confirmou?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-primary hover:underline"
+            >
+              Entrar
+            </Link>
+          </p>
+        </motion.div>
+      ) : (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -303,6 +408,7 @@ function CadastroForm() {
           </Link>
         </motion.p>
       </motion.div>
+      )}
     </main>
   );
 }

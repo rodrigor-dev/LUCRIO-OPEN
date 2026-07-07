@@ -25,12 +25,15 @@ function LoginForm() {
 
   useEffect(() => {
     const erroAuth = searchParams?.get("error");
+    const msg = searchParams?.get("msg");
     if (erroAuth === "conta_bloqueada") {
       setErro("Sua conta foi bloqueada. Entre em contato com o suporte.");
     } else if (erroAuth === "conta_suspensa") {
       setErro("Sua conta foi suspensa temporariamente. Entre em contato com o suporte.");
+    } else if (erroAuth === "auth_error" && msg === "email_confirm") {
+      setErro("Não foi possível confirmar seu e-mail. Tente fazer login — se o erro persistir, solicite um novo email de confirmação em 'Esqueceu a senha?'.");
     } else if (erroAuth === "auth_error") {
-      setErro("Erro na autenticação. Tente novamente.");
+      setErro("Erro na autenticação. Verifique seu e-mail e tente novamente.");
     }
   }, [searchParams]);
 
