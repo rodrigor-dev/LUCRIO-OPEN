@@ -87,6 +87,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { FinanceiroKpiCard } from "@/components/financeiro";
+import { FinanceiroStatusBadge, STATUS_DOT_COLORS, VALUE_COLORS } from "@/components/financeiro";
+import { FinanceiroFilterBar, FinanceiroSearch } from "@/components/financeiro";
+import { FinanceiroEmptyState } from "@/components/financeiro";
+import { FinanceiroBulkBar, FinanceiroBulkBarDesktop } from "@/components/financeiro";
 
 type Receita = ReceitaDB & {
   cliente?: { nome: string } | null;
@@ -105,27 +110,6 @@ const FORM_DEFAULTS = {
   cliente_id: "",
   recorrencia_tipo: "" as RecorrenciaTipo,
   observacoes: "",
-};
-
-const STATUS_DOT_COLORS: Record<string, string> = {
-  pago: "bg-emerald-500",
-  pendente: "bg-yellow-500",
-  atrasado: "bg-red-500",
-  cancelado: "bg-gray-400",
-};
-
-const VALUE_COLORS: Record<string, string> = {
-  pago: "text-emerald-600",
-  pendente: "text-foreground",
-  atrasado: "text-red-600",
-  cancelado: "text-muted-foreground",
-};
-
-const STATUS_BADGE_COLORS: Record<string, string> = {
-  pago: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  pendente: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  atrasado: "bg-red-100 text-red-700 border-red-200",
-  cancelado: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
 export default function ReceitasPage() {
@@ -681,16 +665,6 @@ export default function ReceitasPage() {
     setSelecionadas(new Set());
   }
 
-  function statusBadge(status: string) {
-    return (
-      <span
-        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium sm:text-xs ${STATUS_BADGE_COLORS[status] || STATUS_BADGE_COLORS.pendente}`}
-      >
-        {STATUS_LABELS[status] || status}
-      </span>
-    );
-  }
-
   return (
     <div className="space-y-4 pb-28 md:pb-6">
       {/* Header */}
@@ -787,69 +761,10 @@ export default function ReceitasPage() {
               animate={{ opacity: 1, y: 0 }}
               className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
             >
-              <Card className="overflow-hidden">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-lg bg-emerald-100 p-1.5">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 sm:h-5 sm:w-5" />
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
-                      Recebido
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-lg font-bold text-emerald-600 sm:text-xl">
-                    {formatarMoeda(kpis.recebido)}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-hidden">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-lg bg-blue-100 p-1.5">
-                      <Clock className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
-                      A receber
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-lg font-bold text-blue-600 sm:text-xl">
-                    {formatarMoeda(kpis.aReceber)}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-hidden">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-lg bg-red-100 p-1.5">
-                      <AlertTriangle className="h-4 w-4 text-red-600 sm:h-5 sm:w-5" />
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
-                      Atrasado
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-lg font-bold text-red-600 sm:text-xl">
-                    {formatarMoeda(kpis.atrasado)}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-hidden">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-lg bg-muted p-1.5">
-                      <DollarSign className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
-                      Total do mês
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-lg font-bold sm:text-xl">
-                    {formatarMoeda(kpis.totalMes)}
-                  </p>
-                </CardContent>
-              </Card>
+              <FinanceiroKpiCard label="Recebido" valor={kpis.recebido} icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-100" valorColor="text-emerald-600" />
+              <FinanceiroKpiCard label="A receber" valor={kpis.aReceber} icon={Clock} iconColor="text-blue-600" iconBg="bg-blue-100" valorColor="text-blue-600" />
+              <FinanceiroKpiCard label="Atrasado" valor={kpis.atrasado} icon={AlertTriangle} iconColor="text-red-600" iconBg="bg-red-100" valorColor="text-red-600" />
+              <FinanceiroKpiCard label="Total do mês" valor={kpis.totalMes} icon={DollarSign} iconColor="text-muted-foreground" iconBg="bg-muted" />
             </motion.div>
 
             {/* Search */}
@@ -1101,7 +1016,7 @@ export default function ReceitasPage() {
                               </span>
                             </div>
                             <div className="mt-1">
-                              {statusBadge(receita.status)}
+                              <FinanceiroStatusBadge status={receita.status} />
                             </div>
                           </div>
 
@@ -1190,7 +1105,7 @@ export default function ReceitasPage() {
                                   : "-"}
                               </TableCell>
                               <TableCell className="py-3">
-                                {statusBadge(receita.status)}
+                                <FinanceiroStatusBadge status={receita.status} />
                               </TableCell>
                               <TableCell className="py-3 text-right">
                                 <span
@@ -1375,7 +1290,7 @@ export default function ReceitasPage() {
                     <div
                       className={`h-3 w-3 rounded-full ${STATUS_DOT_COLORS[receitaSelecionada.status]}`}
                     />
-                    {statusBadge(receitaSelecionada.status)}
+                    <FinanceiroStatusBadge status={receitaSelecionada.status} />
                   </div>
                   <span
                     className={`text-xl font-bold md:text-2xl ${VALUE_COLORS[receitaSelecionada.status]}`}
