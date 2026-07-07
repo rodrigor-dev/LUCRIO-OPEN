@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Lock, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
 import { redefinirSenha } from "@/services/auth.service";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +15,63 @@ import { Card, CardContent } from "@/components/ui/card";
 
 function RedefinirSenhaForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
+  const [tokenProcessado, setTokenProcessado] = useState(false);
+  const [tokenErro, setTokenErro] = useState(false);
+
+  useEffect(() => {
+    async function processarToken() {
+      const supabase = createClient();
+
+      // Verificar se já tem sessão ativa
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setTokenProcessado(true);
+        return;
+      }
+
+      // Extrair token do hash (#access_token=...&type=recovery)
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        const type = params.get("type");
+
+        if (accessToken && type === "recovery") {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: params.get("refresh_token") || "",
+          });
+
+          if (!error) {
+            setTokenProcessado(true);
+          } else {
+            console.error("[RedefinirSenha] Erro ao processar token:", error.message);
+            setTokenErro(true);
+          }
+          return;
+        }
+      }
+
+      // Verificar query params (fluxo alternativo)
+      const token = searchParams?.get("token");
+      const tokenType = searchParams?.get("type");
+      if (token && tokenType === "recovery") {
+        setTokenProcessado(true);
+        return;
+      }
+
+      // Nenhum token encontrado
+      setTokenErro(true);
+    }
+
+    processarToken();
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +101,55 @@ function RedefinirSenhaForm() {
     } finally {
       setCarregando(false);
     }
+  }
+
+  // Carregando token
+  if (!tokenProcessado && !tokenErro) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-emerald-50/20 p-4">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Verificando link...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Token inválido ou expirado
+  if (tokenErro) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-emerald-50/20 p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md space-y-8"
+        >
+          <div className="text-center">
+            <Link href="/" className="inline-block">
+              <h1 className="text-4xl font-bold text-primary">LUCRIO</h1>
+            </Link>
+          </div>
+          <Card className="border-border/50 shadow-lg">
+            <CardContent className="p-8 text-center">
+              <Lock className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h2 className="mb-2 text-xl font-bold">Link inválido ou expirado</h2>
+              <p className="mb-6 text-sm text-muted-foreground">
+                O link de redefinição de senha não é válido ou já expirou.
+                Solicite um novo link de redefinição.
+              </p>
+              <Link href="/recuperar-senha">
+                <Button className="w-full" size="lg">
+                  Solicitar novo link
+                </Button>
+              </Link>
+              <Link href="/login" className="mt-3 block text-sm text-primary hover:underline">
+                Voltar ao login
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </main>
+    );
   }
 
   return (
