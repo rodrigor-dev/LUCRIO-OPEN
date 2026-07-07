@@ -25,52 +25,75 @@ function RedefinirSenhaForm() {
   const [tokenErro, setTokenErro] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     async function processarToken() {
       const supabase = createClient();
 
-      // Verificar se já tem sessão ativa
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        setTokenProcessado(true);
+        if (mounted) setTokenProcessado(true);
         return;
       }
 
-      // Extrair token do hash (#access_token=...&type=recovery)
-      const hash = window.location.hash;
-      if (hash) {
-        const params = new URLSearchParams(hash.substring(1));
-        const accessToken = params.get("access_token");
-        const type = params.get("type");
+      const url = window.location;
+      console.log("[RedefinirSenha] URL:", url.href, "hash:", url.hash, "search:", url.search);
+      const hashParams = new URLSearchParams(url.hash.length > 1 ? url.hash.substring(1) : "");
+      const searchParamsUrl = new URLSearchParams(url.search.length > 1 ? url.search.substring(1) : "");
 
-        if (accessToken && type === "recovery") {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: params.get("refresh_token") || "",
-          });
+      function getParam(name: string): string | null {
+        return hashParams.get(name) || searchParamsUrl.get(name);
+      }
 
-          if (!error) {
-            setTokenProcessado(true);
-          } else {
-            console.error("[RedefinirSenha] Erro ao processar token:", error.message);
-            setTokenErro(true);
-          }
+      const accessToken = getParam("access_token");
+      const refreshToken = getParam("refresh_token");
+      const type = getParam("type");
+      const code = getParam("code");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          if (mounted) setTokenProcessado(true);
           return;
+        }
+        console.error("[RedefinirSenha] exchangeCodeForSession error:", error.message);
+      }
+
+      if (accessToken && type === "recovery") {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || "",
+        });
+        if (!error) {
+          if (mounted) setTokenProcessado(true);
+          return;
+        }
+        console.error("[RedefinirSenha] setSession error:", error.message);
+      }
+
+      const otpToken = getParam("token");
+      const tokenType = getParam("type");
+      if (otpToken && (tokenType === "recovery" || tokenType === "signup" || tokenType === "email")) {
+        const email = getParam("email") || "";
+        if (email) {
+          const { error } = await supabase.auth.verifyOtp({
+            email,
+            token: otpToken,
+            type: "recovery",
+          });
+          if (!error) {
+            if (mounted) setTokenProcessado(true);
+            return;
+          }
+          console.error("[RedefinirSenha] verifyOtp error:", error.message);
         }
       }
 
-      // Verificar query params (fluxo alternativo)
-      const token = searchParams?.get("token");
-      const tokenType = searchParams?.get("type");
-      if (token && tokenType === "recovery") {
-        setTokenProcessado(true);
-        return;
-      }
-
-      // Nenhum token encontrado
-      setTokenErro(true);
+      if (mounted) setTokenErro(true);
     }
 
     processarToken();
+    return () => { mounted = false; };
   }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
