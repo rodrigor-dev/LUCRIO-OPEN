@@ -305,9 +305,7 @@ class AuthService {
    * Recuperar senha.
    */
   async recuperarSenha(email: string): Promise<{ erro?: string }> {
-    const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/redefinir-senha`,
-    });
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email);
 
     if (error) {
       return { erro: this.traduzirErro(error.message) };
