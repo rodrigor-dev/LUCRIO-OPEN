@@ -14,7 +14,16 @@ BEGIN
   UPDATE assinaturas
   SET 
     status = p_status,
-    ultimo_pagamento = CASE WHEN p_pago THEN NOW() ELSE ultimo_pagamento END
+    ultimo_pagamento = CASE WHEN p_pago THEN NOW() ELSE ultimo_pagamento END,
+    proximo_pagamento = CASE 
+      WHEN p_pago AND fim_periodo IS NULL THEN NOW() + INTERVAL '30 days'
+      WHEN p_pago AND fim_periodo < NOW() THEN NOW() + INTERVAL '30 days'
+      ELSE proximo_pagamento 
+    END,
+    fim_periodo = CASE 
+      WHEN p_pago AND (fim_periodo IS NULL OR fim_periodo < NOW()) THEN NOW() + INTERVAL '30 days'
+      ELSE fim_periodo 
+    END
   WHERE intent_pagamento_id = p_pagamento_id;
   
   RETURN FOUND;

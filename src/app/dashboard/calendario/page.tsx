@@ -303,12 +303,6 @@ export default function CalendarioPage() {
     return eventos.some((e) => e.status === "atrasado");
   };
 
-  const temVencimentoNoDia = (dia: Date) => {
-    const chave = formatoDataKey(dia);
-    const eventos = eventosPorDia[chave] || [];
-    return eventos.some((e) => e.status === "pendente");
-  };
-
   const resumoDia = (dia: Date) => {
     const chave = formatoDataKey(dia);
     const eventos = eventosPorDia[chave] || [];
@@ -327,7 +321,7 @@ export default function CalendarioPage() {
   const temEventosNoMes = Object.keys(eventosPorDia).length > 0;
 
   return (
-    <div className="min-h-[100dvh] bg-background pb-24 space-y-4">
+    <div className="space-y-6 pb-24 md:pb-6">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-3 py-3 sm:px-4 sm:py-4">
@@ -418,7 +412,6 @@ export default function CalendarioPage() {
                   dia.getMonth() === hoje.getMonth() &&
                   dia.getFullYear() === hoje.getFullYear();
                 const temAtrasado = temAtrasadoNoDia(dia);
-                const temVencimento = temVencimentoNoDia(dia);
                 const resumo = resumoDia(dia);
                 const eventos = eventosPorDia[formatoDataKey(dia)] || [];
                 const temEventos = eventos.length > 0;
@@ -428,9 +421,6 @@ export default function CalendarioPage() {
                 ).length;
                 const despesaDots = eventos.filter(
                   (e) => e.tipo === "despesa"
-                ).length;
-                const vencimentoDots = eventos.filter(
-                  (e) => e.status === "pendente"
                 ).length;
 
                 return (
@@ -487,17 +477,9 @@ export default function CalendarioPage() {
                               />
                             )
                           )}
-                          {Array.from({
-                            length: Math.min(vencimentoDots, 3),
-                          }).map((_, i) => (
-                            <span
-                              key={`v${i}`}
-                              className="h-1 w-1 rounded-full bg-yellow-400 sm:h-1.5 sm:w-1.5"
-                            />
-                          ))}
                         </div>
                         {resumo && (
-                          <span className="text-[8px] sm:text-[10px] font-medium leading-none text-muted-foreground truncate max-w-full hidden sm:block">
+                          <span className="text-[8px] sm:text-[10px] font-medium leading-none text-muted-foreground truncate max-w-full">
                             {resumo.totalReceita > 0 && resumo.totalDespesa > 0
                               ? `${formatarMoedaShort(resumo.totalReceita - resumo.totalDespesa)}`
                               : resumo.totalReceita > 0

@@ -267,8 +267,77 @@ export default function RelatoriosPage() {
     link.click();
   }
 
+  function handleExportPDF() {
+    import("jspdf").then(({ default: jsPDF }) => {
+      import("jspdf-autotable").then(() => {
+        const doc = new jsPDF();
+        const fontName = "times";
+
+        doc.setFontSize(16);
+        doc.setFont(fontName, "bold");
+        doc.text("Relatorio Financeiro - LUCRIO", 105, 15, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont(fontName, "normal");
+        const periodoLabel = periodo === "mes" ? "Este Mes" : periodo === "trimestre" ? "Ultimos 3 Meses" : "Este Ano";
+        doc.text(`Periodo: ${periodoLabel}`, 14, 25);
+        doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, 14, 31);
+
+        let y = 40;
+        doc.setFont(fontName, "bold");
+        doc.setFontSize(12);
+        doc.text("Resumo", 14, y);
+        y += 7;
+        doc.setFont(fontName, "normal");
+        doc.setFontSize(10);
+        doc.text(`Receita Total: R$ ${dados.receitaTotal.toFixed(2).replace(".", ",")}`, 14, y); y += 6;
+        doc.text(`Despesa Total: R$ ${dados.despesaTotal.toFixed(2).replace(".", ",")}`, 14, y); y += 6;
+        doc.text(`Lucro Liquido: R$ ${dados.lucroLiquido.toFixed(2).replace(".", ",")}`, 14, y); y += 6;
+        doc.text(`Ticket Medio: R$ ${dados.ticketMedio.toFixed(2).replace(".", ",")}`, 14, y); y += 6;
+        doc.text(`Total Clientes: ${dados.totalClientes}`, 14, y); y += 6;
+        doc.text(`Total Servicos: ${dados.totalServicos}`, 14, y); y += 10;
+
+        if (dados.topClientes.length > 0) {
+          doc.setFont(fontName, "bold");
+          doc.setFontSize(12);
+          doc.text("Top Clientes", 14, y); y += 7;
+          (doc as any).autoTable({
+            startY: y,
+            head: [["Cliente", "Valor"]],
+            body: dados.topClientes.map((c) => [c.nome, `R$ ${c.valor.toFixed(2).replace(".", ",")}`]),
+            theme: "grid",
+            headStyles: { fillColor: [16, 185, 129] },
+            styles: { fontSize: 9 },
+          });
+          y = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        if (dados.categoriasDespesas.length > 0) {
+          doc.setFont(fontName, "bold");
+          doc.setFontSize(12);
+          doc.text("Despesas por Categoria", 14, y); y += 7;
+          (doc as any).autoTable({
+            startY: y,
+            head: [["Categoria", "Valor"]],
+            body: dados.categoriasDespesas.map((c) => [c.nome, `R$ ${c.valor.toFixed(2).replace(".", ",")}`]),
+            theme: "grid",
+            headStyles: { fillColor: [239, 68, 68] },
+            styles: { fontSize: 9 },
+          });
+        }
+
+        doc.setFontSize(8);
+        doc.setFont(fontName, "normal");
+        doc.text("Gerado pelo LUCRIO - Sistema Financeiro", 105, 285, { align: "center" });
+
+        doc.save(`lucrio_relatorio_${new Date().toISOString().split("T")[0]}.pdf`);
+        toast.success("PDF exportado com sucesso!");
+      });
+    });
+  }
+
   function handleExportEmBreve(formato: string) {
-    toast.info(`Exportação em ${formato} disponível em breve!`);
+    toast.info(`Exportacao em ${formato} disponivel em breve!`);
   }
 
   if (carregando) {
@@ -326,7 +395,7 @@ export default function RelatoriosPage() {
             variant="outline"
             size="sm"
             className="gap-2"
-            onClick={() => handleExportEmBreve("PDF")}
+            onClick={handleExportPDF}
           >
             <FileText className="h-4 w-4" />
             PDF

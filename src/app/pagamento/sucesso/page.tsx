@@ -16,7 +16,7 @@ function PagamentoSucessoInner() {
   const [sucesso, setSucesso] = useState(false);
 
   useEffect(() => {
-    const pagamentoId = searchParams?.get("payment_id") ?? null;
+    const pagamentoId = searchParams?.get("collection_id") ?? searchParams?.get("payment_id") ?? null;
     const status = searchParams?.get("status") ?? null;
 
     async function processarPagamento() {
@@ -46,36 +46,47 @@ function PagamentoSucessoInner() {
             return;
           }
 
-          const { data: assinatura } = await supabase
+          // Idempotência: verificar se já existe assinatura ativa
+          const { data: existente } = await supabase
             .from("assinaturas")
-            .select("id")
+            .select("id, status")
             .eq("usuario_id", user.id)
-            .eq("status", "trial")
-            .single();
+            .in("status", ["ativo", "trial"])
+            .maybeSingle();
 
-          if (assinatura) {
+          if (existente?.status === "ativo") {
+            // Já ativo, não precisa atualizar
+            setSucesso(true);
+            return;
+          }
+
+          const now = new Date();
+          const fim = new Date(now.getTime() + diasPlano * 24 * 60 * 60 * 1000);
+
+          if (existente) {
+            // Atualizar trial existente para ativo
             await supabase
               .from("assinaturas")
               .update({
                 status: "ativo",
                 plano_id: planoPro.id,
                 intent_pagamento_id: pagamentoId,
-                trial_termina: new Date().toISOString(),
-                ultimo_pagamento: new Date().toISOString(),
-                proximo_pagamento: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
-                fim_periodo: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
+                trial_termina: now.toISOString(),
+                ultimo_pagamento: now.toISOString(),
+                proximo_pagamento: fim.toISOString(),
+                fim_periodo: fim.toISOString(),
               })
-              .eq("id", assinatura.id);
+              .eq("id", existente.id);
           } else {
+            // Inserir nova assinatura
             await supabase.from("assinaturas").insert({
               usuario_id: user.id,
               plano_id: planoPro.id,
               status: "ativo",
               intent_pagamento_id: pagamentoId,
-              trial_termina: new Date().toISOString(),
-              ultimo_pagamento: new Date().toISOString(),
-              proximo_pagamento: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
-              fim_periodo: new Date(Date.now() + diasPlano * 24 * 60 * 60 * 1000).toISOString(),
+              ultimo_pagamento: now.toISOString(),
+              proximo_pagamento: fim.toISOString(),
+              fim_periodo: fim.toISOString(),
             });
           }
 
