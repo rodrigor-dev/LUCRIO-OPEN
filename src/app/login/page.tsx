@@ -25,7 +25,11 @@ function LoginForm() {
 
   useEffect(() => {
     const erroAuth = searchParams?.get("error");
-    if (erroAuth) {
+    if (erroAuth === "conta_bloqueada") {
+      setErro("Sua conta foi bloqueada. Entre em contato com o suporte.");
+    } else if (erroAuth === "conta_suspensa") {
+      setErro("Sua conta foi suspensa temporariamente. Entre em contato com o suporte.");
+    } else if (erroAuth === "auth_error") {
       setErro("Erro na autenticação. Tente novamente.");
     }
   }, [searchParams]);

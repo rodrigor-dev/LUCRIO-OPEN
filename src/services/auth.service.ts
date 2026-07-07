@@ -106,7 +106,8 @@ class AuthService {
   async criarConta(
     email: string,
     senha: string,
-    nome: string
+    nome: string,
+    codigoIndicacao?: string | null
   ): Promise<{ usuario: Usuario | null; erro?: string; requiresEmailConfirmation?: boolean }> {
     const { data, error } = await this.supabase.auth.signUp({
       email,
@@ -118,7 +119,8 @@ class AuthService {
     });
 
     if (error) {
-      return { usuario: null, erro: error.message };
+      const msg = this.traduzirErro(error.message);
+      return { usuario: null, erro: msg };
     }
 
     // Se não retornou sessão, email confirmation está habilitado
@@ -131,21 +133,43 @@ class AuthService {
 
     // Sessão existe → inserir perfil imediatamente
     if (data.user) {
-      const { error: insertError } = await this.supabase.from("usuarios").insert({
-        id: data.user.id,
-        email: data.user.email!,
-        nome,
-        is_ativo: true,
-        is_admin: false,
-      });
+      // Verificar se o perfil já existe (criado por trigger)
+      const { data: existente } = await this.supabase
+        .from("usuarios").select("id").eq("id", data.user.id).single();
 
-      if (insertError) {
-        console.error("[AuthService] Erro ao criar perfil:", insertError);
-        return { usuario: null, erro: insertError.message };
+      if (!existente) {
+        const { error: insertError } = await this.supabase.from("usuarios").insert({
+          id: data.user.id,
+          email: data.user.email!,
+          nome,
+          is_ativo: true,
+          is_admin: false,
+        });
+
+        if (insertError) {
+          console.error("[AuthService] Erro ao criar perfil:", insertError);
+          // Se for duplicate key, o perfil já existe (trigger criou)
+          if (insertError.code !== "23505") {
+            return { usuario: null, erro: this.traduzirErro(insertError.message) };
+          }
+        }
       }
 
-      // Criar trial
+      // Criar trial (com tratamento de erro)
       await this.criarTrial(data.user.id);
+
+      // Processar codigo de indicacao
+      if (codigoIndicacao && data.user.id) {
+        try {
+          await this.supabase.rpc("registrar_indicacao" as never, {
+            p_indicador_codigo: codigoIndicacao,
+            p_indicado_id: data.user.id,
+          } as never);
+        } catch (err) {
+          // Nao bloquear cadastro por erro de indicacao
+          console.error("[AuthService] Erro ao processar indicacao:", err);
+        }
+      }
 
       // Buscar perfil criado
       const usuario = await this.getUserProfile(data.user.id);
@@ -183,11 +207,18 @@ class AuthService {
    * Login com Google OAuth.
    */
   async entrarComGoogle(): Promise<{ erro?: string }> {
+    // Recuperar codigo de indicacao do sessionStorage
+    const referralCode = typeof window !== "undefined"
+      ? sessionStorage.getItem("referral_code")
+      : null;
+
+    const redirectTo = referralCode
+      ? `${window.location.origin}/auth/callback?ref=${referralCode}`
+      : `${window.location.origin}/auth/callback`;
+
     const { error } = await this.supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo },
     });
 
     if (error) {
@@ -201,33 +232,73 @@ class AuthService {
    * Criar trial de 7 dias para novo usuário.
    */
   private async criarTrial(usuarioId: string): Promise<void> {
-    const trialTerminaEm = new Date();
-    trialTerminaEm.setDate(trialTerminaEm.getDate() + 7);
+    try {
+      const trialTerminaEm = new Date();
+      trialTerminaEm.setDate(trialTerminaEm.getDate() + 7);
 
-    // Buscar plano PRO
-    const { data: plano } = await this.supabase
-      .from("planos")
-      .select("id")
-      .eq("is_ativo", true)
-      .order("preco_mensal", { ascending: true })
-      .limit(1)
-      .single();
+      // Verificar se já tem assinatura
+      const { data: existente } = await this.supabase
+        .from("assinaturas").select("id").eq("usuario_id", usuarioId).limit(1).single();
 
-    if (!plano) return;
+      if (existente) return;
 
-    await this.supabase.from("assinaturas").insert({
-      usuario_id: usuarioId,
-      plano_id: plano.id,
-      status: "trial",
-      trial_termina: trialTerminaEm.toISOString(),
-      inicio_periodo: new Date().toISOString(),
-      fim_periodo: trialTerminaEm.toISOString(),
-    });
+      // Buscar plano PRO
+      const { data: plano } = await this.supabase
+        .from("planos")
+        .select("id")
+        .eq("slug", "pro")
+        .eq("is_ativo", true)
+        .limit(1)
+        .single();
 
-    await this.supabase
-      .from("usuarios")
-      .update({ trial_termina_em: trialTerminaEm.toISOString() })
-      .eq("id", usuarioId);
+      let planoId = plano?.id;
+
+      if (!planoId) {
+        // Fallback: buscar qualquer plano ativo
+        const { data: fallback } = await this.supabase
+          .from("planos").select("id").eq("is_ativo", true)
+          .order("preco_mensal", { ascending: true }).limit(1).single();
+        if (!fallback) return;
+        planoId = fallback.id;
+      }
+
+      const { error } = await this.supabase.from("assinaturas").insert({
+        usuario_id: usuarioId,
+        plano_id: planoId,
+        status: "trial",
+        trial_termina: trialTerminaEm.toISOString(),
+        inicio_periodo: new Date().toISOString(),
+        fim_periodo: trialTerminaEm.toISOString(),
+      });
+
+      if (error) {
+        console.error("[AuthService] Erro ao criar trial:", error);
+        return;
+      }
+
+      await this.supabase
+        .from("usuarios")
+        .update({ trial_termina_em: trialTerminaEm.toISOString() })
+        .eq("id", usuarioId);
+    } catch (err) {
+      console.error("[AuthService] Erro inesperado ao criar trial:", err);
+    }
+  }
+
+  /**
+   * Traduzir mensagens de erro do Supabase para português
+   */
+  private traduzirErro(msg: string): string {
+    const erros: Record<string, string> = {
+      "User already registered": "Este email já está cadastrado.",
+      "Invalid login credentials": "Email ou senha incorretos.",
+      "Email not confirmed": "Email não confirmado. Verifique sua caixa de entrada.",
+      "Password should be at least 8 characters": "A senha deve ter no mínimo 8 caracteres.",
+      "Unable to validate email address: invalid format": "Formato de email inválido.",
+      "Signup is disabled": "Cadastros estão temporariamente desabilitados.",
+      "Email rate limit exceeded": "Muitas tentativas. Aguarde alguns minutos.",
+    };
+    return erros[msg] || msg || "Ocorreu um erro. Tente novamente.";
   }
 
   /**
@@ -272,8 +343,8 @@ class AuthService {
 export const authService = new AuthService();
 
 // Funções de conveniência (backward compatibility)
-export const criarConta = (email: string, senha: string, nome: string) =>
-  authService.criarConta(email, senha, nome);
+export const criarConta = (email: string, senha: string, nome: string, codigoIndicacao?: string | null) =>
+  authService.criarConta(email, senha, nome, codigoIndicacao);
 
 export const entrarComEmail = (email: string, senha: string) =>
   authService.entrarComEmail(email, senha);

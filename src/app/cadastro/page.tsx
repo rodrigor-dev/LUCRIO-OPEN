@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, User, Gift } from "lucide-react";
 import { criarConta, entrarComGoogle } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,9 @@ import { Card, CardContent } from "@/components/ui/card";
 
 function CadastroForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refCode = searchParams?.get("ref") || null;
+
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -22,6 +25,13 @@ function CadastroForm() {
   const [erro, setErro] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+
+  // Salvar codigo de indicacao no sessionStorage
+  useEffect(() => {
+    if (refCode) {
+      sessionStorage.setItem("referral_code", refCode);
+    }
+  }, [refCode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +48,8 @@ function CadastroForm() {
         return;
       }
 
-      const resultado = await criarConta(email, senha, nome);
+      const codigoRef = refCode || sessionStorage.getItem("referral_code") || null;
+      const resultado = await criarConta(email, senha, nome, codigoRef);
 
       if (resultado.erro) {
         setErro(resultado.erro);
@@ -51,6 +62,8 @@ function CadastroForm() {
         return;
       }
 
+      // Limpar codigo de sessionStorage apos sucesso
+      sessionStorage.removeItem("referral_code");
       toast.success("Conta criada com sucesso!");
       router.push("/dashboard");
     } catch {
@@ -64,6 +77,10 @@ function CadastroForm() {
     setCarregando(true);
     setErro("");
     try {
+      // Salvar referral code antes do redirect Google
+      if (refCode) {
+        sessionStorage.setItem("referral_code", refCode);
+      }
       const resultado = await entrarComGoogle();
 
       if (resultado.erro) {
@@ -105,9 +122,16 @@ function CadastroForm() {
         >
           <Card className="border-border/50 shadow-lg">
             <CardContent className="p-8">
-              <div className="mb-6 rounded-md bg-primary/10 p-3 text-center text-sm text-primary">
-                <strong>7 dias grátis</strong> - Sem cartão de crédito
-              </div>
+              {refCode ? (
+                <div className="mb-6 rounded-md bg-green-500/10 p-3 text-center text-sm text-green-700 dark:text-green-400">
+                  <Gift className="mx-auto mb-1 h-4 w-4" />
+                  Você foi convidado! Ganhe <strong>7 dias extras</strong> de trial
+                </div>
+              ) : (
+                <div className="mb-6 rounded-md bg-primary/10 p-3 text-center text-sm text-primary">
+                  <strong>7 dias grátis</strong> - Sem cartão de crédito
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -247,7 +271,7 @@ function CadastroForm() {
                   />
                   <path
                     d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
+                    fill="#34A850"
                   />
                   <path
                     d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"

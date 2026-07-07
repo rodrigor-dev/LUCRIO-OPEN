@@ -214,3 +214,85 @@ export interface UsuarioAdmin {
   plano?: PlanoAdmin;
   _count?: { clientes: number; receitas: number; despesas: number };
 }
+
+// ============================================================
+// TYPES DO SISTEMA DE INDICACAO
+// ============================================================
+
+export interface CodigoIndicacao {
+  id: string;
+  usuario_id: string;
+  codigo: string;
+  total_indicacoes: number;
+  total_recompensas: number;
+  is_ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface Indicacao {
+  id: string;
+  indicador_id: string;
+  indicado_id: string;
+  codigo_usado: string;
+  status: "pendente" | "convertida" | "recompensada" | "cancelada";
+  trial_convertido: boolean;
+  assinatura_gerada: boolean;
+  ip_indicado: string | null;
+  user_agent_indicado: string | null;
+  criado_em: string;
+  atualizado_em: string;
+  // Joined fields
+  indicador_nome?: string;
+  indicador_email?: string;
+  indicado_nome?: string;
+  indicado_email?: string;
+}
+
+export interface RecompensaIndicacao {
+  id: string;
+  usuario_id: string;
+  indicacao_id: string;
+  tipo: "dias_trial" | "meses_gratis" | "desconto";
+  valor: number;
+  descricao: string | null;
+  aplicada: boolean;
+  aplicada_em: string | null;
+  criado_em: string;
+}
+
+export interface CampanhaIndicacao {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  recompensa_indicador_tipo: "dias_trial" | "meses_gratis" | "desconto";
+  recompensa_indicador_valor: number;
+  recompensa_indicado_tipo: "dias_trial" | "meses_gratis" | "desconto";
+  recompensa_indicado_valor: number;
+  max_indicacoes_por_usuario: number;
+  max_total_indicacoes: number;
+  data_inicio: string | null;
+  data_fim: string | null;
+  bloquear_temp_emails: boolean;
+  dominios_bloqueados: string[];
+  is_ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface IndicacoesStats {
+  total_indicacoes: number;
+  convertidas: number;
+  pendentes: number;
+  recompensas_dadas: number;
+  total_dias_dados: number;
+  indicacoes_por_dia: { data: string; total: number }[];
+}
+
+export interface IndicacoesUsuarioStats {
+  codigo: string;
+  total_indicacoes: number;
+  total_convertidas: number;
+  total_recompensas: number;
+  indicacoes: Indicacao[];
+}

@@ -22,6 +22,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  Megaphone,
+  UserPlus,
 } from "lucide-react";
 import {
   Tooltip,
@@ -43,6 +45,8 @@ const navItems: NavItem[] = [
   { label: "Planos", href: "/admin/planos", icon: CreditCard },
   { label: "Assinaturas", href: "/admin/assinaturas", icon: Receipt },
   { label: "Cupons", href: "/admin/cupons", icon: Tag },
+  { label: "Indicacoes", href: "/admin/indicacoes", icon: UserPlus },
+  { label: "Campanhas", href: "/admin/campanhas", icon: Megaphone },
   { label: "Financeiro", href: "/admin/financeiro", icon: DollarSign },
   { label: "Suporte", href: "/admin/suporte", icon: MessageSquare },
   { label: "Avisos", href: "/admin/avisos", icon: Bell },

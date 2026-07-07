@@ -65,6 +65,31 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Verificações para usuários autenticados
+  if (user && !rotaPublica) {
+    const { data: usuario } = await supabase
+      .from("usuarios")
+      .select("is_bloqueado, is_suspendido")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // Bloqueado → não acessa nada (exceto login/logout)
+    if (usuario?.is_bloqueado === true) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "conta_bloqueada");
+      return NextResponse.redirect(url);
+    }
+
+    // Suspenso → não acessa (exceto login/logout)
+    if (usuario?.is_suspendido === true) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "conta_suspensa");
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Verificação de admin para /admin/*
   if (pathname.startsWith("/admin")) {
     if (!user) {
@@ -74,7 +99,6 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Usar query direta com select que já funciona via RLS own
     const { data: usuario } = await supabase
       .from("usuarios")
       .select("is_admin")

@@ -14,6 +14,7 @@ import {
   Wallet,
   BarChart3,
   Settings,
+  Gift,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,6 +37,7 @@ const moreItems = [
   { label: "Orçamentos", icon: FileText, href: "/dashboard/propostas" },
   { label: "Fluxo de Caixa", icon: Wallet, href: "/dashboard/fluxo-caixa" },
   { label: "Relatórios", icon: BarChart3, href: "/dashboard/relatorios" },
+  { label: "Indique e Ganhe", icon: Gift, href: "/dashboard/indicar" },
   { label: "Configurações", icon: Settings, href: "/dashboard/configuracoes" },
 ] as const;
 
