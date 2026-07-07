@@ -188,7 +188,8 @@ export default function CommandPalette() {
 
         setResults(mapped);
         setSelectedIndex(0);
-      } catch {
+      } catch (err) {
+        console.error("[CommandPalette] Erro na busca:", err);
         if (!controller.signal.aborted) {
           setResults([]);
         }

@@ -64,7 +64,8 @@ function LoginForm() {
       toast.success("Login realizado com sucesso!");
       router.push(redirect);
       router.refresh();
-    } catch {
+    } catch (err) {
+      console.error("[Login] Erro inesperado ao fazer login:", err);
       setErro("Erro ao fazer login. Tente novamente.");
     } finally {
       setCarregando(false);
@@ -80,7 +81,8 @@ function LoginForm() {
       if (resultado.erro) {
         setErro(resultado.erro);
       }
-    } catch {
+    } catch (err) {
+      console.error("[Login] Erro ao autenticar com Google:", err);
       setErro("Erro ao autenticar com Google. Tente novamente.");
     } finally {
       setCarregando(false);

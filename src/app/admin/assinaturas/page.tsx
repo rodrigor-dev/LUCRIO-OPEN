@@ -376,7 +376,7 @@ export default function AdminAssinaturasPage() {
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>

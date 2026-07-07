@@ -280,8 +280,8 @@ export default function ConfiguracoesPage() {
             },
           });
         }
-      } catch {
-        /* silent */
+      } catch (err) {
+        console.error("[Configuracoes] Erro ao carregar dados:", err);
       } finally {
         setCarregando(false);
       }

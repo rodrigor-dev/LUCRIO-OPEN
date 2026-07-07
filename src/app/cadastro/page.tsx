@@ -69,7 +69,8 @@ function CadastroForm() {
       sessionStorage.removeItem("referral_code");
       toast.success("Conta criada com sucesso!");
       router.push("/dashboard");
-    } catch {
+    } catch (err) {
+      console.error("[Cadastro] Erro ao criar conta:", err);
       setErro("Erro ao criar conta. Tente novamente.");
     } finally {
       setCarregando(false);
@@ -85,7 +86,8 @@ function CadastroForm() {
       } else {
         toast.success("Email reenviado! Verifique sua caixa de entrada.");
       }
-    } catch {
+    } catch (err) {
+      console.error("[Cadastro] Erro ao reenviar email:", err);
       toast.error("Erro ao reenviar email. Tente novamente.");
     } finally {
       setReenviando(false);
@@ -105,7 +107,8 @@ function CadastroForm() {
       if (resultado.erro) {
         setErro(resultado.erro);
       }
-    } catch {
+    } catch (err) {
+      console.error("[Cadastro] Erro ao autenticar com Google:", err);
       setErro("Erro ao autenticar com Google. Tente novamente.");
     } finally {
       setCarregando(false);

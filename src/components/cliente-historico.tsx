@@ -93,8 +93,8 @@ export function ClienteHistorico({
 
         setCliente(clienteData);
         setReceitas(receitasData || []);
-      } catch {
-        // ignore
+      } catch (err) {
+        console.error("[ClienteHistorico] Erro ao carregar dados:", err);
       } finally {
         setCarregando(false);
       }

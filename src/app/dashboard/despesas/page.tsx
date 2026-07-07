@@ -245,8 +245,8 @@ export default function DespesasPage() {
 
       try {
         await atualizarStatusVencidos(negocio.id);
-      } catch {
-        /* silent */
+      } catch (err) {
+        console.error("[Despesas] Erro ao atualizar status vencidos:", err);
       }
 
       const [despesasRes, categoriasRes] = await Promise.all([

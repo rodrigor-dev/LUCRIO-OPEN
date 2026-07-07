@@ -198,7 +198,7 @@ export default function CalendarioPage() {
             forma_pagamento: r.forma_pagamento,
           });
         } catch {
-          // skip invalid dates
+          // datas invalidas sao ignoradas propositalmente
         }
       });
     }
@@ -221,7 +221,7 @@ export default function CalendarioPage() {
             forma_pagamento: d.forma_pagamento,
           });
         } catch {
-          // skip invalid dates
+          // datas invalidas sao ignoradas propositalmente
         }
       });
     }

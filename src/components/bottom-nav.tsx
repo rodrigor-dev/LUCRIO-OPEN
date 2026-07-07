@@ -64,7 +64,7 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className="flex h-14 flex-1 flex-col items-center justify-center gap-0.5"
+              className="relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5"
             >
               <tab.icon
                 className="h-5 w-5 transition-colors"

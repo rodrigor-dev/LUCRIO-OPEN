@@ -119,7 +119,8 @@ function RedefinirSenhaForm() {
 
       toast.success("Senha redefinida com sucesso!");
       router.push("/login");
-    } catch {
+    } catch (err) {
+      console.error("[RedefinirSenha] Erro ao redefinir senha:", err);
       toast.error("Erro ao redefinir senha. Tente novamente.");
     } finally {
       setCarregando(false);

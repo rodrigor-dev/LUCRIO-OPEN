@@ -102,8 +102,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         setUsuario(perfil);
         setNegocio(negocioData.data);
-      } catch {
-        /* silent */
+      } catch (err) {
+        console.error("[DashboardLayout] Erro ao carregar perfil/negocio:", err);
       } finally {
         setLoading(false);
       }

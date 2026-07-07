@@ -21,14 +21,14 @@ export function createClient() {
         try {
           cookieStore.set({ name, value, ...options });
         } catch (error) {
-          // Server Component - ignorar
+          console.error("[SupabaseServer] Erro ao setar cookie:", name, error);
         }
       },
       remove(name: string, options: CookieOptions) {
         try {
           cookieStore.set({ name, value: "", ...options });
         } catch (error) {
-          // Server Component - ignorar
+          console.error("[SupabaseServer] Erro ao remover cookie:", name, error);
         }
       },
     },

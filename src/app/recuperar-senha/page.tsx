@@ -28,7 +28,8 @@ function RecuperarSenhaForm() {
       }
 
       setEnviado(true);
-    } catch {
+    } catch (err) {
+      console.error("[RecuperarSenha] Erro ao enviar email:", err);
       setErro("Erro ao enviar e-mail. Tente novamente.");
     } finally {
       setCarregando(false);

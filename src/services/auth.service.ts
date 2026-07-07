@@ -192,6 +192,7 @@ class AuthService {
     });
 
     if (error) {
+      console.error("[AuthService] entrarComEmail raw error:", error.message, error.status);
       return { erro: this.traduzirErro(error.message) };
     }
 
