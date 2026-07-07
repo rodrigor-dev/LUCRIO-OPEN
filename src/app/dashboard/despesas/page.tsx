@@ -531,38 +531,10 @@ export default function DespesasPage() {
   }
 
   const kpiCards = [
-    {
-      label: "Total",
-      valor: totais.total,
-      qtd: totais.totalQtd,
-      icon: TrendingDown,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-    },
-    {
-      label: "A Pagar",
-      valor: totais.aPagar,
-      qtd: totais.aPagarQtd,
-      icon: AlertTriangle,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-    },
-    {
-      label: "Pago",
-      valor: totais.pago,
-      qtd: totais.pagoQtd,
-      icon: TrendingUp,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-    },
-    {
-      label: "Atrasado",
-      valor: totais.atrasado,
-      qtd: totais.atrasadoQtd,
-      icon: Clock,
-      color: "text-red-600",
-      bg: "bg-red-50",
-    },
+    { label: "Total", valor: totais.total, qtd: totais.totalQtd, icon: TrendingDown, iconColor: "text-emerald-600", iconBg: "bg-emerald-100" },
+    { label: "A Pagar", valor: totais.aPagar, qtd: totais.aPagarQtd, icon: AlertTriangle, iconColor: "text-amber-600", iconBg: "bg-amber-100" },
+    { label: "Pago", valor: totais.pago, qtd: totais.pagoQtd, icon: TrendingUp, iconColor: "text-blue-600", iconBg: "bg-blue-100" },
+    { label: "Atrasado", valor: totais.atrasado, qtd: totais.atrasadoQtd, icon: Clock, iconColor: "text-red-600", iconBg: "bg-red-100" },
   ];
 
   return (
@@ -661,26 +633,15 @@ export default function DespesasPage() {
               className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
             >
               {kpiCards.map((kpi) => (
-                <div key={kpi.label} className="rounded-2xl border bg-card p-3 sm:p-4">
-                  <div className="mb-1 flex items-center gap-2">
-                    <div
-                      className={`flex h-6 w-6 items-center justify-center rounded-full ${kpi.bg}`}
-                    >
-                      <kpi.icon
-                        className={`h-3 w-3 ${kpi.color} md:h-3.5 md:w-3.5`}
-                      />
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground md:text-xs">
-                      {kpi.label}
-                    </span>
-                  </div>
-                  <p className={`text-base font-bold ${kpi.color} md:text-lg`}>
-                    {formatarMoeda(kpi.valor)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {kpi.qtd} {kpi.qtd === 1 ? "item" : "itens"}
-                  </p>
-                </div>
+                <FinanceiroKpiCard
+                  key={kpi.label}
+                  label={kpi.label}
+                  valor={kpi.valor}
+                  qtd={kpi.qtd}
+                  icon={kpi.icon}
+                  iconColor={kpi.iconColor}
+                  iconBg={kpi.iconBg}
+                />
               ))}
             </motion.div>
 

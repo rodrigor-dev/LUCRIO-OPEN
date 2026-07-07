@@ -90,6 +90,7 @@ import { FinanceiroStatusBadge, STATUS_DOT_COLORS, VALUE_COLORS } from "@/compon
 import { FinanceiroFilterBar, FinanceiroSearch } from "@/components/financeiro";
 import { FinanceiroEmptyState } from "@/components/financeiro";
 import { FinanceiroBulkBar, FinanceiroBulkBarDesktop } from "@/components/financeiro";
+import { FinanceiroSelectionHeader } from "@/components/financeiro";
 
 type Receita = ReceitaDB & {
   cliente?: { nome: string } | null;
@@ -812,25 +813,14 @@ export default function ReceitasPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-2 flex items-center justify-between overflow-hidden py-2"
+                  className="mt-2 overflow-hidden"
                 >
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={
-                        selecionadas.size === receitasFiltradas.length &&
-                        receitasFiltradas.length > 0
-                      }
-                      onCheckedChange={toggleTodasSelecao}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {selecionadas.size > 0
-                        ? `${selecionadas.size} selecionada(s)`
-                        : "Selecionar todas"}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {receitasFiltradas.length} resultado(s)
-                  </span>
+                  <FinanceiroSelectionHeader
+                    total={receitasFiltradas.length}
+                    selected={selecionadas.size}
+                    allSelected={selecionadas.size === receitasFiltradas.length}
+                    onSelectAll={toggleTodasSelecao}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

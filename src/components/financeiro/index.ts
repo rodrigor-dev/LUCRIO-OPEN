@@ -3,3 +3,4 @@ export { FinanceiroStatusBadge, STATUS_DOT_COLORS, VALUE_COLORS } from "./financ
 export { FinanceiroFilterBar, FinanceiroSearch } from "./financeiro-filters";
 export { FinanceiroEmptyState } from "./financeiro-empty-state";
 export { FinanceiroBulkBar, FinanceiroBulkBarDesktop } from "./financeiro-bulk-bar";
+export { FinanceiroSelectionHeader } from "./financeiro-selection-header";
