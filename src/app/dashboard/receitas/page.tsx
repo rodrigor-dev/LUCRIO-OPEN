@@ -24,7 +24,6 @@ import { InputMoeda } from "@/components/ui/input-moeda";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,7 +70,6 @@ import {
 } from "@/components/ui/select";
 import {
   Plus,
-  Search,
   TrendingUp,
   DollarSign,
   Pencil,
@@ -774,116 +772,37 @@ export default function ReceitasPage() {
               transition={{ delay: 0.1 }}
               className="mt-4"
             >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar receita..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="h-11 w-full rounded-xl border bg-card pl-10 pr-10 text-sm"
-                />
-                {busca && (
-                  <button
-                    onClick={() => setBusca("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+              <FinanceiroSearch value={busca} onChange={setBusca} placeholder="Buscar receita..." />
             </motion.div>
 
-            {/* Filter Pills - horizontal scroll only on the strip */}
+            {/* Filter Pills */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-3 overflow-x-auto scrollbar-hide"
+              className="mt-3"
             >
-              <div className="flex gap-2 pb-2" style={{ minWidth: "max-content" }}>
-                <button
-                  onClick={() => handleFiltraStatus("todos")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                    filtroStatus === "todos" && !filtroPeriodo
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Todos
-                  <span className="opacity-70">({contadores.todos})</span>
-                </button>
-
-                <button
-                  onClick={() => handleFiltraStatus("pago")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                    filtroStatus === "pago"
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Pagos
-                  <span className="opacity-70">({contadores.pagos})</span>
-                </button>
-
-                <button
-                  onClick={() => handleFiltraStatus("pendente")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                    filtroStatus === "pendente"
-                      ? "border-yellow-500 bg-yellow-500 text-white"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Pendentes
-                  <span className="opacity-70">({contadores.pendentes})</span>
-                </button>
-
-                <button
-                  onClick={() => handleFiltraStatus("atrasado")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                    filtroStatus === "atrasado"
-                      ? "border-red-600 bg-red-600 text-white"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Atrasados
-                  <span className="opacity-70">({contadores.atrasados})</span>
-                </button>
-
-                <div className="w-px shrink-0 self-stretch bg-border" />
-
-                <button
-                  onClick={() => handleFiltraPeriodo("este_mes")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                    filtroPeriodo === "este_mes"
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Este mês
-                </button>
-
-                <button
-                  onClick={() => handleFiltraPeriodo("proximo_mes")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                    filtroPeriodo === "proximo_mes"
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Próximo mês
-                </button>
-
-                <button
-                  onClick={() => handleFiltraPeriodo("ultimos_30_dias")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                    filtroPeriodo === "ultimos_30_dias"
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Últimos 30 dias
-                </button>
-              </div>
+              <FinanceiroFilterBar
+                filters={[
+                  { label: "Todos", value: "todos", count: contadores.todos },
+                  { label: "Pagos", value: "pago", count: contadores.pagos, color: "border-emerald-600 bg-emerald-600 text-white" },
+                  { label: "Pendentes", value: "pendente", count: contadores.pendentes, color: "border-yellow-500 bg-yellow-500 text-white" },
+                  { label: "Atrasados", value: "atrasado", count: contadores.atrasados, color: "border-red-600 bg-red-600 text-white" },
+                  { label: "---", value: "__divider__" },
+                  { label: "Este mês", value: "este_mes" },
+                  { label: "Próximo mês", value: "proximo_mes" },
+                  { label: "Últimos 30 dias", value: "ultimos_30_dias" },
+                ]}
+                activeValue={filtroPeriodo || filtroStatus}
+                onSelect={(value) => {
+                  if (value === "__divider__") return;
+                  if (["este_mes", "proximo_mes", "ultimos_30_dias"].includes(value)) {
+                    handleFiltraPeriodo(value);
+                  } else {
+                    handleFiltraStatus(value);
+                  }
+                }}
+              />
             </motion.div>
 
             {/* Bulk Selection Header */}
@@ -931,30 +850,14 @@ export default function ReceitasPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="mt-4"
               >
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                      <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
-                    </div>
-                    <h3 className="mb-1.5 text-base font-semibold">
-                      Nenhuma receita encontrada
-                    </h3>
-                    <p className="mb-4 text-center text-sm text-muted-foreground">
-                      {busca || filtroStatus !== "todos" || filtroPeriodo
-                        ? "Tente ajustar os filtros"
-                        : "Adicione sua primeira receita"}
-                    </p>
-                    {!busca && filtroStatus === "todos" && !filtroPeriodo && (
-                      <Button
-                        onClick={abrirNovo}
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Adicionar Receita
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                <FinanceiroEmptyState
+                  icon={TrendingUp}
+                  title="Nenhuma receita encontrada"
+                  description="Adicione sua primeira receita"
+                  actionLabel="Adicionar Receita"
+                  onAction={abrirNovo}
+                  hasFilters={!!busca || filtroStatus !== "todos" || !!filtroPeriodo}
+                />
               </motion.div>
             ) : (
               <>
@@ -1161,111 +1064,24 @@ export default function ReceitasPage() {
       )}
 
       {/* Mobile Bottom Bulk Action Bar */}
-      <AnimatePresence>
-        {selecionadas.size > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden"
-            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {selecionadas.size} selecionada(s)
-              </span>
-              <button
-                onClick={cancelarModoSelecao}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Limpar
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-11 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                onClick={handleMarcarPagoMassa}
-                disabled={processandoMassa}
-              >
-                <CheckCheck className="mr-1 h-4 w-4" />
-                Pago
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-11 border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800"
-                onClick={handleMarcarPendenteMassa}
-                disabled={processandoMassa}
-              >
-                <Clock className="mr-1 h-4 w-4" />
-                Pendente
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-11 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                onClick={handleExcluirMassa}
-                disabled={processandoMassa}
-              >
-                <Trash2 className="mr-1 h-4 w-4" />
-                Excluir
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <FinanceiroBulkBar
+        count={selecionadas.size}
+        onCancel={cancelarModoSelecao}
+        onMarkPaid={handleMarcarPagoMassa}
+        onMarkPending={handleMarcarPendenteMassa}
+        onDelete={handleExcluirMassa}
+        processing={processandoMassa}
+      />
 
       {/* Desktop Bottom Bulk Bar */}
-      <AnimatePresence>
-        {selecionadas.size > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-40 hidden border-t bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 md:block"
-          >
-            <div className="mx-auto flex max-w-5xl items-center gap-4">
-              <span className="text-sm font-medium">
-                {selecionadas.size} selecionada(s)
-              </span>
-              <div className="ml-auto flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                  onClick={handleMarcarPagoMassa}
-                  disabled={processandoMassa}
-                >
-                  <CheckCheck className="mr-1 h-4 w-4" />
-                  Marcar Pago
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-9 border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800"
-                  onClick={handleMarcarPendenteMassa}
-                  disabled={processandoMassa}
-                >
-                  <Clock className="mr-1 h-4 w-4" />
-                  Pendente
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-9 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                  onClick={handleExcluirMassa}
-                  disabled={processandoMassa}
-                >
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  Excluir
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <FinanceiroBulkBarDesktop
+        count={selecionadas.size}
+        onCancel={cancelarModoSelecao}
+        onMarkPaid={handleMarcarPagoMassa}
+        onMarkPending={handleMarcarPendenteMassa}
+        onDelete={handleExcluirMassa}
+        processing={processandoMassa}
+      />
 
       {/* Detail Drawer */}
       <Sheet open={drawerAberto} onOpenChange={setDrawerAberto}>

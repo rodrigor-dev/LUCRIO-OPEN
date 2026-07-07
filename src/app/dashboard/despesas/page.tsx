@@ -7,7 +7,6 @@ import { Pagination } from "@/components/pagination";
 import {
   FORMAS_PAGAMENTO_DESPESA,
   STATUS_LABELS,
-  STATUS_VARIANTS,
 } from "@/lib/constants";
 import type { Despesa as DespesaDB } from "@/types/database";
 import {
@@ -65,7 +64,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
-  Search,
   TrendingDown,
   TrendingUp,
   Pencil,
@@ -83,6 +81,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { FinanceiroKpiCard } from "@/components/financeiro";
+import { FinanceiroStatusBadge, STATUS_DOT_COLORS, VALUE_COLORS } from "@/components/financeiro";
+import { FinanceiroFilterBar, FinanceiroSearch } from "@/components/financeiro";
+import { FinanceiroEmptyState } from "@/components/financeiro";
+import { FinanceiroBulkBar, FinanceiroBulkBarDesktop } from "@/components/financeiro";
 
 type Categoria = {
   id: string;
@@ -100,20 +103,6 @@ type Despesa = DespesaDB & {
 };
 
 type FiltroStatus = "todos" | "pago" | "pendente" | "atrasado";
-
-const STATUS_DOT_COLORS: Record<string, string> = {
-  pago: "bg-emerald-500",
-  pendente: "bg-yellow-500",
-  atrasado: "bg-red-500",
-  cancelado: "bg-gray-400",
-};
-
-const VALUE_COLORS: Record<string, string> = {
-  pago: "text-emerald-600",
-  pendente: "text-foreground",
-  atrasado: "text-red-600",
-  cancelado: "text-muted-foreground",
-};
 
 const FORM_DEFAULTS = {
   descricao: "",
@@ -541,22 +530,6 @@ export default function DespesasPage() {
     }
   }
 
-  function statusBadge(status: string) {
-    const colors: Record<string, string> = {
-      pago: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      pendente: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      atrasado: "bg-red-100 text-red-700 border-red-200",
-      cancelado: "bg-gray-100 text-gray-500 border-gray-200",
-    };
-    return (
-      <span
-        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${colors[status] || colors.pendente}`}
-      >
-        {STATUS_LABELS[status] || status}
-      </span>
-    );
-  }
-
   const kpiCards = [
     {
       label: "Total",
@@ -718,23 +691,7 @@ export default function DespesasPage() {
               transition={{ delay: 0.1 }}
               className="mt-4"
             >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar despesa..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="h-11 w-full rounded-xl border bg-card pl-10 pr-10 text-sm"
-                />
-                {busca && (
-                  <button
-                    onClick={() => setBusca("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+              <FinanceiroSearch value={busca} onChange={setBusca} placeholder="Buscar despesa..." />
             </motion.div>
 
             {/* Filter Bar - Status Pills + Category */}
@@ -742,67 +699,21 @@ export default function DespesasPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-3 overflow-x-auto scrollbar-hide"
+              className="mt-3"
             >
-              <div
-                className="flex gap-2 pb-2"
-                style={{ minWidth: "max-content" }}
-              >
-                <button
-                  onClick={() => setFiltroStatus("todos")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
-                    filtroStatus === "todos"
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Todos
-                  <span className="opacity-70">
-                    ({contarPorStatus("todos")})
-                  </span>
-                </button>
-                <button
-                  onClick={() => setFiltroStatus("pago")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
-                    filtroStatus === "pago"
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Pagos
-                  <span className="opacity-70">
-                    ({contarPorStatus("pago")})
-                  </span>
-                </button>
-                <button
-                  onClick={() => setFiltroStatus("pendente")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
-                    filtroStatus === "pendente"
-                      ? "border-yellow-500 bg-yellow-500 text-white"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Pendentes
-                  <span className="opacity-70">
-                    ({contarPorStatus("pendente")})
-                  </span>
-                </button>
-                <button
-                  onClick={() => setFiltroStatus("atrasado")}
-                  className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
-                    filtroStatus === "atrasado"
-                      ? "border-red-600 bg-red-600 text-white"
-                      : "border-border bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  Atrasados
-                  <span className="opacity-70">
-                    ({contarPorStatus("atrasado")})
-                  </span>
-                </button>
-
-                <div className="w-px shrink-0 self-stretch bg-border" />
-
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                <div className="min-w-0 flex-1">
+                  <FinanceiroFilterBar
+                    filters={[
+                      { label: "Todos", value: "todos", count: contarPorStatus("todos") },
+                      { label: "Pagos", value: "pago", count: contarPorStatus("pago"), color: "border-emerald-600 bg-emerald-600 text-white" },
+                      { label: "Pendentes", value: "pendente", count: contarPorStatus("pendente"), color: "border-yellow-500 bg-yellow-500 text-white" },
+                      { label: "Atrasados", value: "atrasado", count: contarPorStatus("atrasado"), color: "border-red-600 bg-red-600 text-white" },
+                    ]}
+                    activeValue={filtroStatus}
+                    onSelect={(v) => setFiltroStatus(v as FiltroStatus)}
+                  />
+                </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   <Filter className="h-3.5 w-3.5 text-muted-foreground" />
                   <Select
@@ -826,59 +737,14 @@ export default function DespesasPage() {
             </motion.div>
 
             {/* Bulk Action Bar - Desktop only */}
-            <AnimatePresence>
-              {selecionados.size > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-2 mt-2 hidden overflow-hidden md:block"
-                >
-                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                    <span className="text-xs font-medium text-emerald-800">
-                      {selecionados.size} selecionado(s)
-                    </span>
-                    <div className="ml-auto flex flex-wrap gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-emerald-300 bg-white px-2.5 text-xs text-emerald-700 hover:bg-emerald-100"
-                        onClick={() => setAcaoEmMassa("pagar")}
-                      >
-                        <Check className="mr-1 h-3 w-3" />
-                        Pago
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-yellow-300 bg-white px-2.5 text-xs text-yellow-700 hover:bg-yellow-50"
-                        onClick={() => setAcaoEmMassa("pendente")}
-                      >
-                        <Clock className="mr-1 h-3 w-3" />
-                        Pendente
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 border-red-300 bg-white px-2.5 text-xs text-red-700 hover:bg-red-50"
-                        onClick={() => setAcaoEmMassa("excluir")}
-                      >
-                        <Trash2 className="mr-1 h-3 w-3" />
-                        Excluir
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 px-0"
-                        onClick={() => setSelecionados(new Set())}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <FinanceiroBulkBarDesktop
+              count={selecionados.size}
+              onCancel={() => { setSelecionados(new Set()); setModoSelecao(false); }}
+              onMarkPaid={() => setAcaoEmMassa("pagar")}
+              onMarkPending={() => setAcaoEmMassa("pendente")}
+              onDelete={() => setAcaoEmMassa("excluir")}
+              processing={processandoMassa}
+            />
 
             {/* Results count */}
             {despesasFiltradas.length > 0 && (
@@ -896,31 +762,14 @@ export default function DespesasPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="mt-2"
               >
-                <div className="flex flex-col items-center justify-center rounded-2xl border bg-card py-16">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                    <ArrowDownCircle className="h-8 w-8 text-muted-foreground/50" />
-                  </div>
-                  <h3 className="mb-1 text-base font-semibold">
-                    Nenhuma despesa encontrada
-                  </h3>
-                  <p className="mb-4 text-center text-sm text-muted-foreground">
-                    {busca || filtroCategoria !== "todas" || filtroStatus !== "todos"
-                      ? "Tente ajustar os filtros"
-                      : "Adicione sua primeira despesa"}
-                  </p>
-                  {!busca &&
-                    filtroCategoria === "todas" &&
-                    filtroStatus === "todos" && (
-                      <Button
-                        onClick={abrirNovo}
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                      >
-                        <Plus className="mr-1 h-4 w-4" />
-                        Adicionar Despesa
-                      </Button>
-                    )}
-                </div>
+                <FinanceiroEmptyState
+                  icon={ArrowDownCircle}
+                  title="Nenhuma despesa encontrada"
+                  description="Adicione sua primeira despesa"
+                  actionLabel="Adicionar Despesa"
+                  onAction={abrirNovo}
+                  hasFilters={!!busca || filtroCategoria !== "todas" || filtroStatus !== "todos"}
+                />
               </motion.div>
             )}
 
@@ -1044,7 +893,7 @@ export default function DespesasPage() {
                                 "-"}
                             </td>
                             <td className="px-3 py-3">
-                              {statusBadge(d.status)}
+                              <FinanceiroStatusBadge status={d.status} />
                             </td>
                             <td className="px-3 py-3 text-right">
                               <span
@@ -1127,7 +976,7 @@ export default function DespesasPage() {
                             "-"}
                         </span>
                         <span className="text-muted-foreground/40">•</span>
-                        {statusBadge(d.status)}
+                        <FinanceiroStatusBadge status={d.status} />
                       </div>
 
                       {/* Row 3: category + checkbox */}
@@ -1215,61 +1064,14 @@ export default function DespesasPage() {
       )}
 
       {/* Mobile Bottom Bulk Action Bar */}
-      <AnimatePresence>
-        {selecionados.size > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden"
-            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {selecionados.size} selecionado(s)
-              </span>
-              <button
-                onClick={cancelarModoSelecao}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Limpar
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-11 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                onClick={() => setAcaoEmMassa("pagar")}
-                disabled={processandoMassa}
-              >
-                <CheckCheck className="mr-1 h-4 w-4" />
-                Pago
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-11 border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800"
-                onClick={() => setAcaoEmMassa("pendente")}
-                disabled={processandoMassa}
-              >
-                <Clock className="mr-1 h-4 w-4" />
-                Pendente
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-11 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                onClick={() => setAcaoEmMassa("excluir")}
-                disabled={processandoMassa}
-              >
-                <Trash2 className="mr-1 h-4 w-4" />
-                Excluir
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <FinanceiroBulkBar
+        count={selecionados.size}
+        onCancel={cancelarModoSelecao}
+        onMarkPaid={() => setAcaoEmMassa("pagar")}
+        onMarkPending={() => setAcaoEmMassa("pendente")}
+        onDelete={() => setAcaoEmMassa("excluir")}
+        processing={processandoMassa}
+      />
 
       {/* Detail Drawer */}
       <Sheet open={detalheAberto} onOpenChange={setDetalheAberto}>
@@ -1294,7 +1096,7 @@ export default function DespesasPage() {
                     <div
                       className={`h-3 w-3 rounded-full ${STATUS_DOT_COLORS[despesaDetalhe.status] || STATUS_DOT_COLORS.pendente}`}
                     />
-                    {statusBadge(despesaDetalhe.status)}
+                    <FinanceiroStatusBadge status={despesaDetalhe.status} />
                   </div>
                   <span
                     className={`text-xl font-bold md:text-2xl ${VALUE_COLORS[despesaDetalhe.status] || "text-foreground"}`}
