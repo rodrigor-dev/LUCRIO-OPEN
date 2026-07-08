@@ -10,11 +10,8 @@ import {
   Gift,
   Calendar,
   Loader2,
-  ExternalLink,
   QrCode,
   MessageCircle,
-  Send,
-  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,16 +33,29 @@ const fadeInUp = {
 export default function IndicarPage() {
   const [stats, setStats] = useState<IndicacoesUsuarioStats | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
 
   const carregarDados = useCallback(async () => {
-    const user = await authService.getAuthUser();
-    if (!user) return;
-    setUsuarioId(user.id);
-    const dados = await obterStatsIndicacoes(user.id);
-    setStats(dados);
-    setCarregando(false);
+    setCarregando(true);
+    setErro(false);
+    try {
+      const user = await authService.getAuthUser();
+      if (!user) return;
+      setUsuarioId(user.id);
+      const dados = await obterStatsIndicacoes(user.id);
+      if (!dados?.codigo) {
+        setErro(true);
+        toast.error("Erro ao carregar código de indicação");
+      }
+      setStats(dados);
+    } catch {
+      setErro(true);
+      toast.error("Erro ao carregar dados de indicações");
+    } finally {
+      setCarregando(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -61,16 +71,30 @@ export default function IndicarPage() {
     setTimeout(() => setCopiado(false), 2000);
   }
 
-  function compartilhar(rede: "whatsapp" | "telegram" | "facebook" | "email") {
+  function compartilhar() {
     if (!stats?.codigo) return;
     const links = gerarLinksCompartilhamento(stats.codigo);
-    window.open(links[rede], "_blank");
+    window.open(links.whatsapp, "_blank");
   }
 
   if (carregando) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (erro && !stats) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4">
+        <p className="text-center text-muted-foreground">
+          Erro ao carregar dados de indicações.
+        </p>
+        <Button onClick={carregarDados} className="gap-2">
+          <Loader2 className="h-4 w-4" />
+          Tentar novamente
+        </Button>
       </div>
     );
   }
@@ -105,7 +129,7 @@ export default function IndicarPage() {
 
             <div className="flex items-center gap-2 rounded-lg bg-background p-4 border border-border/50">
               <code className="flex-1 text-center text-2xl font-bold tracking-widest text-primary">
-                {stats?.codigo || "Carregando..."}
+                {stats?.codigo || "Erro ao gerar código"}
               </code>
               <Button
                 variant="ghost"
@@ -207,11 +231,11 @@ export default function IndicarPage() {
         <Card>
           <CardContent className="p-6">
             <h3 className="font-semibold mb-4">Compartilhar via</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Button
                 variant="outline"
                 className="justify-start gap-3"
-                onClick={() => compartilhar("whatsapp")}
+                onClick={compartilhar}
               >
                 <MessageCircle className="h-5 w-5 text-green-600" />
                 WhatsApp
@@ -219,26 +243,14 @@ export default function IndicarPage() {
               <Button
                 variant="outline"
                 className="justify-start gap-3"
-                onClick={() => compartilhar("telegram")}
+                onClick={copiarLink}
               >
-                <Send className="h-5 w-5 text-blue-500" />
-                Telegram
-              </Button>
-              <Button
-                variant="outline"
-                className="justify-start gap-3"
-                onClick={() => compartilhar("facebook")}
-              >
-                <ExternalLink className="h-5 w-5 text-blue-600" />
-                Facebook
-              </Button>
-              <Button
-                variant="outline"
-                className="justify-start gap-3"
-                onClick={() => compartilhar("email")}
-              >
-                <Mail className="h-5 w-5 text-orange-500" />
-                E-mail
+                {copiado ? (
+                  <Check className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Copy className="h-5 w-5" />
+                )}
+                Copiar Link
               </Button>
             </div>
           </CardContent>
@@ -301,7 +313,7 @@ export default function IndicarPage() {
                 <div>
                   <p className="font-medium">Compartilhe seu código</p>
                   <p className="text-sm text-muted-foreground">
-                    Envie o link para amigos via WhatsApp, e-mail ou redes sociais
+                    Envie o link para amigos via WhatsApp ou link copiado
                   </p>
                 </div>
               </div>

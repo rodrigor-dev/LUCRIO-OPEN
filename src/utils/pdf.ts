@@ -42,7 +42,7 @@ async function loadFont(doc: jsPDF) {
   }
 }
 
-export async function gerarPDFOrcamento(data: PDFData): Promise<void> {
+export async function gerarPDFOrcamento(data: PDFData, acao: "baixar" | "imprimir" = "baixar"): Promise<void> {
   const doc = new jsPDF();
   await loadFont(doc);
 
@@ -145,5 +145,13 @@ export async function gerarPDFOrcamento(data: PDFData): Promise<void> {
   doc.setFont(fontName, "normal");
   doc.text("Gerado pelo LUCRIO - Sistema Financeiro", 105, 285, { align: "center" });
 
-  doc.save(`orcamento-${data.numero.replace(/[^a-zA-Z0-9]/g, "")}.pdf`);
+  if (acao === "imprimir") {
+    const blobUrl = doc.output("bloburl");
+    const opened = window.open(blobUrl, "_blank");
+    if (!opened) {
+      doc.save(`orcamento-${data.numero.replace(/[^a-zA-Z0-9]/g, "")}.pdf`);
+    }
+  } else {
+    doc.save(`orcamento-${data.numero.replace(/[^a-zA-Z0-9]/g, "")}.pdf`);
+  }
 }

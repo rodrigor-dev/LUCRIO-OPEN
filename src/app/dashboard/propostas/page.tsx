@@ -59,6 +59,7 @@ import {
   Download,
   Calendar,
   DollarSign,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -79,6 +80,7 @@ interface Proposta {
   id: string;
   numero_proposta: string;
   cliente_id: string | null;
+  cliente_nome_manual: string | null;
   validade: string;
   status: string;
   subtotal: number;
@@ -94,6 +96,7 @@ interface Proposta {
 
 type FormState = {
   cliente_id: string;
+  cliente_nome_manual: string;
   validade: string;
   desconto: number;
   frete: number;
@@ -103,6 +106,7 @@ type FormState = {
 
 const emptyForm: FormState = {
   cliente_id: "",
+  cliente_nome_manual: "",
   validade: "",
   desconto: 0,
   frete: 0,
@@ -213,7 +217,7 @@ export default function PropostasPage() {
     return propostas.filter((p) => {
       const buscaMatch =
         p.numero_proposta.toLowerCase().includes(busca.toLowerCase()) ||
-        (p.cliente?.nome || "").toLowerCase().includes(busca.toLowerCase());
+        (p.cliente?.nome || p.cliente_nome_manual || "").toLowerCase().includes(busca.toLowerCase());
       const statusMatch = filtroStatus === "todos" || p.status === filtroStatus;
       return buscaMatch && statusMatch;
     });
@@ -230,6 +234,7 @@ export default function PropostasPage() {
     setPropostaEditando(proposta);
     setForm({
       cliente_id: proposta.cliente_id || "",
+      cliente_nome_manual: proposta.cliente_nome_manual || "",
       validade: proposta.validade,
       desconto: proposta.desconto,
       frete: proposta.frete,
@@ -263,10 +268,6 @@ export default function PropostasPage() {
     if (campo === "quantidade" || campo === "valor_unitario") {
       novosItens[index].total =
         novosItens[index].quantidade * novosItens[index].valor_unitario;
-    }
-    if (campo === "quantidade" && typeof valor === "number" && valor <= 0 && novosItens.length > 1) {
-      setItens(novosItens.filter((_, i) => i !== index));
-      return;
     }
     setItens(novosItens);
   }
@@ -315,6 +316,7 @@ export default function PropostasPage() {
     const payload = {
       negocio_id: negocio.id,
       cliente_id: form.cliente_id || null,
+      cliente_nome_manual: form.cliente_id ? null : (form.cliente_nome_manual || null),
       validade: form.validade || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
       subtotal,
       desconto: form.desconto,
@@ -457,6 +459,7 @@ export default function PropostasPage() {
         .insert({
           negocio_id: negocio.id,
           cliente_id: proposta.cliente_id,
+          cliente_nome_manual: proposta.cliente_nome_manual,
           numero_proposta: gerarNumeroOrcamento(),
           validade: proposta.validade,
           status: "rascunho",
@@ -590,7 +593,7 @@ export default function PropostasPage() {
                             <span className="font-medium">{proposta.numero_proposta}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{proposta.cliente?.nome || "Sem cliente"}</TableCell>
+                        <TableCell>{proposta.cliente?.nome || proposta.cliente_nome_manual || "Sem cliente"}</TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <Calendar className="h-3.5 w-3.5" />
@@ -621,8 +624,8 @@ export default function PropostasPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setPropostaPdf(proposta);
-                                setPdfCliente(proposta.cliente?.nome || "");
-                                setPdfDialogAberto(true);
+                              setPdfCliente(proposta.cliente?.nome || proposta.cliente_nome_manual || "");
+                              setPdfDialogAberto(true);
                               }}
                               title="Exportar PDF"
                             >
@@ -725,7 +728,7 @@ export default function PropostasPage() {
                             </CardTitle>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {proposta.cliente?.nome || "Sem cliente"}
+                            {proposta.cliente?.nome || proposta.cliente_nome_manual || "Sem cliente"}
                           </p>
                         </div>
                         <Badge
@@ -762,7 +765,7 @@ export default function PropostasPage() {
                           className="h-11 w-11"
                           onClick={() => {
                             setPropostaPdf(proposta);
-                            setPdfCliente(proposta.cliente?.nome || "");
+                            setPdfCliente(proposta.cliente?.nome || proposta.cliente_nome_manual || "");
                             setPdfDialogAberto(true);
                           }}
                         >
@@ -855,7 +858,7 @@ export default function PropostasPage() {
                 <Label>Cliente (opcional)</Label>
                 <Select
                   value={form.cliente_id}
-                  onValueChange={(v) => setForm({ ...form, cliente_id: v })}
+                  onValueChange={(v) => setForm({ ...form, cliente_id: v, cliente_nome_manual: "" })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um cliente" />
@@ -868,6 +871,14 @@ export default function PropostasPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {!form.cliente_id && (
+                  <Input
+                    placeholder="Nome do cliente"
+                    value={form.cliente_nome_manual}
+                    onChange={(e) => setForm({ ...form, cliente_nome_manual: e.target.value })}
+                    onFocus={scrollToInput}
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Validade</Label>
@@ -919,7 +930,7 @@ export default function PropostasPage() {
                       <Input
                         type="number"
                         placeholder="Qtd"
-                        value={item.quantidade}
+                        value={item.quantidade || ""}
                         onChange={(e) =>
                           atualizarItem(index, "quantidade", parseInt(e.target.value) || 0)
                         }
@@ -1057,7 +1068,7 @@ export default function PropostasPage() {
                 <div>
                   <p className="text-muted-foreground">Cliente</p>
                   <p className="font-medium">
-                    {propostaVisualizando.cliente?.nome || "Sem cliente"}
+                    {propostaVisualizando.cliente?.nome || propostaVisualizando.cliente_nome_manual || "Sem cliente"}
                   </p>
                 </div>
                 <div>
@@ -1215,13 +1226,14 @@ export default function PropostasPage() {
               <Button variant="outline" className="h-11">Cancelar</Button>
             </DialogClose>
             <Button
-              className="h-11 bg-emerald-600 hover:bg-emerald-700"
+              variant="outline"
+              className="h-11"
               onClick={async () => {
                 if (!propostaPdf) return;
                 await gerarPDFOrcamento({
                   numero: propostaPdf.numero_proposta || "0000",
                   empresa: pdfEmpresa,
-                  cliente: pdfCliente || propostaPdf.cliente?.nome || "",
+                  cliente: pdfCliente || propostaPdf.cliente?.nome || propostaPdf.cliente_nome_manual || "",
                   data: new Date(propostaPdf.criado_em).toLocaleDateString("pt-BR"),
                   validade: propostaPdf.validade || "30 dias",
                   itens: (propostaPdf.itens_proposta || []).map((item) => ({
@@ -1236,12 +1248,40 @@ export default function PropostasPage() {
                   total: propostaPdf.total,
                   condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
                   observacoes: propostaPdf.observacoes || undefined,
-                });
+                }, "imprimir");
+                setPdfDialogAberto(false);
+              }}
+            >
+              Imprimir
+            </Button>
+            <Button
+              className="h-11 bg-emerald-600 hover:bg-emerald-700"
+              onClick={async () => {
+                if (!propostaPdf) return;
+                await gerarPDFOrcamento({
+                  numero: propostaPdf.numero_proposta || "0000",
+                  empresa: pdfEmpresa,
+                  cliente: pdfCliente || propostaPdf.cliente?.nome || propostaPdf.cliente_nome_manual || "",
+                  data: new Date(propostaPdf.criado_em).toLocaleDateString("pt-BR"),
+                  validade: propostaPdf.validade || "30 dias",
+                  itens: (propostaPdf.itens_proposta || []).map((item) => ({
+                    descricao: item.descricao,
+                    quantidade: item.quantidade,
+                    valor_unitario: item.valor_unitario,
+                    total: item.total,
+                  })),
+                  subtotal: propostaPdf.subtotal,
+                  desconto: propostaPdf.desconto || 0,
+                  frete: propostaPdf.frete || 0,
+                  total: propostaPdf.total,
+                  condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
+                  observacoes: propostaPdf.observacoes || undefined,
+                }, "baixar");
                 setPdfDialogAberto(false);
                 toast.success("PDF gerado com sucesso!");
               }}
             >
-              Gerar PDF
+              Salvar PDF
             </Button>
           </DialogFooter>
         </DialogContent>
