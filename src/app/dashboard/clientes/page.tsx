@@ -93,14 +93,92 @@ const emptyForm: FormState = {
   observacoes: "",
 };
 
-function calcularProximoVencimento(diaVencimento: number | null): string {
+function calcularProximoVencimento(diaVencimento: number): string {
   const hoje = new Date();
-  const dia = diaVencimento || hoje.getDate();
-  const proximo = new Date(hoje.getFullYear(), hoje.getMonth(), dia);
-  if (proximo <= hoje) {
-    proximo.setMonth(proximo.getMonth() + 1);
+  const diaHoje = hoje.getDate();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+
+  const dataAlvo =
+    diaVencimento >= diaHoje
+      ? new Date(ano, mes, diaVencimento)
+      : new Date(ano, mes + 1, diaVencimento);
+
+  return dataAlvo.toISOString().split("T")[0];
+}
+
+async function sincronizarRecorrenciaCliente(params: {
+  supabase: ReturnType<typeof useSupabase>;
+  negocioId: string;
+  clienteId: string;
+  clienteNome: string;
+  tipo: "fixo" | "esporadico";
+  isAtivo: boolean;
+  valorMensal: number | null;
+  diaVencimento: number | null;
+}) {
+  const { supabase, negocioId, clienteId, clienteNome, tipo, isAtivo, valorMensal, diaVencimento } = params;
+
+  const recorrenciasExistentes = await listarRecorrencias(negocioId, "receita");
+  const recorrenciaExistente = recorrenciasExistentes.find((r) => r.cliente_id === clienteId);
+
+  const deveEstarAtiva = tipo === "fixo" && isAtivo && !!valorMensal && valorMensal > 0;
+
+  if (!deveEstarAtiva) {
+    if (recorrenciaExistente && recorrenciaExistente.is_ativa) {
+      await atualizarRecorrencia(recorrenciaExistente.id, { is_ativa: false });
+    }
+    return;
   }
-  return proximo.toISOString().split("T")[0];
+
+  const proximoGerarEm = diaVencimento
+    ? calcularProximoVencimento(diaVencimento)
+    : calcularProximoVencimento(new Date().getDate());
+
+  if (recorrenciaExistente) {
+    await atualizarRecorrencia(recorrenciaExistente.id, {
+      valor: valorMensal!,
+      descricao: `Mensalidade - ${clienteNome}`,
+      dia_vencimento: diaVencimento || undefined,
+      is_ativa: true,
+      ...(recorrenciaExistente.is_ativa ? {} : { proximo_gerar_em: proximoGerarEm }),
+    });
+    return recorrenciaExistente.id;
+  }
+
+  const novaRecorrencia = await criarRecorrencia({
+    negocio_id: negocioId,
+    cliente_id: clienteId,
+    tipo: "receita",
+    recorrencia: "mensal",
+    valor: valorMensal!,
+    descricao: `Mensalidade - ${clienteNome}`,
+    dia_vencimento: diaVencimento || undefined,
+    is_ativa: true,
+    proximo_gerar_em: proximoGerarEm,
+  });
+
+  const { data: receitaExistente } = await supabase
+    .from("receitas")
+    .select("id")
+    .eq("recorrencia_id", novaRecorrencia.id)
+    .limit(1);
+
+  if (!receitaExistente || receitaExistente.length === 0) {
+    await supabase.from("receitas").insert({
+      negocio_id: negocioId,
+      cliente_id: clienteId,
+      descricao: `Mensalidade - ${clienteNome}`,
+      valor: valorMensal,
+      data: proximoGerarEm,
+      data_vencimento: proximoGerarEm,
+      status: "pendente",
+      recorrencia_tipo: "mensal",
+      recorrencia_id: novaRecorrencia.id,
+    });
+  }
+
+  return novaRecorrencia.id;
 }
 
 export default function ClientesPage() {
@@ -209,6 +287,54 @@ export default function ClientesPage() {
     setEnderecoAberto(false);
   }
 
+  async function alternarStatusCliente(cliente: Cliente) {
+    const novoStatus = !cliente.is_ativo;
+
+    const { error } = await supabase
+      .from("clientes")
+      .update({ is_ativo: novoStatus })
+      .eq("id", cliente.id);
+
+    if (error) {
+      console.error("[clientes] erro ao alternar status:", error);
+      toast.error(`Erro ao mudar situação do cliente: ${error.message}`);
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: negocio } = await supabase
+          .from("negocios")
+          .select("id")
+          .eq("usuario_id", user.id)
+          .single();
+
+        if (negocio) {
+          await sincronizarRecorrenciaCliente({
+            supabase,
+            negocioId: negocio.id,
+            clienteId: cliente.id,
+            clienteNome: cliente.nome,
+            tipo: cliente.tipo,
+            isAtivo: novoStatus,
+            valorMensal: cliente.valor_mensal ?? null,
+            diaVencimento: cliente.dia_vencimento ?? null,
+          });
+        }
+      }
+    } catch (recErro) {
+      console.error("[clientes] erro ao sincronizar recorrência:", recErro);
+    }
+
+    toast.success(
+      novoStatus ? "Cliente marcado como ativo." : "Cliente marcado como inativo."
+    );
+    carregarClientes();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSalvando(true);
@@ -248,8 +374,6 @@ export default function ClientesPage() {
         observacoes: form.observacoes || null,
       };
 
-      let clienteId: string | null = null;
-
       if (clienteEditando) {
         const { error } = await supabase
           .from("clientes")
@@ -262,13 +386,30 @@ export default function ClientesPage() {
           return;
         }
 
-        clienteId = clienteEditando.id;
+        try {
+          await sincronizarRecorrenciaCliente({
+            supabase,
+            negocioId: negocio.id,
+            clienteId: clienteEditando.id,
+            clienteNome: form.nome,
+            tipo: form.tipo,
+            isAtivo: clienteEditando.is_ativo,
+            valorMensal: payload.valor_mensal,
+            diaVencimento: payload.dia_vencimento,
+          });
+        } catch (recErro) {
+          console.error("[clientes] erro ao sincronizar recorrência:", recErro);
+        }
+
         toast.success("Cliente atualizado com sucesso!");
       } else {
-        const { data: novoCliente, error } = await supabase
+        const { data: clienteCriado, error } = await supabase
           .from("clientes")
-          .insert({ negocio_id: negocio.id, ...payload })
-          .select("id")
+          .insert({
+            negocio_id: negocio.id,
+            ...payload,
+          })
+          .select()
           .single();
 
         if (error) {
@@ -277,70 +418,28 @@ export default function ClientesPage() {
           return;
         }
 
-        clienteId = novoCliente.id;
-        toast.success("Cliente criado com sucesso!");
-      }
-
-      const deveGerarRecorrencia =
-        form.tipo === "fixo" &&
-        form.valor_mensal &&
-        parseFloat(form.valor_mensal) > 0;
-
-      if (deveGerarRecorrencia && clienteId) {
-        try {
-          const recorrencias = await listarRecorrencias(negocio.id, "receita");
-          const existente = recorrencias.find((r) => r.cliente_id === clienteId);
-
-          const dadosRecorrencia = {
-            negocio_id: negocio.id,
-            cliente_id: clienteId,
-            tipo: "receita" as const,
-            recorrencia: "mensal" as const,
-            valor: parseFloat(form.valor_mensal),
-            descricao: `Mensalidade - ${form.nome}`,
-            dia_vencimento: form.dia_vencimento ? parseInt(form.dia_vencimento) : undefined,
-            is_ativa: true,
-            proximo_gerar_em: calcularProximoVencimento(
-              form.dia_vencimento ? parseInt(form.dia_vencimento) : null
-            ),
-          };
-
-          let recorrenciaId: string;
-
-          if (existente) {
-            const atualizada = await atualizarRecorrencia(existente.id, dadosRecorrencia);
-            recorrenciaId = atualizada.id;
-          } else {
-            const nova = await criarRecorrencia(dadosRecorrencia);
-            recorrenciaId = nova.id;
-          }
-
-          const diaVenc = form.dia_vencimento ? parseInt(form.dia_vencimento) : new Date().getDate();
-          const dataVencimento = calcularProximoVencimento(diaVenc);
-
-          const { data: receitaExistente } = await supabase
-            .from("receitas")
-            .select("id")
-            .eq("recorrencia_id", recorrenciaId)
-            .eq("data", dataVencimento)
-            .limit(1);
-
-          if (!receitaExistente || receitaExistente.length === 0) {
-            await supabase.from("receitas").insert({
-              negocio_id: negocio.id,
-              cliente_id: clienteId,
-              descricao: `Mensalidade - ${form.nome}`,
-              valor: parseFloat(form.valor_mensal),
-              data: dataVencimento,
-              data_vencimento: dataVencimento,
-              status: "pendente",
-              recorrencia_tipo: "mensal",
-              recorrencia_id: recorrenciaId,
+        if (clienteCriado) {
+          try {
+            await sincronizarRecorrenciaCliente({
+              supabase,
+              negocioId: negocio.id,
+              clienteId: clienteCriado.id,
+              clienteNome: form.nome,
+              tipo: form.tipo,
+              isAtivo: clienteCriado.is_ativo,
+              valorMensal: payload.valor_mensal,
+              diaVencimento: payload.dia_vencimento,
             });
+          } catch (recErro) {
+            console.error("[clientes] erro ao sincronizar recorrência:", recErro);
           }
-        } catch (err) {
-          console.error("[clientes] erro ao criar recorrência:", err);
         }
+
+        toast.success(
+          form.tipo === "fixo" && payload.valor_mensal
+            ? "Cliente criado e mensalidade lançada em Receitas!"
+            : "Cliente criado com sucesso!"
+        );
       }
 
       fecharDialog();
@@ -349,75 +448,6 @@ export default function ClientesPage() {
       toast.error("Erro ao salvar cliente.");
     } finally {
       setSalvando(false);
-    }
-  }
-
-  async function alternarStatusCliente(cliente: Cliente) {
-    const novoAtivo = !cliente.is_ativo;
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: negocio } = await supabase
-        .from("negocios")
-        .select("id")
-        .eq("usuario_id", user.id)
-        .single();
-      if (!negocio) return;
-
-      const { error } = await supabase
-        .from("clientes")
-        .update({ is_ativo: novoAtivo })
-        .eq("id", cliente.id);
-
-      if (error) {
-        console.error("[clientes] erro ao alternar status:", error);
-        toast.error(`Erro ao alterar status: ${error.message}`);
-        return;
-      }
-
-      if (!novoAtivo) {
-        const recorrencias = await listarRecorrencias(negocio.id, "receita");
-        const rec = recorrencias.find((r) => r.cliente_id === cliente.id);
-        if (rec && rec.is_ativa) {
-          await atualizarRecorrencia(rec.id, { is_ativa: false });
-        }
-      } else if (cliente.tipo === "fixo" && cliente.valor_mensal && cliente.valor_mensal > 0) {
-        const recorrencias = await listarRecorrencias(negocio.id, "receita");
-        const rec = recorrencias.find((r) => r.cliente_id === cliente.id);
-
-        if (rec) {
-          await atualizarRecorrencia(rec.id, {
-            is_ativa: true,
-            proximo_gerar_em: calcularProximoVencimento(cliente.dia_vencimento || null),
-          });
-        } else {
-          await criarRecorrencia({
-            negocio_id: negocio.id,
-            cliente_id: cliente.id,
-            tipo: "receita",
-            recorrencia: "mensal",
-            valor: Number(cliente.valor_mensal),
-            descricao: `Mensalidade - ${cliente.nome}`,
-            dia_vencimento: cliente.dia_vencimento || undefined,
-            is_ativa: true,
-            proximo_gerar_em: calcularProximoVencimento(cliente.dia_vencimento || null),
-          });
-        }
-      }
-
-      toast.success(
-        novoAtivo
-          ? "Cliente marcado como ativo."
-          : "Cliente marcado como inativo."
-      );
-      carregarClientes();
-    } catch (err) {
-      console.error("[clientes] erro ao alternar status:", err);
-      toast.error("Erro ao alterar status do cliente.");
     }
   }
 
@@ -501,8 +531,7 @@ export default function ClientesPage() {
         .eq("id", clienteDeletando.id);
 
       if (error) {
-        console.error("[clientes] erro ao excluir:", error);
-        toast.error(`Erro ao excluir cliente: ${error.message}`);
+        toast.error("Erro ao excluir cliente.");
         return;
       }
 
@@ -510,8 +539,7 @@ export default function ClientesPage() {
       setClienteDeletando(null);
       setReceitasRecorrentes([]);
       carregarClientes();
-    } catch (err) {
-      console.error("[clientes] erro ao excluir cliente e receitas:", err);
+    } catch {
       toast.error("Erro ao excluir cliente e receitas.");
     }
   }
@@ -531,8 +559,7 @@ export default function ClientesPage() {
         .eq("id", clienteDeletando.id);
 
       if (error) {
-        console.error("[clientes] erro ao excluir completo:", error);
-        toast.error(`Erro ao excluir cliente: ${error.message}`);
+        toast.error("Erro ao excluir cliente.");
         return;
       }
 
@@ -540,8 +567,7 @@ export default function ClientesPage() {
       setClienteDeletando(null);
       setReceitasRecorrentes([]);
       carregarClientes();
-    } catch (err) {
-      console.error("[clientes] erro ao excluir cliente completo:", err);
+    } catch {
       toast.error("Erro ao excluir cliente e receitas.");
     }
   }
@@ -731,7 +757,9 @@ export default function ClientesPage() {
                               onClick={() => alternarStatusCliente(cliente)}
                               title={cliente.is_ativo ? "Marcar como inativo" : "Marcar como ativo"}
                             >
-                              <Power className={`h-4 w-4 ${cliente.is_ativo ? "text-green-600" : "text-muted-foreground"}`} />
+                              <Power
+                                className={`h-4 w-4 ${cliente.is_ativo ? "text-emerald-600" : "text-muted-foreground"}`}
+                              />
                             </Button>
                             <Button
                               variant="ghost"
@@ -818,7 +846,9 @@ export default function ClientesPage() {
                             onClick={() => alternarStatusCliente(cliente)}
                             title={cliente.is_ativo ? "Marcar como inativo" : "Marcar como ativo"}
                           >
-                            <Power className={`h-3.5 w-3.5 ${cliente.is_ativo ? "text-green-600" : "text-muted-foreground"}`} />
+                            <Power
+                              className={`h-3.5 w-3.5 ${cliente.is_ativo ? "text-emerald-600" : "text-muted-foreground"}`}
+                            />
                           </Button>
                           <Button
                             variant="ghost"
