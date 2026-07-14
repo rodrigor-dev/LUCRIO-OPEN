@@ -191,7 +191,8 @@ export default function ServicosPage() {
           .eq("id", editando.id);
 
         if (error) {
-          toast.error("Erro ao atualizar serviço");
+          console.error("[servicos] erro ao atualizar:", error);
+          toast.error(`Erro ao atualizar serviço: ${error.message}`);
           return;
         }
 
@@ -203,7 +204,8 @@ export default function ServicosPage() {
         });
 
         if (error) {
-          toast.error("Erro ao criar serviço");
+          console.error("[servicos] erro ao criar:", error);
+          toast.error(`Erro ao criar serviço: ${error.message}`);
           return;
         }
 
@@ -214,7 +216,8 @@ export default function ServicosPage() {
       setEditando(null);
       setForm(FORM_DEFAULTS);
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[servicos] erro ao salvar:", err);
       toast.error("Erro ao salvar serviço");
     } finally {
       setSubmitting(false);
@@ -229,14 +232,16 @@ export default function ServicosPage() {
       const { error } = await supabase.from("servicos").delete().eq("id", excluindo.id);
 
       if (error) {
-        toast.error("Erro ao excluir serviço");
+        console.error("[servicos] erro ao excluir:", error);
+        toast.error(`Erro ao excluir serviço: ${error.message}`);
         return;
       }
 
       toast.success("Serviço excluído com sucesso!");
       setExcluindo(null);
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[servicos] erro ao excluir:", err);
       toast.error("Erro ao excluir serviço");
     } finally {
       setExcluindoBtn(false);

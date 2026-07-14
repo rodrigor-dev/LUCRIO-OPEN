@@ -343,7 +343,8 @@ export default function DespesasPage() {
           .update(basePayload)
           .eq("id", editando.id);
         if (error) {
-          toast.error("Erro ao atualizar despesa");
+          console.error("[despesas] erro ao atualizar:", error);
+          toast.error(`Erro ao atualizar despesa: ${error.message}`);
           return;
         }
         toast.success("Despesa atualizada com sucesso!");
@@ -372,7 +373,8 @@ export default function DespesasPage() {
           .from("despesas")
           .insert(inserts.map((p) => ({ negocio_id: negocio.id, ...p })));
         if (error) {
-          toast.error("Erro ao criar parcelas");
+          console.error("[despesas] erro ao criar parcelas:", error);
+          toast.error(`Erro ao criar parcelas: ${error.message}`);
           return;
         }
         toast.success(`${numParcelas} parcelas criadas com sucesso!`);
@@ -382,7 +384,8 @@ export default function DespesasPage() {
           ...basePayload,
         });
         if (error) {
-          toast.error("Erro ao criar despesa");
+          console.error("[despesas] erro ao criar:", error);
+          toast.error(`Erro ao criar despesa: ${error.message}`);
           return;
         }
         toast.success("Despesa criada com sucesso!");
@@ -392,7 +395,8 @@ export default function DespesasPage() {
       setEditando(null);
       setForm(FORM_DEFAULTS);
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[despesas] erro ao salvar:", err);
       toast.error("Erro ao salvar despesa");
     } finally {
       setSubmitting(false);
@@ -409,7 +413,8 @@ export default function DespesasPage() {
         .delete()
         .eq("id", excluindo.id);
       if (error) {
-        toast.error("Erro ao excluir despesa");
+        console.error("[despesas] erro ao excluir:", error);
+        toast.error(`Erro ao excluir despesa: ${error.message}`);
         return;
       }
       toastComDesfazer("Despesa excluída com sucesso!", async () => {
@@ -439,7 +444,8 @@ export default function DespesasPage() {
       setExcluindo(null);
       setDetalheAberto(false);
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[despesas] erro ao excluir:", err);
       toast.error("Erro ao excluir despesa");
     } finally {
       setExcluindoBtn(false);
@@ -523,7 +529,8 @@ export default function DespesasPage() {
       setSelecionados(new Set());
       setAcaoEmMassa(null);
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[despesas] erro em ação em massa:", err);
       toast.error("Erro ao executar ação em massa");
     } finally {
       setProcessandoMassa(false);

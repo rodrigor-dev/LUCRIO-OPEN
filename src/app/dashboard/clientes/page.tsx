@@ -239,7 +239,8 @@ export default function ClientesPage() {
           .eq("id", clienteEditando.id);
 
         if (error) {
-          toast.error("Erro ao atualizar cliente.");
+          console.error("[clientes] erro ao atualizar:", error);
+          toast.error(`Erro ao atualizar cliente: ${error.message}`);
           return;
         }
 
@@ -251,7 +252,8 @@ export default function ClientesPage() {
         });
 
         if (error) {
-          toast.error("Erro ao criar cliente.");
+          console.error("[clientes] erro ao criar:", error);
+          toast.error(`Erro ao criar cliente: ${error.message}`);
           return;
         }
 
@@ -347,7 +349,8 @@ export default function ClientesPage() {
         .eq("id", clienteDeletando.id);
 
       if (error) {
-        toast.error("Erro ao excluir cliente.");
+        console.error("[clientes] erro ao excluir:", error);
+        toast.error(`Erro ao excluir cliente: ${error.message}`);
         return;
       }
 
@@ -355,7 +358,8 @@ export default function ClientesPage() {
       setClienteDeletando(null);
       setReceitasRecorrentes([]);
       carregarClientes();
-    } catch {
+    } catch (err) {
+      console.error("[clientes] erro ao excluir cliente e receitas:", err);
       toast.error("Erro ao excluir cliente e receitas.");
     }
   }
@@ -375,7 +379,8 @@ export default function ClientesPage() {
         .eq("id", clienteDeletando.id);
 
       if (error) {
-        toast.error("Erro ao excluir cliente.");
+        console.error("[clientes] erro ao excluir completo:", error);
+        toast.error(`Erro ao excluir cliente: ${error.message}`);
         return;
       }
 
@@ -383,7 +388,8 @@ export default function ClientesPage() {
       setClienteDeletando(null);
       setReceitasRecorrentes([]);
       carregarClientes();
-    } catch {
+    } catch (err) {
+      console.error("[clientes] erro ao excluir cliente completo:", err);
       toast.error("Erro ao excluir cliente e receitas.");
     }
   }

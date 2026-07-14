@@ -300,7 +300,8 @@ export default function ConfiguracoesPage() {
       .eq("id", usuario.id);
 
     if (error) {
-      toast.error("Erro ao salvar perfil");
+      console.error("[configuracoes] erro ao salvar perfil:", error);
+      toast.error(`Erro ao salvar perfil: ${error.message}`);
     } else {
       setUsuario({ ...usuario, nome: perfil.nome, telefone: perfil.telefone });
       toast.success("Perfil salvo com sucesso");
@@ -325,7 +326,8 @@ export default function ConfiguracoesPage() {
       .eq("id", negocio.id);
 
     if (error) {
-      toast.error("Erro ao salvar dados do negócio");
+      console.error("[configuracoes] erro ao salvar negócio:", error);
+      toast.error(`Erro ao salvar dados do negócio: ${error.message}`);
     } else {
       setNegocio({ ...negocio, ...negocioForm });
       toast.success("Dados do negócio salvos com sucesso");

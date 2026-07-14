@@ -333,7 +333,8 @@ export default function PropostasPage() {
         .eq("id", propostaEditando.id);
 
       if (error) {
-        toast.error("Erro ao atualizar orçamento.");
+        console.error("[propostas] erro ao atualizar:", error);
+        toast.error(`Erro ao atualizar orçamento: ${error.message}`);
         setSalvando(false);
         return;
       }
@@ -372,7 +373,8 @@ export default function PropostasPage() {
         .single();
 
       if (error) {
-        toast.error("Erro ao criar orçamento.");
+        console.error("[propostas] erro ao criar:", error);
+        toast.error(`Erro ao criar orçamento: ${error.message}`);
         setSalvando(false);
         return;
       }
@@ -407,14 +409,16 @@ export default function PropostasPage() {
       const { error } = await supabase.from("propostas").delete().eq("id", propostaDeletando.id);
 
       if (error) {
-        toast.error("Erro ao excluir orçamento.");
+        console.error("[propostas] erro ao excluir:", error);
+        toast.error(`Erro ao excluir orçamento: ${error.message}`);
         return;
       }
 
       toast.success("Orçamento excluído com sucesso!");
       setPropostaDeletando(null);
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[propostas] erro ao excluir:", err);
       toast.error("Erro ao excluir orçamento.");
     }
   }
@@ -427,13 +431,15 @@ export default function PropostasPage() {
         .eq("id", proposta.id);
 
       if (error) {
-        toast.error("Erro ao enviar orçamento.");
+        console.error("[propostas] erro ao enviar:", error);
+        toast.error(`Erro ao enviar orçamento: ${error.message}`);
         return;
       }
 
       toast.success("Orçamento enviado com sucesso!");
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[propostas] erro ao enviar:", err);
       toast.error("Erro ao enviar orçamento.");
     }
   }
@@ -474,7 +480,8 @@ export default function PropostasPage() {
         .single();
 
       if (error) {
-        toast.error("Erro ao duplicar orçamento.");
+        console.error("[propostas] erro ao duplicar:", error);
+        toast.error(`Erro ao duplicar orçamento: ${error.message}`);
         return;
       }
 
@@ -491,7 +498,8 @@ export default function PropostasPage() {
 
       toast.success("Orçamento duplicado com sucesso!");
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[propostas] erro ao duplicar:", err);
       toast.error("Erro ao duplicar orçamento.");
     }
   }

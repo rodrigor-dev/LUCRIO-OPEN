@@ -275,7 +275,8 @@ export default function CalendarioPage() {
         `${evento.tipo === "receita" ? "Receita" : "Despesa"} marcada como paga!`
       );
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[calendario] erro ao marcar pago:", err);
       toast.error("Erro ao marcar como pago");
     }
   }
@@ -286,7 +287,8 @@ export default function CalendarioPage() {
       await desmarcarPago(tabela, evento.id);
       toast.success("Pagamento desmarcado");
       carregarDados();
-    } catch {
+    } catch (err) {
+      console.error("[calendario] erro ao desmarcar pagamento:", err);
       toast.error("Erro ao desmarcar pagamento");
     }
   }
