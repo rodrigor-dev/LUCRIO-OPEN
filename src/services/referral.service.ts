@@ -80,10 +80,6 @@ export function gerarLinksCompartilhamento(codigo: string) {
 
   return {
     whatsapp: `https://wa.me/?text=${encodeURIComponent(`${texto}\n\n${link}`)}`,
-    telegram: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(texto)}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`,
-    instagram: link, // Instagram nao tem share URL direto, copia link
-    email: `mailto:?subject=${encodeURIComponent("Convite LUCRIO")}&body=${encodeURIComponent(`${texto}\n\n${link}`)}`,
     copiar: link,
   };
 }

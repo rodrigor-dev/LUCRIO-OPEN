@@ -888,7 +888,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link
                 href="/dashboard/receitas?novo=true"
                 className="flex items-center gap-3 rounded-lg border p-4 text-sm font-medium transition-colors hover:bg-green-50 hover:border-green-200 group"

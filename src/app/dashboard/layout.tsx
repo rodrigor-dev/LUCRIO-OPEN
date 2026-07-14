@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Gift,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { authService, type UserProfile } from "@/services/auth.service";
@@ -62,6 +63,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/fluxo-caixa", label: "Fluxo de Caixa", icon: Wallet },
   { href: "/dashboard/propostas", label: "Orçamentos", icon: FileText },
   { href: "/dashboard/calendario", label: "Calendário", icon: Calendar },
+  { href: "/dashboard/indicar", label: "Indique e Ganhe", icon: Gift },
   { href: "/dashboard/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
 ];
@@ -90,6 +92,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           router.push("/login");
           return;
         }
+
+        localStorage.setItem("lucrio_dispositivo_logado", "true");
 
         const [perfil, negocioData] = await Promise.all([
           authService.getUserProfile(authUser.id),
