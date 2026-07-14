@@ -20,6 +20,7 @@ import {
   alterarStatusEmMassa,
   excluirEmMassa,
 } from "@/services/status.service";
+import { gerarReceitasRecorrentes } from "@/services/recorrencia.service";
 import { InputMoeda } from "@/components/ui/input-moeda";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -161,6 +162,7 @@ export default function ReceitasPage() {
 
       if (!negocio) return;
 
+      await gerarReceitasRecorrentes(negocio.id);
       await atualizarStatusVencidos(negocio.id);
 
       const [receitasRes, clientesRes] = await Promise.all([

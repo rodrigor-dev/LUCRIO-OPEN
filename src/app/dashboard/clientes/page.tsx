@@ -56,8 +56,14 @@ import {
   FileText,
   ChevronDown,
   DollarSign,
+  Power,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  criarRecorrencia,
+  atualizarRecorrencia,
+  listarRecorrencias,
+} from "@/services/recorrencia.service";
 
 type FormState = {
   nome: string;
@@ -86,6 +92,16 @@ const emptyForm: FormState = {
   fornecedor: "",
   observacoes: "",
 };
+
+function calcularProximoVencimento(diaVencimento: number | null): string {
+  const hoje = new Date();
+  const dia = diaVencimento || hoje.getDate();
+  const proximo = new Date(hoje.getFullYear(), hoje.getMonth(), dia);
+  if (proximo <= hoje) {
+    proximo.setMonth(proximo.getMonth() + 1);
+  }
+  return proximo.toISOString().split("T")[0];
+}
 
 export default function ClientesPage() {
   const supabase = useSupabase();
@@ -232,6 +248,8 @@ export default function ClientesPage() {
         observacoes: form.observacoes || null,
       };
 
+      let clienteId: string | null = null;
+
       if (clienteEditando) {
         const { error } = await supabase
           .from("clientes")
@@ -244,12 +262,14 @@ export default function ClientesPage() {
           return;
         }
 
+        clienteId = clienteEditando.id;
         toast.success("Cliente atualizado com sucesso!");
       } else {
-        const { error } = await supabase.from("clientes").insert({
-          negocio_id: negocio.id,
-          ...payload,
-        });
+        const { data: novoCliente, error } = await supabase
+          .from("clientes")
+          .insert({ negocio_id: negocio.id, ...payload })
+          .select("id")
+          .single();
 
         if (error) {
           console.error("[clientes] erro ao criar:", error);
@@ -257,7 +277,70 @@ export default function ClientesPage() {
           return;
         }
 
+        clienteId = novoCliente.id;
         toast.success("Cliente criado com sucesso!");
+      }
+
+      const deveGerarRecorrencia =
+        form.tipo === "fixo" &&
+        form.valor_mensal &&
+        parseFloat(form.valor_mensal) > 0;
+
+      if (deveGerarRecorrencia && clienteId) {
+        try {
+          const recorrencias = await listarRecorrencias(negocio.id, "receita");
+          const existente = recorrencias.find((r) => r.cliente_id === clienteId);
+
+          const dadosRecorrencia = {
+            negocio_id: negocio.id,
+            cliente_id: clienteId,
+            tipo: "receita" as const,
+            recorrencia: "mensal" as const,
+            valor: parseFloat(form.valor_mensal),
+            descricao: `Mensalidade - ${form.nome}`,
+            dia_vencimento: form.dia_vencimento ? parseInt(form.dia_vencimento) : undefined,
+            is_ativa: true,
+            proximo_gerar_em: calcularProximoVencimento(
+              form.dia_vencimento ? parseInt(form.dia_vencimento) : null
+            ),
+          };
+
+          let recorrenciaId: string;
+
+          if (existente) {
+            const atualizada = await atualizarRecorrencia(existente.id, dadosRecorrencia);
+            recorrenciaId = atualizada.id;
+          } else {
+            const nova = await criarRecorrencia(dadosRecorrencia);
+            recorrenciaId = nova.id;
+          }
+
+          const diaVenc = form.dia_vencimento ? parseInt(form.dia_vencimento) : new Date().getDate();
+          const dataVencimento = calcularProximoVencimento(diaVenc);
+
+          const { data: receitaExistente } = await supabase
+            .from("receitas")
+            .select("id")
+            .eq("recorrencia_id", recorrenciaId)
+            .eq("data", dataVencimento)
+            .limit(1);
+
+          if (!receitaExistente || receitaExistente.length === 0) {
+            await supabase.from("receitas").insert({
+              negocio_id: negocio.id,
+              cliente_id: clienteId,
+              descricao: `Mensalidade - ${form.nome}`,
+              valor: parseFloat(form.valor_mensal),
+              data: dataVencimento,
+              data_vencimento: dataVencimento,
+              status: "pendente",
+              recorrencia_tipo: "mensal",
+              recorrencia_id: recorrenciaId,
+            });
+          }
+        } catch (err) {
+          console.error("[clientes] erro ao criar recorrência:", err);
+        }
       }
 
       fecharDialog();
@@ -266,6 +349,75 @@ export default function ClientesPage() {
       toast.error("Erro ao salvar cliente.");
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function alternarStatusCliente(cliente: Cliente) {
+    const novoAtivo = !cliente.is_ativo;
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("usuario_id", user.id)
+        .single();
+      if (!negocio) return;
+
+      const { error } = await supabase
+        .from("clientes")
+        .update({ is_ativo: novoAtivo })
+        .eq("id", cliente.id);
+
+      if (error) {
+        console.error("[clientes] erro ao alternar status:", error);
+        toast.error(`Erro ao alterar status: ${error.message}`);
+        return;
+      }
+
+      if (!novoAtivo) {
+        const recorrencias = await listarRecorrencias(negocio.id, "receita");
+        const rec = recorrencias.find((r) => r.cliente_id === cliente.id);
+        if (rec && rec.is_ativa) {
+          await atualizarRecorrencia(rec.id, { is_ativa: false });
+        }
+      } else if (cliente.tipo === "fixo" && cliente.valor_mensal && cliente.valor_mensal > 0) {
+        const recorrencias = await listarRecorrencias(negocio.id, "receita");
+        const rec = recorrencias.find((r) => r.cliente_id === cliente.id);
+
+        if (rec) {
+          await atualizarRecorrencia(rec.id, {
+            is_ativa: true,
+            proximo_gerar_em: calcularProximoVencimento(cliente.dia_vencimento || null),
+          });
+        } else {
+          await criarRecorrencia({
+            negocio_id: negocio.id,
+            cliente_id: cliente.id,
+            tipo: "receita",
+            recorrencia: "mensal",
+            valor: Number(cliente.valor_mensal),
+            descricao: `Mensalidade - ${cliente.nome}`,
+            dia_vencimento: cliente.dia_vencimento || undefined,
+            is_ativa: true,
+            proximo_gerar_em: calcularProximoVencimento(cliente.dia_vencimento || null),
+          });
+        }
+      }
+
+      toast.success(
+        novoAtivo
+          ? "Cliente marcado como ativo."
+          : "Cliente marcado como inativo."
+      );
+      carregarClientes();
+    } catch (err) {
+      console.error("[clientes] erro ao alternar status:", err);
+      toast.error("Erro ao alterar status do cliente.");
     }
   }
 
@@ -576,6 +728,14 @@ export default function ClientesPage() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => alternarStatusCliente(cliente)}
+                              title={cliente.is_ativo ? "Marcar como inativo" : "Marcar como ativo"}
+                            >
+                              <Power className={`h-4 w-4 ${cliente.is_ativo ? "text-green-600" : "text-muted-foreground"}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => abrirDialogEditar(cliente)}
                               title="Editar"
                             >
@@ -651,6 +811,15 @@ export default function ClientesPage() {
                           </div>
                         </div>
                         <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11"
+                            onClick={() => alternarStatusCliente(cliente)}
+                            title={cliente.is_ativo ? "Marcar como inativo" : "Marcar como ativo"}
+                          >
+                            <Power className={`h-3.5 w-3.5 ${cliente.is_ativo ? "text-green-600" : "text-muted-foreground"}`} />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
