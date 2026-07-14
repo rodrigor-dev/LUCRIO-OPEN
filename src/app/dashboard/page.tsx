@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSupabase } from "@/hooks/use-supabase";
 import { formatarMoeda, formatarData } from "@/utils";
+import { gerarReceitasRecorrentes } from "@/services/recorrencia.service";
 import {
   DollarSign,
   Clock,
@@ -28,7 +29,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { gerarReceitasRecorrentes } from "@/services/recorrencia.service";
 import {
   BarChart,
   Bar,
@@ -216,7 +216,11 @@ export default function DashboardPage() {
 
       const negocioId = negocio.id;
 
-      await gerarReceitasRecorrentes(negocioId);
+      try {
+        await gerarReceitasRecorrentes(negocioId);
+      } catch (recErro) {
+        console.error("[dashboard] erro ao gerar receitas recorrentes:", recErro);
+      }
 
       const agora = new Date();
       const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
