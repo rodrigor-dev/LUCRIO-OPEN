@@ -20,7 +20,6 @@ import {
   alterarStatusEmMassa,
   excluirEmMassa,
 } from "@/services/status.service";
-import { gerarReceitasRecorrentes } from "@/services/recorrencia.service";
 import { InputMoeda } from "@/components/ui/input-moeda";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,6 +91,7 @@ import { FinanceiroFilterBar, FinanceiroSearch } from "@/components/financeiro";
 import { FinanceiroEmptyState } from "@/components/financeiro";
 import { FinanceiroBulkBar, FinanceiroBulkBarDesktop } from "@/components/financeiro";
 import { FinanceiroSelectionHeader } from "@/components/financeiro";
+import { gerarReceitasRecorrentes } from "@/services/recorrencia.service";
 
 type Receita = ReceitaDB & {
   cliente?: { nome: string } | null;
@@ -162,7 +162,12 @@ export default function ReceitasPage() {
 
       if (!negocio) return;
 
-      await gerarReceitasRecorrentes(negocio.id);
+      try {
+        await gerarReceitasRecorrentes(negocio.id);
+      } catch (recErro) {
+        console.error("[receitas] erro ao gerar receitas recorrentes:", recErro);
+      }
+
       await atualizarStatusVencidos(negocio.id);
 
       const [receitasRes, clientesRes] = await Promise.all([
@@ -365,8 +370,7 @@ export default function ReceitasPage() {
           .eq("id", editando.id);
 
         if (error) {
-          console.error("[receitas] erro ao atualizar:", error);
-          toast.error(`Erro ao atualizar receita: ${error.message}`);
+          toast.error("Erro ao atualizar receita");
           return;
         }
 
@@ -378,8 +382,7 @@ export default function ReceitasPage() {
         });
 
         if (error) {
-          console.error("[receitas] erro ao criar:", error);
-          toast.error(`Erro ao criar receita: ${error.message}`);
+          toast.error("Erro ao criar receita");
           return;
         }
 
@@ -391,8 +394,7 @@ export default function ReceitasPage() {
       setForm(FORM_DEFAULTS);
       setValorFormatado("");
       carregarDados();
-    } catch (err) {
-      console.error("[receitas] erro ao salvar:", err);
+    } catch {
       toast.error("Erro ao salvar receita");
     } finally {
       setSubmitting(false);
@@ -412,8 +414,7 @@ export default function ReceitasPage() {
         .eq("id", excluindo.id);
 
       if (error) {
-        console.error("[receitas] erro ao excluir:", error);
-        toast.error(`Erro ao excluir receita: ${error.message}`);
+        toast.error("Erro ao excluir receita");
         return;
       }
 
@@ -445,8 +446,7 @@ export default function ReceitasPage() {
       setExcluindo(null);
       setDrawerAberto(false);
       carregarDados();
-    } catch (err) {
-      console.error("[receitas] erro ao excluir:", err);
+    } catch {
       toast.error("Erro ao excluir receita");
     } finally {
       setExcluindoBtn(false);
@@ -481,15 +481,13 @@ export default function ReceitasPage() {
       });
 
       if (error) {
-        console.error("[receitas] erro ao duplicar:", error);
-        toast.error(`Erro ao duplicar receita: ${error.message}`);
+        toast.error("Erro ao duplicar receita");
         return;
       }
 
       toast.success("Receita duplicada com sucesso!");
       carregarDados();
-    } catch (err) {
-      console.error("[receitas] erro ao duplicar:", err);
+    } catch {
       toast.error("Erro ao duplicar receita");
     }
   }
@@ -506,8 +504,7 @@ export default function ReceitasPage() {
           data_pagamento: new Date().toISOString().split("T")[0],
         });
       }
-    } catch (err) {
-      console.error("[receitas] erro ao marcar pago:", err);
+    } catch {
       toast.error("Erro ao marcar como pago");
     }
   }
@@ -529,8 +526,7 @@ export default function ReceitasPage() {
           data_pagamento: undefined,
         });
       }
-    } catch (err) {
-      console.error("[receitas] erro ao desmarcar pagamento:", err);
+    } catch {
       toast.error("Erro ao desmarcar pagamento");
     }
   }
@@ -572,8 +568,7 @@ export default function ReceitasPage() {
       setSelecionadas(new Set());
       setModoSelecao(false);
       carregarDados();
-    } catch (err) {
-      console.error("[receitas] erro ao alterar status em massa:", err);
+    } catch {
       toast.error("Erro ao alterar status em massa");
     } finally {
       setProcessandoMassa(false);
@@ -595,8 +590,7 @@ export default function ReceitasPage() {
       setSelecionadas(new Set());
       setModoSelecao(false);
       carregarDados();
-    } catch (err) {
-      console.error("[receitas] erro ao alterar status pendente massa:", err);
+    } catch {
       toast.error("Erro ao alterar status em massa");
     } finally {
       setProcessandoMassa(false);
@@ -612,8 +606,7 @@ export default function ReceitasPage() {
       setSelecionadas(new Set());
       setModoSelecao(false);
       carregarDados();
-    } catch (err) {
-      console.error("[receitas] erro ao excluir em massa:", err);
+    } catch {
       toast.error("Erro ao excluir em massa");
     } finally {
       setProcessandoMassa(false);
