@@ -231,10 +231,41 @@ async function criarPerfilSeNecessario(
 
   if (refCode) {
     try {
-      await supabase.rpc("registrar_indicacao" as never, {
+      const { data: resultadoIndicacao } = await supabase.rpc("registrar_indicacao" as never, {
         p_indicador_codigo: refCode,
         p_indicado_id: user.id,
       } as never);
+
+      if (resultadoIndicacao?.sucesso) {
+        // Aplicar recompensa: estender trial do indicado em 7 dias
+        const { data: assinatura } = await supabase
+          .from("assinaturas")
+          .select("id, fim_periodo, trial_termina")
+          .eq("usuario_id", user.id)
+          .eq("status", "trial")
+          .order("criado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (assinatura?.fim_periodo) {
+          const fimAtual = new Date(assinatura.fim_periodo);
+          fimAtual.setDate(fimAtual.getDate() + 7);
+          await supabase
+            .from("assinaturas")
+            .update({
+              fim_periodo: fimAtual.toISOString(),
+              trial_termina: fimAtual.toISOString(),
+            })
+            .eq("id", assinatura.id);
+
+          // Marcar recompensa como aplicada
+          await supabase
+            .from("recompensas_indicacao")
+            .update({ aplicada: true, aplicada_em: new Date().toISOString() })
+            .eq("indicacao_id", resultadoIndicacao.indicacao_id)
+            .eq("tipo", "dias_trial");
+        }
+      }
     } catch (err) {
       console.error("[Callback] Erro ao processar indicacao:", err);
     }

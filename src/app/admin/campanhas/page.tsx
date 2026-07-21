@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Megaphone,
   Plus,
   Loader2,
   Trash2,
-  Power,
-  PowerOff,
   Pencil,
   X,
   Save,
@@ -156,7 +154,7 @@ export default function AdminCampanhasPage() {
         <div>
           <h1 className="text-2xl font-bold">Campanhas de Indicação</h1>
           <p className="text-muted-foreground">
-            Configure regras e recompensas do sistema de referral
+            Configure regras e recompensas do sistema de indicação
           </p>
         </div>
         <Button onClick={abrirNova}>
@@ -346,7 +344,7 @@ export default function AdminCampanhasPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Max indicações/usuário (0=ilimitado)</Label>
+                <Label>Máx. indicações/usuário (0=ilimitado)</Label>
                 <Input
                   type="number"
                   value={form.max_indicacoes_por_usuario}
@@ -359,7 +357,7 @@ export default function AdminCampanhasPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Max total indicações (0=ilimitado)</Label>
+                <Label>Máx. total indicações (0=ilimitado)</Label>
                 <Input
                   type="number"
                   value={form.max_total_indicacoes}

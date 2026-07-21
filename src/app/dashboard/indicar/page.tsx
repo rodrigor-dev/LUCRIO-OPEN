@@ -10,8 +10,8 @@ import {
   Gift,
   Calendar,
   Loader2,
-  QrCode,
   MessageCircle,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,7 +92,7 @@ export default function IndicarPage() {
           Erro ao carregar dados de indicações.
         </p>
         <Button onClick={carregarDados} className="gap-2">
-          <Loader2 className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
           Tentar novamente
         </Button>
       </div>
@@ -192,7 +192,7 @@ export default function IndicarPage() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {proximaRecompensa > 0
-                ? `Faltam ${proximaRecompensa} indicações para ganhar +15 dias de trial`
+                ? `Faltam ${proximaRecompensa} indicações para ganhar dias extras de trial`
                 : "Parabéns! Você já desbloqueou todas as recompensas!"}
             </p>
           </CardContent>
@@ -220,7 +220,7 @@ export default function IndicarPage() {
             <CardContent className="p-4 text-center">
               <Gift className="mx-auto mb-2 h-5 w-5 text-primary" />
               <p className="text-2xl font-bold">{stats?.total_recompensas || 0}</p>
-              <p className="text-xs text-muted-foreground">Dias ganhos</p>
+              <p className="text-xs text-muted-foreground">Recompensas ganhas</p>
             </CardContent>
           </Card>
         </div>
@@ -333,7 +333,7 @@ export default function IndicarPage() {
                   3
                 </div>
                 <div>
-                  <p className="font-medium">Você ganha +15 dias</p>
+                  <p className="font-medium">Você ganha dias extras</p>
                   <p className="text-sm text-muted-foreground">
                     A cada 3 amigos que se cadastra, você ganha 15 dias de trial
                   </p>

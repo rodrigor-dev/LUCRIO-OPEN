@@ -10,7 +10,6 @@ import {
   Search,
   Loader2,
   UserPlus,
-  Calendar,
   BarChart3,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,13 +35,18 @@ export default function AdminIndicacoesPage() {
   const [busca, setBusca] = useState("");
 
   const carregarDados = useCallback(async () => {
-    const [s, i] = await Promise.all([
-      obterStatsAdminIndicacoes(),
-      listarAdminIndicacoes(filtroStatus || undefined, busca || undefined),
-    ]);
-    setStats(s);
-    setIndicacoes(i);
-    setCarregando(false);
+    try {
+      const [s, i] = await Promise.all([
+        obterStatsAdminIndicacoes(),
+        listarAdminIndicacoes(filtroStatus || undefined, busca || undefined),
+      ]);
+      setStats(s);
+      setIndicacoes(i);
+    } catch (err) {
+      console.error("[Admin Indicações] Erro ao carregar dados:", err);
+    } finally {
+      setCarregando(false);
+    }
   }, [filtroStatus, busca]);
 
   useEffect(() => {
@@ -244,7 +248,7 @@ export default function AdminIndicacoesPage() {
                       </p>
                     </div>
                     <Badge className={statusColors[ind.status] || ""}>
-                      {ind.status}
+                      {ind.status === "pendente" ? "Pendente" : ind.status === "convertida" ? "Convertida" : ind.status === "recompensada" ? "Recompensada" : ind.status}
                     </Badge>
                   </div>
                 ))}

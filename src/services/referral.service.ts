@@ -68,7 +68,7 @@ export function montarLinkIndicacao(codigo: string): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}/cadastro?ref=${codigo}`;
   }
-  return `https://lucrio-open.vercel.app/cadastro?ref=${codigo}`;
+  return `${process.env.NEXT_PUBLIC_APP_URL || "https://lucrio-open.vercel.app"}/cadastro?ref=${codigo}`;
 }
 
 // ============================================================
