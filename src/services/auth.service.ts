@@ -219,7 +219,10 @@ class AuthService {
 
     const { error } = await this.supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        queryParams: { prompt: "select_account" },
+      },
     });
 
     if (error) {
