@@ -660,15 +660,15 @@ export default function DashboardPage() {
         animate="visible"
       >
         {kpiCards.map((card) => (
-          <motion.div key={card.titulo} variants={itemVariants}>
+          <motion.div key={card.titulo} variants={itemVariants} className="min-w-0">
             <Card className="transition-colors hover:border-gray-200">
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-muted-foreground truncate">
                       {card.titulo}
                     </p>
-                    <p className={`mt-1 text-xl font-bold ${card.cor}`}>
+                    <p className={`mt-1 truncate text-xl font-bold ${card.cor}`}>
                       <AnimatedNumber value={card.valor} format={card.formato} />
                     </p>
                   </div>
@@ -688,7 +688,7 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Receita vs Despesa</CardTitle>
             <CardDescription>Comparativo dos últimos 6 meses</CardDescription>
@@ -734,7 +734,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Evolução do Saldo</CardTitle>
             <CardDescription>Saldo acumulado nos últimos 12 meses</CardDescription>
@@ -786,7 +786,7 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.45, duration: 0.5 }}
       >
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Top 5 Clientes</CardTitle>
             <CardDescription>Clientes que mais geraram receita este mês</CardDescription>
@@ -832,7 +832,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Despesas por Categoria</CardTitle>
             <CardDescription>Breakdown das despesas do mês</CardDescription>
@@ -885,7 +885,7 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.5 }}
       >
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -940,7 +940,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>

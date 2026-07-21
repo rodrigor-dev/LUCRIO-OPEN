@@ -93,18 +93,16 @@ const emptyForm: FormState = {
   observacoes: "",
 };
 
-function calcularProximoVencimento(diaVencimento: number): string {
+function calcularDataVencimentoMesAtual(diaVencimento: number): string {
   const hoje = new Date();
-  const diaHoje = hoje.getDate();
-  const ano = hoje.getFullYear();
-  const mes = hoje.getMonth();
+  return new Date(hoje.getFullYear(), hoje.getMonth(), diaVencimento)
+    .toISOString()
+    .split("T")[0];
+}
 
-  const dataAlvo =
-    diaVencimento >= diaHoje
-      ? new Date(ano, mes, diaVencimento)
-      : new Date(ano, mes + 1, diaVencimento);
-
-  return dataAlvo.toISOString().split("T")[0];
+function calcularProximoCiclo(dataBaseISO: string): string {
+  const [ano, mes, dia] = dataBaseISO.split("-").map(Number);
+  return new Date(ano, mes - 1 + 1, dia).toISOString().split("T")[0];
 }
 
 function hojeISO(): string {
@@ -113,7 +111,10 @@ function hojeISO(): string {
 
 /**
  * Garante que um cliente Fixo ativo tenha uma recorrência mensal de receita,
- * criando a primeira cobrança imediatamente. Se o cliente deixar de ser
+ * criando a primeira cobrança imediatamente NO MÊS ATUAL (para já contar nos
+ * totais do mês em Receitas/Dashboard, mesmo que o dia de vencimento já
+ * tenha passado — nesse caso ela some como "atrasado"). Os meses seguintes
+ * ficam a cargo do motor de recorrência. Se o cliente deixar de ser
  * Fixo/ativo, a recorrência é pausada (não apaga o histórico).
  */
 async function sincronizarRecorrenciaCliente(params: {
@@ -140,9 +141,10 @@ async function sincronizarRecorrenciaCliente(params: {
     return;
   }
 
-  const proximoGerarEm = diaVencimento
-    ? calcularProximoVencimento(diaVencimento)
-    : calcularProximoVencimento(new Date().getDate());
+  const dataCobrancaMesAtual = diaVencimento
+    ? calcularDataVencimentoMesAtual(diaVencimento)
+    : hojeISO();
+  const proximoCiclo = calcularProximoCiclo(dataCobrancaMesAtual);
 
   if (recorrenciaExistente) {
     await atualizarRecorrencia(recorrenciaExistente.id, {
@@ -150,7 +152,7 @@ async function sincronizarRecorrenciaCliente(params: {
       descricao: `Mensalidade - ${clienteNome}`,
       dia_vencimento: diaVencimento || undefined,
       is_ativa: true,
-      ...(recorrenciaExistente.is_ativa ? {} : { proximo_gerar_em: proximoGerarEm }),
+      ...(recorrenciaExistente.is_ativa ? {} : { proximo_gerar_em: proximoCiclo }),
     });
     return;
   }
@@ -164,7 +166,7 @@ async function sincronizarRecorrenciaCliente(params: {
     descricao: `Mensalidade - ${clienteNome}`,
     dia_vencimento: diaVencimento || undefined,
     is_ativa: true,
-    proximo_gerar_em: proximoGerarEm,
+    proximo_gerar_em: proximoCiclo,
   });
 
   await supabase.from("receitas").insert({
@@ -172,8 +174,8 @@ async function sincronizarRecorrenciaCliente(params: {
     cliente_id: clienteId,
     descricao: `Mensalidade - ${clienteNome}`,
     valor: valorMensal,
-    data: proximoGerarEm,
-    data_vencimento: proximoGerarEm,
+    data: dataCobrancaMesAtual,
+    data_vencimento: dataCobrancaMesAtual,
     status: "pendente",
     recorrencia_tipo: "mensal",
     recorrencia_id: novaRecorrencia.id,
