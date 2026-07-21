@@ -15,7 +15,7 @@ interface InputMoedaProps {
 
 export function InputMoeda({ value, onChange, placeholder = "R$ 0,00", disabled, className, id }: InputMoedaProps) {
   const [displayValue, setDisplayValue] = useState(
-    value > 0 ? formatarInputMoeda(String(Math.round(value * 100))) : ""
+    value > 0 ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""
   );
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,7 +27,7 @@ export function InputMoeda({ value, onChange, placeholder = "R$ 0,00", disabled,
 
   const handleBlur = useCallback(() => {
     if (value > 0) {
-      setDisplayValue(formatarInputMoeda(String(Math.round(value * 100))));
+      setDisplayValue(value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     }
   }, [value]);
 

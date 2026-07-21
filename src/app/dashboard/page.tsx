@@ -221,7 +221,6 @@ export default function DashboardPage() {
       } catch (recErro) {
         console.error("[dashboard] erro ao gerar receitas recorrentes:", recErro);
       }
-
       const agora = new Date();
       const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
         .toISOString()

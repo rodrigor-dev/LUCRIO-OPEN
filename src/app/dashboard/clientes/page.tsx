@@ -107,6 +107,15 @@ function calcularProximoVencimento(diaVencimento: number): string {
   return dataAlvo.toISOString().split("T")[0];
 }
 
+function hojeISO(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+/**
+ * Garante que um cliente Fixo ativo tenha uma recorrência mensal de receita,
+ * criando a primeira cobrança imediatamente. Se o cliente deixar de ser
+ * Fixo/ativo, a recorrência é pausada (não apaga o histórico).
+ */
 async function sincronizarRecorrenciaCliente(params: {
   supabase: ReturnType<typeof useSupabase>;
   negocioId: string;
@@ -143,7 +152,7 @@ async function sincronizarRecorrenciaCliente(params: {
       is_ativa: true,
       ...(recorrenciaExistente.is_ativa ? {} : { proximo_gerar_em: proximoGerarEm }),
     });
-    return recorrenciaExistente.id;
+    return;
   }
 
   const novaRecorrencia = await criarRecorrencia({
@@ -158,27 +167,43 @@ async function sincronizarRecorrenciaCliente(params: {
     proximo_gerar_em: proximoGerarEm,
   });
 
-  const { data: receitaExistente } = await supabase
-    .from("receitas")
-    .select("id")
-    .eq("recorrencia_id", novaRecorrencia.id)
-    .limit(1);
+  await supabase.from("receitas").insert({
+    negocio_id: negocioId,
+    cliente_id: clienteId,
+    descricao: `Mensalidade - ${clienteNome}`,
+    valor: valorMensal,
+    data: proximoGerarEm,
+    data_vencimento: proximoGerarEm,
+    status: "pendente",
+    recorrencia_tipo: "mensal",
+    recorrencia_id: novaRecorrencia.id,
+  });
+}
 
-  if (!receitaExistente || receitaExistente.length === 0) {
-    await supabase.from("receitas").insert({
-      negocio_id: negocioId,
-      cliente_id: clienteId,
-      descricao: `Mensalidade - ${clienteNome}`,
-      valor: valorMensal,
-      data: proximoGerarEm,
-      data_vencimento: proximoGerarEm,
-      status: "pendente",
-      recorrencia_tipo: "mensal",
-      recorrencia_id: novaRecorrencia.id,
-    });
-  }
+/**
+ * Lança uma receita única (não recorrente) para um cliente Esporádico,
+ * apenas no momento do cadastro (não se repete em edições futuras).
+ */
+async function lancarReceitaEsporadica(params: {
+  supabase: ReturnType<typeof useSupabase>;
+  negocioId: string;
+  clienteId: string;
+  clienteNome: string;
+  valor: number;
+}) {
+  const { supabase, negocioId, clienteId, clienteNome, valor } = params;
+  const hoje = hojeISO();
 
-  return novaRecorrencia.id;
+  await supabase.from("receitas").insert({
+    negocio_id: negocioId,
+    cliente_id: clienteId,
+    descricao: `Serviço - ${clienteNome}`,
+    valor,
+    data: hoje,
+    data_vencimento: hoje,
+    status: "pendente",
+    recorrencia_tipo: "nenhuma",
+  });
 }
 
 export default function ClientesPage() {
@@ -368,7 +393,7 @@ export default function ClientesPage() {
         cpf_cnpj: form.cpf_cnpj || null,
         endereco: form.endereco,
         tipo: form.tipo,
-        valor_mensal: form.tipo === "fixo" && form.valor_mensal ? parseFloat(form.valor_mensal) : null,
+        valor_mensal: form.valor_mensal ? parseFloat(form.valor_mensal) : null,
         dia_vencimento: form.tipo === "fixo" && form.dia_vencimento ? parseInt(form.dia_vencimento) : null,
         fornecedor: form.fornecedor || null,
         observacoes: form.observacoes || null,
@@ -418,26 +443,40 @@ export default function ClientesPage() {
           return;
         }
 
+        let lancouReceita = false;
+
         if (clienteCriado) {
           try {
-            await sincronizarRecorrenciaCliente({
-              supabase,
-              negocioId: negocio.id,
-              clienteId: clienteCriado.id,
-              clienteNome: form.nome,
-              tipo: form.tipo,
-              isAtivo: clienteCriado.is_ativo,
-              valorMensal: payload.valor_mensal,
-              diaVencimento: payload.dia_vencimento,
-            });
+            if (form.tipo === "fixo" && payload.valor_mensal) {
+              await sincronizarRecorrenciaCliente({
+                supabase,
+                negocioId: negocio.id,
+                clienteId: clienteCriado.id,
+                clienteNome: form.nome,
+                tipo: form.tipo,
+                isAtivo: clienteCriado.is_ativo,
+                valorMensal: payload.valor_mensal,
+                diaVencimento: payload.dia_vencimento,
+              });
+              lancouReceita = true;
+            } else if (form.tipo === "esporadico" && payload.valor_mensal) {
+              await lancarReceitaEsporadica({
+                supabase,
+                negocioId: negocio.id,
+                clienteId: clienteCriado.id,
+                clienteNome: form.nome,
+                valor: payload.valor_mensal,
+              });
+              lancouReceita = true;
+            }
           } catch (recErro) {
-            console.error("[clientes] erro ao sincronizar recorrência:", recErro);
+            console.error("[clientes] erro ao lançar receita:", recErro);
           }
         }
 
         toast.success(
-          form.tipo === "fixo" && payload.valor_mensal
-            ? "Cliente criado e mensalidade lançada em Receitas!"
+          lancouReceita
+            ? "Cliente criado e valor lançado em Receitas!"
             : "Cliente criado com sucesso!"
         );
       }
@@ -731,7 +770,7 @@ export default function ClientesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {cliente.tipo === "fixo" && cliente.valor_mensal != null
+                          {cliente.valor_mensal != null
                             ? formatarMoeda(Number(cliente.valor_mensal))
                             : "—"}
                         </TableCell>
@@ -893,7 +932,7 @@ export default function ClientesPage() {
                           {formatarCPFCNPJ(cliente.cpf_cnpj)}
                         </div>
                       )}
-                      {cliente.tipo === "fixo" && cliente.valor_mensal != null && (
+                      {cliente.valor_mensal != null && (
                         <div className="flex items-center gap-2 text-sm font-medium text-primary">
                           <DollarSign className="h-3.5 w-3.5" />
                           {formatarMoeda(Number(cliente.valor_mensal))}
@@ -968,9 +1007,14 @@ export default function ClientesPage() {
                   <span className="text-sm">Cliente Fixo</span>
                 </label>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {form.tipo === "fixo"
+                  ? "Cliente Fixo: o valor entra em Receitas automaticamente todo mês, sem precisar lançar de novo."
+                  : "Cliente Esporádico: o valor entra em Receitas só neste mês, uma única vez."}
+              </p>
             </div>
 
-            {form.tipo === "fixo" && (
+            {form.tipo === "fixo" ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="valor_mensal">Valor Mensal (obrigatório) *</Label>
@@ -1001,6 +1045,22 @@ export default function ClientesPage() {
                     placeholder="1 a 31"
                   />
                 </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="valor_mensal">Valor do serviço (opcional)</Label>
+                <Input
+                  id="valor_mensal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.valor_mensal}
+                  onChange={(e) => setForm({ ...form, valor_mensal: e.target.value })}
+                  placeholder="0,00"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se preencher, lançamos esse valor em Receitas assim que o cliente for cadastrado.
+                </p>
               </div>
             )}
 

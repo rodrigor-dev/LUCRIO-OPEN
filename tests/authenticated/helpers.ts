@@ -10,7 +10,7 @@ function stringToBase64URL(str: string): string {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);
   let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
+  for (const b of Array.from(bytes)) binary += String.fromCharCode(b);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
