@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
+import { LogoMark } from "@/components/ui/logo";
 import {
   LayoutDashboard,
   Users,
@@ -148,8 +149,10 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-1">
-            <Sparkles className="h-6 w-6 text-emerald-500" />
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600">
+              <LogoMark className="h-5 w-5 text-white" />
+            </div>
             <span className="text-2xl font-bold tracking-tight text-slate-900">
               FATURION
             </span>
@@ -460,8 +463,10 @@ export default function Home() {
       <footer className="border-t border-slate-100 bg-white px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-            <div className="flex items-center gap-1">
-              <Sparkles className="h-5 w-5 text-emerald-500" />
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600">
+                <LogoMark className="h-4 w-4 text-white" />
+              </div>
               <span className="text-lg font-bold text-slate-900">FATURION</span>
             </div>
             <p className="text-sm text-slate-500">

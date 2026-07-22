@@ -46,6 +46,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import SubscriptionGuard from "@/components/subscription-guard";
+import { LogoMark } from "@/components/ui/logo";
 import type { Negocio } from "@/types/database";
 
 interface NavItem {
@@ -255,203 +256,203 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <SkipToContent />
       <div className="flex min-h-[100dvh] bg-background">
         {/* Desktop Sidebar */}
-      <aside
-        role="navigation"
-        aria-label="Menu principal"
-        className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:flex-col lg:border-r lg:border-border lg:bg-card lg:transition-all lg:duration-300 ${
-          sidebarCollapsed ? "lg:w-[68px]" : "lg:w-64"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          {/* Logo */}
-          <div
-            className={`flex h-16 items-center border-b border-border px-4 ${
-              sidebarCollapsed ? "justify-center" : ""
-            }`}
-          >
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2.5"
+        <aside
+          role="navigation"
+          aria-label="Menu principal"
+          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:flex-col lg:border-r lg:border-border lg:bg-card lg:transition-all lg:duration-300 ${
+            sidebarCollapsed ? "lg:w-[68px]" : "lg:w-64"
+          }`}
+        >
+          <div className="flex h-full flex-col">
+            {/* Logo */}
+            <div
+              className={`flex h-16 items-center border-b border-border px-4 ${
+                sidebarCollapsed ? "justify-center" : ""
+              }`}
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600">
-                <span className="text-lg font-bold text-white">L</span>
-              </div>
-              {!sidebarCollapsed && (
-                <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                  FATURION
-                </span>
-              )}
-            </Link>
-          </div>
-
-          {/* Nav */}
-          {renderNavLinks(sidebarCollapsed)}
-
-          {/* User + Logout */}
-          {renderUserSection(sidebarCollapsed, handleLogout)}
-
-          {/* Collapse Toggle */}
-          <div className="hidden lg:flex border-t border-border p-3">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              {sidebarCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <>
-                  <ChevronLeft className="h-4 w-4" />
-                  <span>Recolher</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile Overlay */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Sidebar */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.aside
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            role="navigation"
-            aria-label="Menu de navegação mobile"
-            className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-card shadow-xl lg:hidden"
-          >
-            <div className="flex h-full flex-col">
-              {/* Mobile Logo + Close */}
-              <div className="flex h-16 items-center justify-between border-b border-border px-4">
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-2.5"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600">
-                    <span className="text-lg font-bold text-white">L</span>
-                  </div>
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2.5"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600">
+                  <LogoMark className="h-5 w-5 text-white" />
+                </div>
+                {!sidebarCollapsed && (
                   <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
                     FATURION
                   </span>
-                </Link>
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  aria-label="Fechar menu"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                )}
+              </Link>
+            </div>
+
+            {/* Nav */}
+            {renderNavLinks(sidebarCollapsed)}
+
+            {/* User + Logout */}
+            {renderUserSection(sidebarCollapsed, handleLogout)}
+
+            {/* Collapse Toggle */}
+            <div className="hidden lg:flex border-t border-border p-3">
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {sidebarCollapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <>
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>Recolher</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Mobile Overlay */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Sidebar */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              role="navigation"
+              aria-label="Menu de navegação mobile"
+              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-card shadow-xl lg:hidden"
+            >
+              <div className="flex h-full flex-col">
+                {/* Mobile Logo + Close */}
+                <div className="flex h-16 items-center justify-between border-b border-border px-4">
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2.5"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600">
+                      <LogoMark className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                      FATURION
+                    </span>
+                  </Link>
+                  <button
+                    onClick={() => setMobileOpen(false)}
+                    aria-label="Fechar menu"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Mobile Nav */}
+                {renderNavLinks(false, () => setMobileOpen(false))}
+
+                {/* Mobile User + Logout */}
+                {renderUserSection(false, handleLogout)}
               </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
 
-              {/* Mobile Nav */}
-              {renderNavLinks(false, () => setMobileOpen(false))}
-
-              {/* Mobile User + Logout */}
-              {renderUserSection(false, handleLogout)}
-            </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      {/* Main Area */}
-      <div
-        className={`flex flex-1 flex-col transition-all duration-300 ${
-          sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-64"
-        }`}
-      >
-        {/* Mobile Header */}
-        <header role="banner" className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-lg lg:hidden">
-          <button
-            onClick={() => setMobileOpen(true)}
-            aria-label="Abrir menu de navegação"
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600">
-              <span className="text-xs font-bold text-white">L</span>
-            </div>
-            <span className="text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              FATURION
-            </span>
-          </Link>
-          <div className="flex items-center gap-1">
+        {/* Main Area */}
+        <div
+          className={`flex flex-1 flex-col transition-all duration-300 ${
+            sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-64"
+          }`}
+        >
+          {/* Mobile Header */}
+          <header role="banner" className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-lg lg:hidden">
             <button
-              onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}
-              aria-label="Busca global (Ctrl+K)"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Abrir menu de navegação"
               className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <Search className="h-5 w-5" />
+              <Menu className="h-5 w-5" />
             </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button aria-label="Menu do usuário" className="flex h-11 w-11 items-center justify-center rounded-full">
-                <Avatar className="h-8 w-8 border-2 border-emerald-200 dark:border-emerald-800">
-                  <AvatarFallback className="bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-              </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{usuario?.nome || "Usuário"}</p>
-                <p className="text-xs text-muted-foreground">
-                  {negocio?.nome || "Meu Negócio"}
-                </p>
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600">
+                <LogoMark className="h-4 w-4 text-white" />
               </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/configuracoes" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Configurações
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-red-600 focus:text-red-600"
+              <span className="text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                FATURION
+              </span>
+            </Link>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}
+                aria-label="Busca global (Ctrl+K)"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <LogOut className="h-4 w-4" />
-                Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
+                <Search className="h-5 w-5" />
+              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button aria-label="Menu do usuário" className="flex h-11 w-11 items-center justify-center rounded-full">
+                  <Avatar className="h-8 w-8 border-2 border-emerald-200 dark:border-emerald-800">
+                    <AvatarFallback className="bg-emerald-100 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+                </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{usuario?.nome || "Usuário"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {negocio?.nome || "Meu Negócio"}
+                  </p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/configuracoes" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Configurações
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
 
-        {/* Content */}
-        <main
-          id="main-content"
-          role="main"
-          aria-label="Conteúdo principal"
-          className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
-        >
-          <SubscriptionGuard isAdmin={authService.isUserAdmin(usuario)}>{children}</SubscriptionGuard>
-        </main>
-        <BottomNav />
+          {/* Content */}
+          <main
+            id="main-content"
+            role="main"
+            aria-label="Conteúdo principal"
+            className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
+          >
+            <SubscriptionGuard isAdmin={authService.isUserAdmin(usuario)}>{children}</SubscriptionGuard>
+          </main>
+          <BottomNav />
+        </div>
+
+        <PWAUpdater />
+        <InstallBanner />
+        <CommandPalette />
       </div>
-
-      <PWAUpdater />
-      <InstallBanner />
-      <CommandPalette />
-    </div>
-    </TooltipProvider>
-  );
+      </TooltipProvider>
+    );
 }

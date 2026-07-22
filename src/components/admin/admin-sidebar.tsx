@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "@/components/ui/logo";
 
 interface NavItem {
   label: string;
@@ -162,7 +163,7 @@ export default function AdminSidebar({
       >
         <Link href="/admin" className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">L</span>
+            <LogoMark className="h-[18px] w-[18px] text-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">

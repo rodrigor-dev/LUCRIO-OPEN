@@ -1,5 +1,12 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { applyPlugin } from "jspdf-autotable";
+
+// A partir da v5, o jspdf-autotable só se conecta automaticamente ao jsPDF
+// se existir uma variável global `window.jsPDF` — o que não é o caso aqui,
+// já que importamos o jsPDF como módulo comum. Sem esta linha, doc.autoTable
+// não existe de verdade e a geração do PDF falha silenciosamente antes de
+// salvar ou abrir para impressão.
+applyPlugin(jsPDF);
 
 interface PDFData {
   numero: string;

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { LogoMark } from "@/components/ui/logo";
 
 function RedefinirSenhaForm() {
   const router = useRouter();
@@ -149,7 +150,10 @@ function RedefinirSenhaForm() {
           className="w-full max-w-md space-y-8"
         >
           <div className="text-center">
-            <Link href="/" className="inline-block">
+            <Link href="/" className="inline-flex flex-col items-center gap-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600">
+                <LogoMark className="h-7 w-7 text-white" />
+              </div>
               <h1 className="text-4xl font-bold text-primary">FATURION</h1>
             </Link>
           </div>
@@ -190,7 +194,10 @@ function RedefinirSenhaForm() {
           transition={{ delay: 0.1, duration: 0.4 }}
           className="text-center"
         >
-          <Link href="/" className="inline-block">
+          <Link href="/" className="inline-flex flex-col items-center gap-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600">
+              <LogoMark className="h-7 w-7 text-white" />
+            </div>
             <h1 className="text-4xl font-bold text-primary">FATURION</h1>
           </Link>
           <p className="mt-2 text-muted-foreground">Defina sua nova senha</p>
