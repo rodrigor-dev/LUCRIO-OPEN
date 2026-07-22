@@ -1,8 +1,8 @@
 {
-  "name": "lucrio-saas",
+  "name": "faturion-saas",
   "version": "0.1.0",
   "private": true,
-  "description": "LUCRIO - Sistema Financeiro para Prestadores de Serviços",
+  "description": "FATURION - Sistema Financeiro para Prestadores de Serviços",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

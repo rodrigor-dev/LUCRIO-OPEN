@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       ? String(dadosNegocio).slice(0, 5000).replace(/<[^>]*>/g, "")
       : "";
 
-    const contextoSistema = `Você é o assistente financeiro do LUCRIO, um SaaS para prestadores de serviços.
+    const contextoSistema = `Você é o assistente financeiro do FATURION, um SaaS para prestadores de serviços.
     Você ajuda com:
     - Análise de despesas e receitas
     - Dicas para economizar
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
         "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-        "X-Title": "LUCRIO - Assistente Financeiro",
+        "X-Title": "FATURION - Assistente Financeiro",
       },
       body: JSON.stringify({
         model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",

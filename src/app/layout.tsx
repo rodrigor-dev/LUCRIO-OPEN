@@ -6,14 +6,14 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LUCRIO - Gestão Financeira para Prestadores de Serviços",
+  title: "FATURION - Gestão Financeira para Prestadores de Serviços",
   description:
     "Sistema financeiro completo para autônomos, MEIs e pequenos empresários. Controle receitas, despesas, clientes e propostas comerciais.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "LUCRIO",
+    title: "FATURION",
   },
   formatDetection: {
     telephone: false,
@@ -22,8 +22,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     url: "https://lucrio.com.br",
-    siteName: "LUCRIO",
-    title: "LUCRIO - Gestão Financeira",
+    siteName: "FATURION",
+    title: "FATURION - Gestão Financeira",
     description: "Controle financeiro completo para prestadores de serviços.",
   },
 };

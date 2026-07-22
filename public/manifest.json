@@ -1,6 +1,6 @@
 {
-  "name": "LUCRIO - Gestão Financeira",
-  "short_name": "LUCRIO",
+  "name": "FATURION - Gestão Financeira",
+  "short_name": "FATURION",
   "description": "Sistema financeiro completo para prestadores de serviços",
   "start_url": "/",
   "display": "standalone",

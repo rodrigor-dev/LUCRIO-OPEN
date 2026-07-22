@@ -138,7 +138,7 @@ function PagamentoSucessoInner() {
                 </motion.div>
                 <h1 className="text-2xl font-bold">Pagamento confirmado!</h1>
                 <p className="text-muted-foreground text-center">
-                  Seu plano PRO foi ativado. Aproveite todas as funcionalidades do LUCRIO!
+                  Seu plano PRO foi ativado. Aproveite todas as funcionalidades do FATURION!
                 </p>
                 <Link href="/dashboard">
                   <Button className="mt-4">

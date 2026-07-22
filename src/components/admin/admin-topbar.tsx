@@ -149,7 +149,7 @@ export default function AdminTopbar({
                   {userName || "Admin"}
                 </p>
                 <p className="mt-0.5 text-xs leading-none text-muted-foreground">
-                  {userEmail || "admin@lucrio.com"}
+                  {userEmail || "admin@faturion.com"}
                 </p>
               </div>
             </button>
@@ -158,7 +158,7 @@ export default function AdminTopbar({
             <div className="px-2 py-1.5">
               <p className="text-sm font-medium">{userName || "Admin"}</p>
               <p className="text-xs text-muted-foreground">
-                {userEmail || "admin@lucrio.com"}
+                {userEmail || "admin@faturion.com"}
               </p>
             </div>
             <DropdownMenuSeparator />

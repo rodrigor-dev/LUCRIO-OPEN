@@ -78,7 +78,7 @@ export default function AdminIndicacoesPage() {
       <div>
         <h1 className="text-2xl font-bold">Indicações</h1>
         <p className="text-muted-foreground">
-          Acompanhe o sistema de indicação do LUCRIO
+          Acompanhe o sistema de indicação do FATURION
         </p>
       </div>
 

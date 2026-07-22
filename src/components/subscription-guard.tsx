@@ -63,7 +63,7 @@ export default function SubscriptionGuard({ children, excludePaths, isAdmin }: S
                     Sua assinatura expirou!
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Renove para continuar usando o LUCRIO
+                    Renove para continuar usando o FATURION
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">

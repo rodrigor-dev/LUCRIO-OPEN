@@ -263,7 +263,7 @@ export default function RelatoriosPage() {
     });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `lucrio_${tipo}_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `faturion_${tipo}_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
   }
 
@@ -275,7 +275,7 @@ export default function RelatoriosPage() {
 
         doc.setFontSize(16);
         doc.setFont(fontName, "bold");
-        doc.text("Relatorio Financeiro - LUCRIO", 105, 15, { align: "center" });
+        doc.text("Relatorio Financeiro - FATURION", 105, 15, { align: "center" });
 
         doc.setFontSize(10);
         doc.setFont(fontName, "normal");
@@ -328,9 +328,9 @@ export default function RelatoriosPage() {
 
         doc.setFontSize(8);
         doc.setFont(fontName, "normal");
-        doc.text("Gerado pelo LUCRIO - Sistema Financeiro", 105, 285, { align: "center" });
+        doc.text("Gerado pelo FATURION - Sistema Financeiro", 105, 285, { align: "center" });
 
-        doc.save(`lucrio_relatorio_${new Date().toISOString().split("T")[0]}.pdf`);
+        doc.save(`faturion_relatorio_${new Date().toISOString().split("T")[0]}.pdf`);
         toast.success("PDF exportado com sucesso!");
       });
     });

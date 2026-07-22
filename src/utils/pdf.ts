@@ -143,7 +143,7 @@ export async function gerarPDFOrcamento(data: PDFData, acao: "baixar" | "imprimi
   // Footer
   doc.setFontSize(8);
   doc.setFont(fontName, "normal");
-  doc.text("Gerado pelo LUCRIO - Sistema Financeiro", 105, 285, { align: "center" });
+  doc.text("Gerado pelo FATURION - Sistema Financeiro", 105, 285, { align: "center" });
 
   if (acao === "imprimir") {
     const blobUrl = doc.output("bloburl");

@@ -42,6 +42,16 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function ProfileSkeleton() {
   return (
@@ -217,6 +227,8 @@ export default function ConfiguracoesPage() {
     alertasVencimento: true,
     novidades: false,
   });
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams?.get("tab") ?? "perfil";
@@ -343,6 +355,28 @@ export default function ConfiguracoesPage() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  }
+
+  async function cancelarAssinatura() {
+    if (!assinatura) return;
+    setCancelando(true);
+    try {
+      const { error } = await supabase.rpc("cancelar_assinatura" as never, {
+        p_assinatura_id: assinatura.id,
+      });
+      if (error) {
+        toast.error(error.message || "Erro ao cancelar assinatura");
+        return;
+      }
+      setAssinatura({ ...assinatura, status: "cancelado" });
+      toast.success("Assinatura cancelada. O acesso continua até o fim do período.");
+    } catch (err) {
+      console.error("[Configuracoes] Erro ao cancelar assinatura:", err);
+      toast.error("Erro inesperado ao cancelar assinatura");
+    } finally {
+      setCancelando(false);
+      setCancelDialogOpen(false);
+    }
   }
 
   const diasTrial = assinatura?.trial_termina
@@ -911,17 +945,47 @@ export default function ConfiguracoesPage() {
 
                       <Separator />
 
-                      {assinatura?.status === "ativo" ? (
+                      {/* Botão de cancelar (ativo) */}
+                      {assinatura?.status === "ativo" && (
                         <div className="flex flex-col sm:flex-row gap-3">
                           <Button
                             variant="outline"
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => toast.info("Cancelamento disponível em breve")}
+                            onClick={() => setCancelDialogOpen(true)}
                           >
                             Cancelar Assinatura
                           </Button>
                         </div>
-                      ) : (
+                      )}
+
+                      {/* Aviso de cancelado */}
+                      {assinatura?.status === "cancelado" && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+                          <div className="flex items-start gap-3">
+                            <Clock className="h-5 w-5 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                Assinatura cancelada
+                              </p>
+                              <p className="text-sm text-amber-600/80 dark:text-amber-400/70 mt-1">
+                                Seu acesso continua ativo até{" "}
+                                <strong>
+                                  {assinatura.fim_periodo
+                                    ? new Date(assinatura.fim_periodo).toLocaleDateString("pt-BR")
+                                    : "o fim do período"}
+                                </strong>
+                                . Após essa data, o acesso será bloqueado.
+                              </p>
+                              <p className="text-sm text-amber-600/80 dark:text-amber-400/70 mt-2">
+                                Para reativar, escolha um plano abaixo.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Planos disponíveis (quando não está ativo OU quando está cancelado) */}
+                      {assinatura?.status !== "ativo" && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {/* Plano Mensal */}
                           <Card className="border-2 border-primary/20 hover:border-primary/50 transition-colors">
@@ -949,7 +1013,7 @@ export default function ConfiguracoesPage() {
                                       body: JSON.stringify({
                                         dados: {
                                           valor: 14.99,
-                                          descricao: "LUCRIO PRO - Plano Mensal",
+                                          descricao: "FATURION PRO - Plano Mensal",
                                           email: usuario?.email || "",
                                           plano: "mensal",
                                         },
@@ -1002,7 +1066,7 @@ export default function ConfiguracoesPage() {
                                       body: JSON.stringify({
                                         dados: {
                                           valor: 139.99,
-                                          descricao: "LUCRIO PRO - Plano Anual",
+                                          descricao: "FATURION PRO - Plano Anual",
                                           email: usuario?.email || "",
                                           plano: "anual",
                                         },
@@ -1066,7 +1130,7 @@ export default function ConfiguracoesPage() {
                       />
                       <FaqItem
                         question="Posso usar o sistema no celular?"
-                        answer="Sim! O LUCRIO é um PWA e pode ser instalado no seu celular pela tela de Configurações > Ajuda."
+                        answer="Sim! O FATURION é um PWA e pode ser instalado no seu celular pela tela de Configurações > Ajuda."
                       />
                       <FaqItem
                         question="Como gerar um orçamento?"
@@ -1142,7 +1206,7 @@ export default function ConfiguracoesPage() {
                           <div className="text-left">
                             <p>Tutorial PWA</p>
                             <p className="text-xs text-muted-foreground font-normal">
-                              Instale o LUCRIO no seu dispositivo
+                              Instale o FATURION no seu dispositivo
                             </p>
                           </div>
                         </div>
@@ -1156,6 +1220,32 @@ export default function ConfiguracoesPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Dialog de confirmação de cancelamento */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ao cancelar, sua assinatura será encerrada. O acesso ao sistema continua
+              ativo até <strong>{assinatura?.fim_periodo
+                ? new Date(assinatura.fim_periodo).toLocaleDateString("pt-BR")
+                : "o fim do período atual"}</strong>, e você não será mais cobrado
+              após essa data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelando}>Manter assinatura</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={cancelarAssinatura}
+              disabled={cancelando}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelando ? "Cancelando..." : "Sim, cancelar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

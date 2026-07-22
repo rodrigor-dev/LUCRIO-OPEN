@@ -410,7 +410,7 @@ export default function AdminDashboardPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Painel Admin</h1>
         <p className="text-muted-foreground">
-          Visao geral completa do sistema LUCRIO
+          Visao geral completa do sistema FATURION
         </p>
       </div>
 

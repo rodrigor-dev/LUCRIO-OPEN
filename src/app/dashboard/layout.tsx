@@ -93,7 +93,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           return;
         }
 
-        localStorage.setItem("lucrio_dispositivo_logado", "true");
+        localStorage.setItem("faturion_dispositivo_logado", "true");
 
         const [perfil, negocioData] = await Promise.all([
           authService.getUserProfile(authUser.id),
@@ -278,7 +278,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               {!sidebarCollapsed && (
                 <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                  LUCRIO
+                  FATURION
                 </span>
               )}
             </Link>
@@ -347,7 +347,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <span className="text-lg font-bold text-white">L</span>
                   </div>
                   <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                    LUCRIO
+                    FATURION
                   </span>
                 </Link>
                 <button
@@ -389,7 +389,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <span className="text-xs font-bold text-white">L</span>
             </div>
             <span className="text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              LUCRIO
+              FATURION
             </span>
           </Link>
           <div className="flex items-center gap-1">

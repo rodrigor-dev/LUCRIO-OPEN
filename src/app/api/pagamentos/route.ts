@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     const pagamento = await mercopag.criarPagamento({
       valor,
-      descricao: String(descricao || "Assinatura LUCRIO").slice(0, 500),
+      descricao: String(descricao || "Assinatura FATURION").slice(0, 500),
       email: String(email),
       redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/pagamento/sucesso?plano=${planoTipo}`,
       webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mercopag`,

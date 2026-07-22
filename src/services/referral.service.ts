@@ -76,7 +76,7 @@ export function montarLinkIndicacao(codigo: string): string {
 // ============================================================
 export function gerarLinksCompartilhamento(codigo: string) {
   const link = montarLinkIndicacao(codigo);
-  const texto = "Estou usando o LUCRIO para organizar minhas finanças! Cadastre-se e ganhe 7 dias grátis de trial:";
+  const texto = "Estou usando o FATURION para organizar minhas finanças! Cadastre-se e ganhe 7 dias grátis de trial:";
 
   return {
     whatsapp: `https://wa.me/?text=${encodeURIComponent(`${texto}\n\n${link}`)}`,

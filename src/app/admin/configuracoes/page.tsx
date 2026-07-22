@@ -194,7 +194,7 @@ export default function AdminConfiguracoesPage() {
                     <Input
                       value={configs.app_name || ""}
                       onChange={(e) => updateConfig("app_name", e.target.value)}
-                      placeholder="LUCRIO"
+                      placeholder="FATURION"
                     />
                   </div>
                   <div className="space-y-2">

@@ -36,7 +36,7 @@ export function createMercoPagClient() {
         body: JSON.stringify({
           items: [
             {
-              id: "LUCRIO-PRO",
+              id: "FATURION-PRO",
               title: dados.descricao,
               quantity: 1,
               unit_price: dados.valor,
@@ -46,7 +46,7 @@ export function createMercoPagClient() {
           payer: {
             email: dados.email,
           },
-          external_reference: `LUCRIO-${Date.now()}`,
+          external_reference: `FATURION-${Date.now()}`,
           back_urls: {
             success: dados.redirectUrl,
             failure: dados.redirectUrl,

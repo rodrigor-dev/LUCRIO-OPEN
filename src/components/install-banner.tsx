@@ -20,7 +20,7 @@ export default function InstallBanner() {
 
       const jaInstalado = window.matchMedia("(display-mode: standalone)").matches;
       if (!jaInstalado) {
-        const bannerVisto = localStorage.getItem("lucrio_install_banner");
+        const bannerVisto = localStorage.getItem("faturion_install_banner");
         if (!bannerVisto) {
           setMostrarBanner(true);
         }
@@ -40,7 +40,7 @@ export default function InstallBanner() {
 
     if (outcome === "accepted") {
       setMostrarBanner(false);
-      localStorage.setItem("lucrio_install_banner", "dismissed");
+      localStorage.setItem("faturion_install_banner", "dismissed");
     }
 
     setDeferredPrompt(null);
@@ -48,7 +48,7 @@ export default function InstallBanner() {
 
   function handleFechar() {
     setMostrarBanner(false);
-    localStorage.setItem("lucrio_install_banner", "dismissed");
+    localStorage.setItem("faturion_install_banner", "dismissed");
   }
 
   if (!mostrarBanner || !deferredPrompt) return null;
@@ -62,7 +62,7 @@ export default function InstallBanner() {
               <span className="text-xl">📱</span>
             </div>
             <div>
-              <p className="text-sm font-medium">Instalar LUCRIO</p>
+              <p className="text-sm font-medium">Instalar FATURION</p>
               <p className="text-xs text-muted-foreground">
                 Acesse offline pelo seu celular
               </p>

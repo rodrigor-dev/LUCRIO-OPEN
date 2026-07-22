@@ -167,7 +167,7 @@ export default function AdminSidebar({
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-lg font-bold tracking-tight text-foreground">
-                LUCRIO
+                FATURION
               </span>
               <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-primary">
                 <ShieldCheck className="h-3 w-3" />
@@ -288,7 +288,7 @@ export function AdminMobileSidebar({
                 </div>
                 <div className="flex flex-col">
                   <span className="text-lg font-bold tracking-tight text-foreground">
-                    LUCRIO
+                    FATURION
                   </span>
                   <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-primary">
                     <ShieldCheck className="h-3 w-3" />

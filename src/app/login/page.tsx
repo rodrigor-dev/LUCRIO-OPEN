@@ -104,7 +104,7 @@ function LoginForm() {
           className="text-center"
         >
           <Link href="/" className="inline-block">
-            <h1 className="text-4xl font-bold text-primary">LUCRIO</h1>
+            <h1 className="text-4xl font-bold text-primary">FATURION</h1>
           </Link>
           <p className="mt-2 text-muted-foreground">Entre na sua conta</p>
         </motion.div>

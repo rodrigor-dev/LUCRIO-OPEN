@@ -161,7 +161,7 @@ export default function IndicarPage() {
                   if (!stats?.codigo) return;
                   const link = montarLinkIndicacao(stats.codigo);
                   if (navigator.share) {
-                    navigator.share({ title: "LUCRIO", text: "Cadastre-se no LUCRIO!", url: link });
+                    navigator.share({ title: "FATURION", text: "Cadastre-se no FATURION!", url: link });
                   }
                 }}
               >

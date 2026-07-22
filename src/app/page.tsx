@@ -124,7 +124,7 @@ export default function Home() {
         return;
       }
 
-      if (localStorage.getItem("lucrio_dispositivo_logado") === "true") {
+      if (localStorage.getItem("faturion_dispositivo_logado") === "true") {
         router.replace("/login");
         return;
       }
@@ -151,7 +151,7 @@ export default function Home() {
           <Link href="/" className="flex items-center gap-1">
             <Sparkles className="h-6 w-6 text-emerald-500" />
             <span className="text-2xl font-bold tracking-tight text-slate-900">
-              LUCRIO
+              FATURION
             </span>
           </Link>
           <div className="flex items-center gap-3">
@@ -462,10 +462,10 @@ export default function Home() {
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <div className="flex items-center gap-1">
               <Sparkles className="h-5 w-5 text-emerald-500" />
-              <span className="text-lg font-bold text-slate-900">LUCRIO</span>
+              <span className="text-lg font-bold text-slate-900">FATURION</span>
             </div>
             <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} LUCRIO. Todos os direitos reservados.
+              © {new Date().getFullYear()} FATURION. Todos os direitos reservados.
             </p>
           </div>
         </div>
