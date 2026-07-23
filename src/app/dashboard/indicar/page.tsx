@@ -50,9 +50,11 @@ export default function IndicarPage() {
         toast.error("Erro ao carregar código de indicação");
       }
       setStats(dados);
-    } catch {
+    } catch (e) {
       setErro(true);
-      toast.error("Erro ao carregar dados de indicações");
+      const mensagem = e instanceof Error ? e.message : "Erro desconhecido";
+      toast.error(`Erro ao carregar indicações: ${mensagem}`, { duration: 10000 });
+      console.error("[IndicarPage] erro completo:", e);
     } finally {
       setCarregando(false);
     }
@@ -63,7 +65,10 @@ export default function IndicarPage() {
   }, [carregarDados]);
 
   async function copiarLink() {
-    if (!stats?.codigo) return;
+    if (!stats?.codigo) {
+      toast.error("Seu código de indicação ainda não carregou. Toque em 'tentar novamente' acima antes de copiar o link.");
+      return;
+    }
     const link = montarLinkIndicacao(stats.codigo);
     await navigator.clipboard.writeText(link);
     setCopiado(true);
@@ -72,7 +77,10 @@ export default function IndicarPage() {
   }
 
   function compartilhar() {
-    if (!stats?.codigo) return;
+    if (!stats?.codigo) {
+      toast.error("Seu código de indicação ainda não carregou. Toque em 'tentar novamente' acima antes de compartilhar.");
+      return;
+    }
     const links = gerarLinksCompartilhamento(stats.codigo);
     window.open(links.whatsapp, "_blank");
   }

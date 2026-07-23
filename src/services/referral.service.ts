@@ -22,13 +22,7 @@ export async function obterStatsIndicacoes(
 
   if (error) {
     console.error("[ReferralService] get_indicacoes_stats error:", error);
-    return {
-      codigo: "",
-      total_indicacoes: 0,
-      total_convertidas: 0,
-      total_recompensas: 0,
-      indicacoes: [],
-    };
+    throw new Error(error.message || "Erro desconhecido ao carregar código de indicação");
   }
 
   const stats = data as unknown as IndicacoesUsuarioStats;
@@ -55,7 +49,7 @@ export async function gerarCodigoIndicacao(
 
   if (error) {
     console.error("[ReferralService] gerar_codigo_indicacao error:", error);
-    return "";
+    throw new Error(error.message || "Erro desconhecido ao gerar código de indicação");
   }
 
   return (data as unknown as string) || "";
