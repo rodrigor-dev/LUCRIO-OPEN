@@ -27,8 +27,8 @@ export function FinanceiroBulkBar({
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
-        className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden"
-        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+        className="fixed left-0 right-0 z-[60] border-t bg-card/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden"
+        style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))" }}
       >
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-medium">{count} selecionado(s)</span>
