@@ -22,6 +22,7 @@ function CadastroForm() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [codigoIndicacao, setCodigoIndicacao] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -30,10 +31,14 @@ function CadastroForm() {
   const [emailConfirmacao, setEmailConfirmacao] = useState("");
   const [reenviando, setReenviando] = useState(false);
 
-  // Salvar codigo de indicacao no sessionStorage
+  // Salvar codigo de indicacao no sessionStorage e pre-preencher o campo
   useEffect(() => {
     if (refCode) {
       sessionStorage.setItem("referral_code", refCode);
+      setCodigoIndicacao(refCode);
+    } else {
+      const salvo = typeof window !== "undefined" ? sessionStorage.getItem("referral_code") : null;
+      if (salvo) setCodigoIndicacao(salvo);
     }
   }, [refCode]);
 
@@ -52,7 +57,7 @@ function CadastroForm() {
         return;
       }
 
-      const codigoRef = refCode || sessionStorage.getItem("referral_code") || null;
+      const codigoRef = codigoIndicacao.trim().toUpperCase() || null;
       const resultado = await criarConta(email, senha, nome, codigoRef);
 
       if (resultado.erro) {
@@ -100,8 +105,9 @@ function CadastroForm() {
     setErro("");
     try {
       // Salvar referral code antes do redirect Google
-      if (refCode) {
-        sessionStorage.setItem("referral_code", refCode);
+      const codigoParaSalvar = codigoIndicacao.trim().toUpperCase();
+      if (codigoParaSalvar) {
+        sessionStorage.setItem("referral_code", codigoParaSalvar);
       }
       const resultado = await entrarComGoogle();
 
@@ -240,7 +246,7 @@ function CadastroForm() {
               {refCode ? (
                 <div className="mb-6 rounded-md bg-green-500/10 p-3 text-center text-sm text-green-700 dark:text-green-400">
                   <Gift className="mx-auto mb-1 h-4 w-4" />
-                  Você foi convidado! Ganhe <strong>7 dias extras</strong> de trial
+                  Você foi convidado! Ganhe <strong>7 dias extras</strong> de teste
                 </div>
               ) : (
                 <div className="mb-6 rounded-md bg-primary/10 p-3 text-center text-sm text-primary">
@@ -249,6 +255,29 @@ function CadastroForm() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="codigoIndicacao">
+                    Código de indicação de um amigo <span className="text-muted-foreground">(opcional)</span>
+                  </Label>
+                  <div className="relative">
+                    <Gift className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="codigoIndicacao"
+                      type="text"
+                      value={codigoIndicacao}
+                      onChange={(e) => setCodigoIndicacao(e.target.value.toUpperCase())}
+                      placeholder="Ex: AB12CD"
+                      maxLength={6}
+                      className="pl-10 uppercase tracking-widest"
+                    />
+                  </div>
+                  {codigoIndicacao && (
+                    <p className="text-xs text-emerald-600">
+                      Você e quem te indicou ganham 7 dias extras de teste grátis!
+                    </p>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="nome">Nome completo</Label>
                   <div className="relative">
