@@ -33,24 +33,21 @@ export function parseMoeda(valor: string): number {
   return isNaN(num) ? 0 : Math.round(num * 100) / 100;
 }
 
+/**
+ * Máscara de valor em dinheiro no padrão que o brasileiro já está
+ * acostumado (Nubank, Itaú, etc): os dígitos digitados vão entrando da
+ * direita para a esquerda, e os dois últimos são sempre os centavos.
+ * Ex: digitar "1", "0", "0", "5", "0" mostra "0,01" → "0,10" → "1,00" →
+ * "10,05" → "100,50" — sem precisar digitar vírgula.
+ */
 export function formatarInputMoeda(valor: string): string {
-  const temVirgula = valor.includes(",");
-  let normalizado = valor.replace(/\./g, ",");
-  let apenasDigitosVirgula = normalizado.replace(/[^\d,]/g, "");
-  const partes = apenasDigitosVirgula.split(",");
-  if (partes.length > 2) {
-    apenasDigitosVirgula = partes[0] + "," + partes.slice(1).join("");
-  }
-  const partesFinais = apenasDigitosVirgula.split(",");
-  const inteiros = (partesFinais[0] || "").replace(/^0+(\d)/, "$1") || "";
-  let centavos = partesFinais[1] || "";
-  if (centavos.length > 2) centavos = centavos.slice(0, 2);
-  if (!inteiros && !centavos) return "";
-  const inteirosFormatado = (inteiros || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  if (temVirgula || partes.length > 1) {
-    return `${inteirosFormatado},${centavos.padEnd(2, "0")}`;
-  }
-  return inteirosFormatado;
+  const digitos = valor.replace(/\D/g, "");
+  if (!digitos) return "";
+  const numero = parseInt(digitos, 10) / 100;
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function formatarMoedaSemSimbolo(valor: number): string {

@@ -770,7 +770,7 @@ export default function DespesasPage() {
                         </th>
                         <th className="px-3 py-2.5">Vencimento</th>
                         <th className="hidden lg:table-cell px-3 py-2.5">
-                          Forma Pgto
+                          Forma de pagamento
                         </th>
                         <th className="px-3 py-2.5">Status</th>
                         <th className="px-3 py-2.5 text-right">Valor</th>
@@ -1114,7 +1114,7 @@ export default function DespesasPage() {
                   {despesaDetalhe.forma_pagamento && (
                     <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
                       <p className="mb-0.5 text-[10px] text-muted-foreground md:text-xs">
-                        Forma Pgto
+                        Forma de pagamento
                       </p>
                       <p className="text-xs font-medium md:text-sm">
                         {FORMAS_PAGAMENTO_DESPESA[
@@ -1271,7 +1271,7 @@ export default function DespesasPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="data" className="text-xs">
-                  Data *
+                  Data da despesa *
                 </Label>
                 <Input
                   id="data"
@@ -1286,26 +1286,28 @@ export default function DespesasPage() {
               </div>
             </div>
 
-            {/* Vencimento + Pagamento */}
+            {/* Vencimento (só aparece se não foi pago) + Pagamento */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="data_vencimento" className="text-xs">
-                  Vencimento
-                </Label>
-                <Input
-                  id="data_vencimento"
-                  type="date"
-                  value={form.data_vencimento}
-                  onChange={(e) =>
-                    setForm({ ...form, data_vencimento: e.target.value })
-                  }
-                  className="h-11 text-sm"
-                />
-              </div>
+              {form.status !== "pago" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="data_vencimento" className="text-xs">
+                    Vence em <span className="text-muted-foreground">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="data_vencimento"
+                    type="date"
+                    value={form.data_vencimento}
+                    onChange={(e) =>
+                      setForm({ ...form, data_vencimento: e.target.value })
+                    }
+                    className="h-11 text-sm"
+                  />
+                </div>
+              )}
               {form.status === "pago" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="data_pagamento" className="text-xs">
-                    Pagamento
+                    Data que pagou
                   </Label>
                   <Input
                     id="data_pagamento"
@@ -1341,10 +1343,10 @@ export default function DespesasPage() {
               </Select>
             </div>
 
-            {/* Forma Pgto + Status */}
+            {/* Forma de pagamento + Status */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Forma Pgto</Label>
+                <Label className="text-xs">Forma de pagamento</Label>
                 <Select
                   value={form.forma_pagamento}
                   onValueChange={(v) =>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatarMoeda, gerarNumeroOrcamento } from "@/utils";
+import { formatarMoeda } from "@/utils";
 import { gerarPDFOrcamento } from "@/utils/pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,6 +138,19 @@ const statusLabel: Record<string, string> = {
   recusada: "Recusada",
   expirada: "Expirada",
 };
+
+async function gerarProximoNumeroOrcamento(
+  supabase: ReturnType<typeof createClient>,
+  negocioId: string
+): Promise<string> {
+  const { count } = await supabase
+    .from("propostas")
+    .select("id", { count: "exact", head: true })
+    .eq("negocio_id", negocioId);
+
+  const proximo = (count || 0) + 1;
+  return `#${String(proximo).padStart(4, "0")}`;
+}
 
 export default function PropostasPage() {
   const supabase = createClient();
@@ -362,11 +375,12 @@ export default function PropostasPage() {
 
       toast.success("Orçamento atualizado com sucesso!");
     } else {
+      const numeroProposta = await gerarProximoNumeroOrcamento(supabase, negocio.id);
       const { data: proposta, error } = await supabase
         .from("propostas")
         .insert({
           ...payload,
-          numero_proposta: gerarNumeroOrcamento(),
+          numero_proposta: numeroProposta,
           status: "rascunho",
         })
         .select()
@@ -460,13 +474,14 @@ export default function PropostasPage() {
 
       if (!negocio) return;
 
+      const numeroDuplicado = await gerarProximoNumeroOrcamento(supabase, negocio.id);
       const { data: novaProposta, error } = await supabase
         .from("propostas")
         .insert({
           negocio_id: negocio.id,
           cliente_id: proposta.cliente_id,
           cliente_nome_manual: proposta.cliente_nome_manual,
-          numero_proposta: gerarNumeroOrcamento(),
+          numero_proposta: numeroDuplicado,
           validade: proposta.validade,
           status: "rascunho",
           subtotal: proposta.subtotal,
