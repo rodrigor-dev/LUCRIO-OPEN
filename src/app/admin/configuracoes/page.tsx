@@ -484,7 +484,7 @@ export default function AdminConfiguracoesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Dias de Trial</Label>
+                  <Label>Dias de Teste</Label>
                   <Input
                     type="number"
                     value={configs.app_trial_dias || ""}
@@ -496,7 +496,7 @@ export default function AdminConfiguracoesPage() {
                     max="90"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Numero de dias de trial gratuito para novos usuarios
+                    Numero de dias de teste gratuito para novos usuarios
                   </p>
                 </div>
                 <Separator />

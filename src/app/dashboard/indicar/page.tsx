@@ -115,7 +115,7 @@ export default function IndicarPage() {
       <div>
         <h1 className="text-2xl font-bold">Indique e Ganhe</h1>
         <p className="text-muted-foreground">
-          Convide amigos e ganhe dias extras de trial
+          Convide amigos e ganhe dias extras de teste
         </p>
       </div>
 
@@ -200,7 +200,7 @@ export default function IndicarPage() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {proximaRecompensa > 0
-                ? `Faltam ${proximaRecompensa} indicações para ganhar dias extras de trial`
+                ? `Faltam ${proximaRecompensa} indicações para ganhar dias extras de teste`
                 : "Parabéns! Você já desbloqueou todas as recompensas!"}
             </p>
           </CardContent>
@@ -332,7 +332,7 @@ export default function IndicarPage() {
                 <div>
                   <p className="font-medium">Amigo se cadastra</p>
                   <p className="text-sm text-muted-foreground">
-                    Ele ganha 7 dias extras de trial ao usar seu código
+                    Ele ganha 7 dias extras de teste ao usar seu código
                   </p>
                 </div>
               </div>
@@ -343,7 +343,7 @@ export default function IndicarPage() {
                 <div>
                   <p className="font-medium">Você ganha dias extras</p>
                   <p className="text-sm text-muted-foreground">
-                    A cada 3 amigos que se cadastra, você ganha 15 dias de trial
+                    A cada 3 amigos que se cadastra, você ganha 15 dias de teste
                   </p>
                 </div>
               </div>

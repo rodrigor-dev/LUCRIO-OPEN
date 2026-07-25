@@ -358,7 +358,7 @@ export default function AdminUsuariosPage() {
     setSalvando(true);
     try {
       await estenderTrial(trialDialog.id, trialDias);
-      toast.success(`Trial estendido em ${trialDias} dias`);
+      toast.success(`Teste estendido em ${trialDias} dias`);
       setTrialDialog(null);
       await carregarDados();
       if (usuarioDetail?.id === trialDialog.id) {
@@ -368,7 +368,7 @@ export default function AdminUsuariosPage() {
         setAssinaturaInfo(assinatura);
       }
     } catch {
-      toast.error("Erro ao estender trial");
+      toast.error("Erro ao estender teste");
     } finally {
       setSalvando(false);
     }
@@ -720,13 +720,13 @@ export default function AdminUsuariosPage() {
                         assinaturaInfo.status === "trial" ? "secondary" : "outline"
                       }>
                         {assinaturaInfo.status === "ativo" && "Ativo"}
-                        {assinaturaInfo.status === "trial" && "Trial"}
+                        {assinaturaInfo.status === "trial" && "Teste"}
                         {assinaturaInfo.status === "cancelado" && "Cancelado"}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
                       {!!assinaturaInfo.status && assinaturaInfo.status === "trial" && !!assinaturaInfo.trial_termina && (
-                        <p>Trial termina: <strong>{formatarDataHora(String(assinaturaInfo.trial_termina))}</strong></p>
+                        <p>Teste termina: <strong>{formatarDataHora(String(assinaturaInfo.trial_termina))}</strong></p>
                       )}
                       {!!assinaturaInfo.fim_periodo && (
                         <p>Valido ate: <strong>{formatarDataHora(String(assinaturaInfo.fim_periodo))}</strong></p>
@@ -795,7 +795,7 @@ export default function AdminUsuariosPage() {
                     onClick={() => setTrialDialog(usuarioDetail)}
                   >
                     <Gift className="mr-2 h-3.5 w-3.5" />
-                    Estender Trial
+                    Estender Teste
                   </Button>
                   <Button
                     variant="outline"
@@ -1030,10 +1030,10 @@ export default function AdminUsuariosPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-purple-600" />
-              Estender Trial
+              Estender Teste
             </DialogTitle>
             <DialogDescription>
-              Estender o periodo de trial de <strong>{trialDialog?.nome}</strong>
+              Estender o período de teste de <strong>{trialDialog?.nome}</strong>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1068,7 +1068,7 @@ export default function AdminUsuariosPage() {
               {salvando ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Estendendo...</>
               ) : (
-                <><Gift className="mr-2 h-4 w-4" /> Estender Trial</>
+                <><Gift className="mr-2 h-4 w-4" /> Estender Teste</>
               )}
             </Button>
           </DialogFooter>

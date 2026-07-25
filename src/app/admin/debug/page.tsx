@@ -225,7 +225,7 @@ export default function AdminDebugPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <DebugRow label="Status" value={info.subscription.status || "N/A"} />
-          <DebugRow label="É Trial" value={info.subscription.is_trial ? "Sim" : "Não"} />
+          <DebugRow label="É Teste" value={info.subscription.is_trial ? "Sim" : "Não"} />
           <DebugRow label="Ativa" value={info.subscription.is_active ? "Sim" : "Não"} />
           <DebugRow label="Expirada" value={info.subscription.is_expired ? "Sim" : "Não"} />
           <DebugRow label="Plano" value={info.subscription.plan_name || "N/A"} />

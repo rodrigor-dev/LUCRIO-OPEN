@@ -42,7 +42,7 @@ const fadeInUp = {
 
 const defaultCampanha: Omit<CampanhaIndicacao, "id" | "criado_em" | "atualizado_em"> = {
   nome: "Indique e Ganhe",
-  descricao: "Convide amigos e ganhe dias extras de trial",
+  descricao: "Convide amigos e ganhe dias extras de teste",
   recompensa_indicador_tipo: "dias_trial",
   recompensa_indicador_valor: 15,
   recompensa_indicado_tipo: "dias_trial",

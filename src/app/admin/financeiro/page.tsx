@@ -298,7 +298,7 @@ export default function AdminFinanceiroPage() {
         className: "bg-rose-100 text-rose-700 border-rose-200",
       },
       trial: {
-        label: "Trial",
+        label: "Teste",
         className: "bg-amber-100 text-amber-700 border-amber-200",
       },
       pendente: {

@@ -97,7 +97,7 @@ type TipoFiltro = "todos" | "ativo" | "trial" | "sem_acesso" | "admin" | "vitali
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType; color: string }> = {
   ativo: { label: "PRO Ativo", variant: "default", icon: CheckCircle2, color: "bg-green-500" },
-  trial: { label: "Trial", variant: "secondary", icon: Clock, color: "bg-amber-500" },
+  trial: { label: "Teste", variant: "secondary", icon: Clock, color: "bg-amber-500" },
   cancelado: { label: "Cancelado", variant: "destructive", icon: XCircle, color: "bg-red-500" },
   expirado: { label: "Expirado", variant: "outline", icon: AlertTriangle, color: "bg-gray-500" },
   sem_acesso: { label: "Sem Acesso", variant: "outline", icon: FlaskConical, color: "bg-gray-400" },
@@ -245,11 +245,11 @@ export default function AdminAssinaturasPage() {
     setProcessando(true);
     try {
       await estenderTrial(trialDialog.usuario_id, trialDias);
-      toast.success(`Trial estendido em ${trialDias} dias`);
+      toast.success(`Teste estendido em ${trialDias} dias`);
       setTrialDialog(null);
       await carregarDados();
     } catch {
-      toast.error("Erro ao estender trial");
+      toast.error("Erro ao estender teste");
     } finally {
       setProcessando(false);
     }
@@ -339,7 +339,7 @@ export default function AdminAssinaturasPage() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-xl border p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4 text-amber-500" />
-            Em Trial
+            Em Teste
           </div>
           <p className="mt-1 text-2xl font-bold">{totalTrials}</p>
         </motion.div>
@@ -358,7 +358,7 @@ export default function AdminAssinaturasPage() {
             {([
               { value: "todos", label: "Todos" },
               { value: "ativo", label: "Ativos" },
-              { value: "trial", label: "Trials" },
+              { value: "trial", label: "Testes" },
               { value: "vitalicio", label: "Vitalicios" },
               { value: "sem_acesso", label: "Sem Acesso" },
               { value: "admin", label: "Admins" },
@@ -384,7 +384,7 @@ export default function AdminAssinaturasPage() {
               <TableHead>Status</TableHead>
               <TableHead>Plano</TableHead>
               <TableHead>Valido Ate</TableHead>
-              <TableHead>Trial Termina</TableHead>
+              <TableHead>Teste Termina</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -462,7 +462,7 @@ export default function AdminAssinaturasPage() {
                             )}
                             {status === "trial" && (
                               <DropdownMenuItem onClick={() => setTrialDialog(u)}>
-                                <Gift className="mr-2 h-4 w-4" /> Estender Trial
+                                <Gift className="mr-2 h-4 w-4" /> Estender Teste
                               </DropdownMenuItem>
                             )}
                             {status === "ativo" && (
@@ -543,7 +543,7 @@ export default function AdminAssinaturasPage() {
                   <p className="mt-1 text-sm font-medium">{detail.fim_periodo ? formatarData(detail.fim_periodo) : "-"}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Trial Termina</p>
+                  <p className="text-xs text-muted-foreground">Teste Termina</p>
                   <p className="mt-1 text-sm font-medium">{detail.trial_termina ? formatarData(detail.trial_termina) : "-"}</p>
                 </div>
               </div>
@@ -560,7 +560,7 @@ export default function AdminAssinaturasPage() {
                     <Crown className="mr-2 h-3.5 w-3.5" /> Vitalicio
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => setTrialDialog(detail)}>
-                    <Gift className="mr-2 h-3.5 w-3.5" /> Estender Trial
+                    <Gift className="mr-2 h-3.5 w-3.5" /> Estender Teste
                   </Button>
                   {detail.assinatura_id && (
                     <Button variant="outline" size="sm" onClick={() => setExtendDialog(detail)}>
@@ -633,12 +633,12 @@ export default function AdminAssinaturasPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Estender Trial */}
+      {/* Dialog Estender Teste */}
       <Dialog open={!!trialDialog} onOpenChange={(open) => { if (!open) setTrialDialog(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Gift className="h-5 w-5 text-purple-600" /> Estender Trial</DialogTitle>
-            <DialogDescription>Estender trial de <strong>{trialDialog?.usuario_nome}</strong></DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Gift className="h-5 w-5 text-purple-600" /> Estender Teste</DialogTitle>
+            <DialogDescription>Estender teste de <strong>{trialDialog?.usuario_nome}</strong></DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

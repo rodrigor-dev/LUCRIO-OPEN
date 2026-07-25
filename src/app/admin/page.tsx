@@ -194,7 +194,7 @@ export default function AdminDashboardPage() {
   const statusAssinaturas = stats
     ? [
         { nome: "Ativos", value: financeiro?.total_assinaturas_ativas || 0 },
-        { nome: "Trial", value: financeiro?.total_trials || 0 },
+        { nome: "Teste", value: financeiro?.total_trials || 0 },
         { nome: "Cancelados", value: financeiro?.total_cancelamentos || 0 },
       ]
     : [];
@@ -252,7 +252,7 @@ export default function AdminDashboardPage() {
       corIcon: "text-violet-600",
     },
     {
-      titulo: "Trials Ativos",
+      titulo: "Testes Ativos",
       valor: financeiro?.total_trials || 0,
       formato: "inteiro" as const,
       icone: FlaskConical,
