@@ -11,6 +11,7 @@ import {
   Clock,
   AlertTriangle,
   TrendingUp,
+  TrendingDown,
   Users,
   UserX,
   BarChart3,
@@ -47,6 +48,7 @@ import {
 
 interface KPIs {
   recebidoMes: number;
+  gastoMes: number;
   aReceber: number;
   atrasado: number;
   totalMes: number;
@@ -177,6 +179,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [kpis, setKpis] = useState<KPIs>({
     recebidoMes: 0,
+    gastoMes: 0,
     aReceber: 0,
     atrasado: 0,
     totalMes: 0,
@@ -361,6 +364,7 @@ export default function DashboardPage() {
 
       setKpis({
         recebidoMes: receitaMes,
+        gastoMes: despesaMes,
         aReceber: pendente,
         atrasado,
         totalMes: receitaMes - despesaMes,
@@ -508,6 +512,14 @@ export default function DashboardPage() {
       bg: "bg-green-50",
     },
     {
+      titulo: "Gasto no mês",
+      valor: kpis.gastoMes,
+      formato: "moeda" as const,
+      icone: TrendingDown,
+      cor: "text-red-600",
+      bg: "bg-red-50",
+    },
+    {
       titulo: "A receber",
       valor: kpis.aReceber,
       formato: "moeda" as const,
@@ -520,17 +532,12 @@ export default function DashboardPage() {
       valor: kpis.atrasado,
       formato: "moeda" as const,
       icone: AlertTriangle,
-      cor: "text-red-600",
-      bg: "bg-red-50",
+      cor: "text-amber-600",
+      bg: "bg-amber-50",
     },
-    {
-      titulo: "Total do mês",
-      valor: kpis.totalMes,
-      formato: "moeda" as const,
-      icone: TrendingUp,
-      cor: kpis.totalMes >= 0 ? "text-purple-600" : "text-red-600",
-      bg: kpis.totalMes >= 0 ? "bg-purple-50" : "bg-red-50",
-    },
+  ];
+
+  const kpiCardsSecundarios = [
     {
       titulo: "Clientes ativos",
       valor: kpis.clientesAtivos,
@@ -556,7 +563,7 @@ export default function DashboardPage() {
       bg: "bg-amber-50",
     },
     {
-      titulo: "MRR",
+      titulo: "Receita recorrente mensal",
       valor: kpis.mrr,
       formato: "moeda" as const,
       icone: Repeat,
@@ -654,6 +661,76 @@ export default function DashboardPage() {
       </div>
 
       <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Card
+          className={`overflow-hidden border-2 ${
+            kpis.totalMes >= 0
+              ? "border-emerald-200 bg-emerald-50/60"
+              : "border-red-200 bg-red-50/60"
+          }`}
+        >
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  {kpis.totalMes >= 0 ? (
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-red-600" />
+                  )}
+                  Lucro líquido do mês
+                </p>
+                <p
+                  className={`mt-1 truncate text-3xl font-bold sm:text-4xl ${
+                    kpis.totalMes >= 0 ? "text-emerald-700" : "text-red-700"
+                  }`}
+                >
+                  <AnimatedNumber value={kpis.totalMes} format="moeda" />
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Você recebeu <strong>{formatarMoeda(kpis.recebidoMes)}</strong> e gastou{" "}
+                  <strong>{formatarMoeda(kpis.gastoMes)}</strong> neste mês.
+                </p>
+              </div>
+
+              {/* Barrinha simples mostrando a proporção recebido x gasto */}
+              <div className="w-full sm:w-48">
+                <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
+                  {(() => {
+                    const totalBarra = kpis.recebidoMes + kpis.gastoMes;
+                    const pctRecebido =
+                      totalBarra > 0 ? (kpis.recebidoMes / totalBarra) * 100 : 50;
+                    return (
+                      <>
+                        <div
+                          className="h-full bg-emerald-500"
+                          style={{ width: `${pctRecebido}%` }}
+                        />
+                        <div
+                          className="h-full bg-red-400"
+                          style={{ width: `${100 - pctRecebido}%` }}
+                        />
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" /> Recebido
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-red-400" /> Gasto
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div
         className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         variants={containerVariants}
         initial="hidden"
@@ -681,6 +758,41 @@ export default function DashboardPage() {
           </motion.div>
         ))}
       </motion.div>
+
+      {/* Outros números - menos prioritários no dia a dia, por isso mais discretos */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Outros números
+        </p>
+        <motion.div
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {kpiCardsSecundarios.map((card) => (
+            <motion.div key={card.titulo} variants={itemVariants} className="min-w-0">
+              <Card className="border-dashed transition-colors hover:border-gray-300">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium text-muted-foreground truncate">
+                        {card.titulo}
+                      </p>
+                      <p className={`mt-0.5 truncate text-base font-bold ${card.cor}`}>
+                        <AnimatedNumber value={card.valor} format={card.formato} />
+                      </p>
+                    </div>
+                    <div className={`shrink-0 rounded-full p-2 ${card.bg}`}>
+                      <card.icone className={`h-4 w-4 ${card.cor}`} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
 
       <motion.div
         className="grid gap-6 lg:grid-cols-2"
@@ -835,7 +947,7 @@ export default function DashboardPage() {
         <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Despesas por Categoria</CardTitle>
-            <CardDescription>Breakdown das despesas do mês</CardDescription>
+            <CardDescription>Como suas despesas se dividem este mês</CardDescription>
           </CardHeader>
           <CardContent>
             {despesasCategoria.length === 0 ? (
@@ -918,7 +1030,7 @@ export default function DashboardPage() {
               </Link>
               <Link
                 href="/dashboard/clientes?novo=true"
-                className="flex items-center gap-3 rounded-lg border p-4 text-sm font-medium transition-colors hover:bg-purple-50 hover:border-purple-200 group"
+                className="flex items-center gap-3 rounded-lg border p--4 text-sm font-medium transition-colors hover:bg-purple-50 hover:border-purple-200 group"
               >
                 <div className="rounded-full bg-purple-100 p-2 transition-colors group-hover:bg-purple-200">
                   <Users className="h-4 w-4 text-purple-600" />

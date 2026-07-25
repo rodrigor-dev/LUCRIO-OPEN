@@ -64,8 +64,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
-  TrendingDown,
-  TrendingUp,
   Pencil,
   Trash2,
   Filter,
@@ -78,6 +76,7 @@ import {
   CheckCheck,
   Clock,
   DollarSign,
+  Wallet,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -538,9 +537,9 @@ export default function DespesasPage() {
   }
 
   const kpiCards = [
-    { label: "Total", valor: totais.total, qtd: totais.totalQtd, icon: TrendingDown, iconColor: "text-emerald-600", iconBg: "bg-emerald-100" },
+    { label: "Total do mês", valor: totais.total, qtd: totais.totalQtd, icon: Wallet, iconColor: "text-slate-600", iconBg: "bg-slate-100" },
     { label: "A Pagar", valor: totais.aPagar, qtd: totais.aPagarQtd, icon: AlertTriangle, iconColor: "text-amber-600", iconBg: "bg-amber-100" },
-    { label: "Pago", valor: totais.pago, qtd: totais.pagoQtd, icon: TrendingUp, iconColor: "text-blue-600", iconBg: "bg-blue-100" },
+    { label: "Pago", valor: totais.pago, qtd: totais.pagoQtd, icon: CheckCheck, iconColor: "text-blue-600", iconBg: "bg-blue-100" },
     { label: "Atrasado", valor: totais.atrasado, qtd: totais.atrasadoQtd, icon: Clock, iconColor: "text-red-600", iconBg: "bg-red-100" },
   ];
 
