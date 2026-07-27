@@ -781,14 +781,14 @@ export default function RelatoriosPage() {
                           : 0;
                         return (
                           <div key={cliente.nome}>
-                            <div className="mb-1 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-muted-foreground">
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span className="shrink-0 text-sm font-bold text-muted-foreground">
                                   {index + 1}º
                                 </span>
-                                <span className="text-sm font-medium">{cliente.nome}</span>
+                                <span className="truncate text-sm font-medium">{cliente.nome}</span>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex shrink-0 items-center gap-2">
                                 <span className="text-sm text-muted-foreground">
                                   {percentual.toFixed(1)}%
                                 </span>
@@ -841,9 +841,9 @@ export default function RelatoriosPage() {
                           : 0;
                         return (
                           <div key={cat.nome}>
-                            <div className="mb-1 flex items-center justify-between">
-                              <span className="text-sm font-medium">{cat.nome}</span>
-                              <div className="flex items-center gap-2">
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              <span className="min-w-0 truncate text-sm font-medium">{cat.nome}</span>
+                              <div className="flex shrink-0 items-center gap-2">
                                 <span className="text-xs text-muted-foreground">
                                   {percentual.toFixed(1)}%
                                 </span>
@@ -892,9 +892,9 @@ export default function RelatoriosPage() {
                           : 0;
                         return (
                           <div key={cliente.nome}>
-                            <div className="mb-1 flex items-center justify-between">
-                              <span className="text-sm font-medium">{cliente.nome}</span>
-                              <div className="flex items-center gap-2">
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              <span className="min-w-0 truncate text-sm font-medium">{cliente.nome}</span>
+                              <div className="flex shrink-0 items-center gap-2">
                                 <span className="text-xs text-muted-foreground">
                                   {percentual.toFixed(1)}%
                                 </span>
