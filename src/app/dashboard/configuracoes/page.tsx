@@ -229,7 +229,18 @@ export default function ConfiguracoesPage() {
   });
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [enviandoAvatar, setEnviandoAvatar] = useState(false);
+  const [enviandoLogo, setEnviandoLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
+
+  // Suporte
+  const [chatAberto, setChatAberto] = useState(false);
+  const [ticketSuporte, setTicketSuporte] = useState<{ id: string; status: string } | null>(null);
+  const [mensagensSuporte, setMensagensSuporte] = useState<Array<{ id: string; remetente_tipo: string; mensagem: string; criado_em: string }>>([]);
+  const [novaMensagem, setNovaMensagem] = useState("");
+  const [enviandoMensagem, setEnviandoMensagem] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams?.get("tab") ?? "perfil";
     return ["perfil", "negocio", "notificacoes", "assinatura", "ajuda"].includes(tab) ? tab : "perfil";
@@ -379,6 +390,201 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  async function enviarAvatar(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !usuario) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Imagem deve ter no máximo 2MB");
+      return;
+    }
+
+    setEnviandoAvatar(true);
+    try {
+      const extensao = file.name.split(".").pop() || "png";
+      const caminho = `${usuario.id}/avatar.${extensao}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(caminho, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(caminho);
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: dbError } = await supabase
+        .from("usuarios")
+        .update({ avatar_url: publicUrl })
+        .eq("id", usuario.id);
+
+      if (dbError) throw dbError;
+
+      setUsuario({ ...usuario, avatar_url: publicUrl });
+      toast.success("Foto de perfil atualizada!");
+    } catch (err) {
+      console.error("[Configuracoes] Erro ao enviar avatar:", err);
+      toast.error("Erro ao enviar imagem. Tente novamente.");
+    } finally {
+      setEnviandoAvatar(false);
+      event.target.value = "";
+    }
+  }
+
+  async function enviarLogo(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !negocio || !usuario) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Imagem deve ter no máximo 2MB");
+      return;
+    }
+
+    setEnviandoLogo(true);
+    try {
+      const extensao = file.name.split(".").pop() || "png";
+      const caminho = `${usuario.id}/logo.${extensao}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("logos")
+        .upload(caminho, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("logos").getPublicUrl(caminho);
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: dbError } = await supabase
+        .from("negocios")
+        .update({ logo_url: publicUrl })
+        .eq("id", negocio.id);
+
+      if (dbError) throw dbError;
+
+      setNegocio({ ...negocio, logo_url: publicUrl });
+      toast.success("Logo atualizada!");
+    } catch (err) {
+      console.error("[Configuracoes] Erro ao enviar logo:", err);
+      toast.error("Erro ao enviar logo. Tente novamente.");
+    } finally {
+      setEnviandoLogo(false);
+      event.target.value = "";
+    }
+  }
+
+  async function abrirChatSuporte() {
+    setChatAberto(true);
+    if (ticketSuporte) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: ticket } = await supabase
+        .from("suporte_tickets")
+        .select("id, status")
+        .eq("usuario_id", user.id)
+        .in("status", ["aberto", "respondido", "em_andamento"])
+        .order("criado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (ticket) {
+        setTicketSuporte(ticket);
+        const { data: msgs } = await supabase
+          .from("suporte_mensagens")
+          .select("id, remetente_tipo, mensagem, criado_em")
+          .eq("ticket_id", ticket.id)
+          .order("criado_em", { ascending: true });
+        setMensagensSuporte(msgs || []);
+      }
+    } catch (err) {
+      console.error("[Configuracoes] Erro ao abrir chat:", err);
+    }
+  }
+
+  async function enviarMensagemSuporte() {
+    if (!novaMensagem.trim() || enviandoMensagem) return;
+    setEnviandoMensagem(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let ticketId = ticketSuporte?.id;
+
+      if (!ticketId) {
+        const { data: ticket, error: ticketError } = await supabase
+          .from("suporte_tickets")
+          .insert({
+            usuario_id: user.id,
+            assunto: "Suporte via chat",
+            mensagem: novaMensagem.trim(),
+            status: "aberto",
+          })
+          .select("id, status")
+          .single();
+
+        if (ticketError) throw ticketError;
+        ticketId = ticket.id;
+        setTicketSuporte(ticket);
+      }
+
+      const { error: msgError } = await supabase
+        .from("suporte_mensagens")
+        .insert({
+          ticket_id: ticketId,
+          remetente_id: user.id,
+          remetente_tipo: "usuario",
+          mensagem: novaMensagem.trim(),
+        });
+
+      if (msgError) throw msgError;
+
+      const userMsg = novaMensagem.trim();
+      setNovaMensagem("");
+      setMensagensSuporte((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), remetente_tipo: "usuario", mensagem: userMsg, criado_em: new Date().toISOString() },
+      ]);
+
+      const res = await fetch("/api/suporte-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pergunta: userMsg }),
+      });
+
+      const data = await res.json();
+      const respostaIA = data.resposta || "Não consegui responder. Nossa equipe entrará em contato.";
+
+      await supabase
+        .from("suporte_mensagens")
+        .insert({
+          ticket_id: ticketId,
+          remetente_tipo: "sistema",
+          mensagem: respostaIA,
+        });
+
+      setMensagensSuporte((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), remetente_tipo: "sistema", mensagem: respostaIA, criado_em: new Date().toISOString() },
+      ]);
+    } catch (err) {
+      console.error("[Configuracoes] Erro ao enviar mensagem:", err);
+      toast.error("Erro ao enviar mensagem. Tente novamente.");
+    } finally {
+      setEnviandoMensagem(false);
+    }
+  }
+
   const diasTrial = assinatura?.trial_termina
     ? diasRestantes(assinatura.trial_termina)
     : 0;
@@ -473,9 +679,9 @@ export default function ConfiguracoesPage() {
                           <input
                             ref={fileInputRef}
                             type="file"
-                            accept="image/*"
+                            accept="image/png,image/jpeg,image/webp"
                             className="hidden"
-                            onChange={() => toast.info("Upload de avatar em breve")}
+                            onChange={enviarAvatar}
                           />
                         </div>
                         <div className="text-center sm:text-left">
@@ -589,11 +795,23 @@ export default function ConfiguracoesPage() {
                             variant="outline"
                             size="sm"
                             className="mt-2"
-                            onClick={() => toast.info("Upload de logo em breve")}
+                            onClick={() => logoInputRef.current?.click()}
+                            disabled={enviandoLogo}
                           >
-                            <Camera className="mr-2 h-3.5 w-3.5" />
-                            Escolher arquivo
+                            {enviandoLogo ? (
+                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Camera className="mr-2 h-3.5 w-3.5" />
+                            )}
+                            {enviandoLogo ? "Enviando..." : "Escolher arquivo"}
                           </Button>
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={enviarLogo}
+                          />
                         </div>
                       </div>
 
@@ -1168,7 +1386,7 @@ export default function ConfiguracoesPage() {
                       </a>
 
                       <button
-                        onClick={() => toast.info("Suporte em breve")}
+                        onClick={abrirChatSuporte}
                         className="flex w-full items-center justify-between rounded-lg border p-4 text-sm font-medium hover:bg-accent/50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
@@ -1219,6 +1437,88 @@ export default function ConfiguracoesPage() {
             </AnimatePresence>
           </TabsContent>
         </Tabs>
+
+        {/* ==================== CHAT DE SUPORTE ==================== */}
+        <AnimatePresence>
+          {chatAberto && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="fixed bottom-24 right-4 z-50 w-[calc(100vw-2rem)] max-w-md sm:bottom-6 sm:right-6"
+            >
+              <Card className="shadow-2xl border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-primary" />
+                    Suporte FATURION
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setChatAberto(false)}
+                  >
+                    ✕
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="h-64 overflow-y-auto space-y-3 rounded-lg border bg-muted/30 p-3">
+                    {mensagensSuporte.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-8">
+                        Olá! Como podemos ajudar?
+                      </p>
+                    )}
+                    {mensagensSuporte.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.remetente_tipo === "usuario" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                            msg.remetente_tipo === "usuario"
+                              ? "bg-primary text-primary-foreground"
+                              : msg.remetente_tipo === "sistema"
+                              ? "bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200"
+                              : "bg-muted"
+                          }`}
+                        >
+                          {msg.mensagem}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Digite sua dúvida..."
+                      value={novaMensagem}
+                      onChange={(e) => setNovaMensagem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          enviarMensagemSuporte();
+                        }
+                      }}
+                      disabled={enviandoMensagem}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={enviarMensagemSuporte}
+                      disabled={!novaMensagem.trim() || enviandoMensagem}
+                    >
+                      {enviandoMensagem ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Enviar"
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Dialog de confirmação de cancelamento */}

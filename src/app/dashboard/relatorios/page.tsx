@@ -435,16 +435,16 @@ export default function RelatoriosPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0 }}
         >
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Total Receitas</p>
                   <p className="mt-1 text-2xl font-bold text-emerald-600">
                     {formatarMoeda(dados.receitaTotal)}
                   </p>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                   <TrendingUp className="h-5 w-5" />
                 </div>
               </div>
@@ -456,16 +456,16 @@ export default function RelatoriosPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
         >
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Total Despesas</p>
                   <p className="mt-1 text-2xl font-bold text-red-600">
                     {formatarMoeda(dados.despesaTotal)}
                   </p>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
                   <TrendingDown className="h-5 w-5" />
                 </div>
               </div>
@@ -477,10 +477,10 @@ export default function RelatoriosPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Lucro</p>
                   <p
                     className={`mt-1 text-2xl font-bold ${
@@ -491,7 +491,7 @@ export default function RelatoriosPage() {
                   </p>
                 </div>
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                     dados.lucroLiquido >= 0
                       ? "bg-emerald-100 text-emerald-600"
                       : "bg-red-100 text-red-600"
@@ -512,16 +512,16 @@ export default function RelatoriosPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Ticket Médio</p>
                   <p className="mt-1 text-2xl font-bold text-blue-600">
                     {formatarMoeda(dados.ticketMedio)}
                   </p>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
                   <BarChart3 className="h-5 w-5" />
                 </div>
               </div>
@@ -547,7 +547,7 @@ export default function RelatoriosPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -591,7 +591,7 @@ export default function RelatoriosPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <PieChart className="h-4 w-4 text-muted-foreground" />
@@ -660,7 +660,7 @@ export default function RelatoriosPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card>
+            <Card className="min-w-0 overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -738,7 +738,7 @@ export default function RelatoriosPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card>
+            <Card className="min-w-0 overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="h-4 w-4 text-muted-foreground" />
@@ -821,7 +821,7 @@ export default function RelatoriosPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <PieChart className="h-4 w-4 text-muted-foreground" />
@@ -872,7 +872,7 @@ export default function RelatoriosPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Users className="h-4 w-4 text-muted-foreground" />
@@ -927,7 +927,7 @@ export default function RelatoriosPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -975,7 +975,7 @@ export default function RelatoriosPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
