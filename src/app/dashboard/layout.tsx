@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/tooltip";
 import SubscriptionGuard from "@/components/subscription-guard";
 import { LogoMark } from "@/components/ui/logo";
+import { TutorialBoasVindas } from "@/components/tutorial-boas-vindas";
 import type { Negocio } from "@/types/database";
 
 interface NavItem {
@@ -263,6 +264,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <TooltipProvider>
       <SkipToContent />
+      <TutorialBoasVindas />
       <div className="flex min-h-[100dvh] bg-background">
         {/* Desktop Sidebar */}
         <aside

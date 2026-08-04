@@ -7,6 +7,7 @@ import { formatarMoeda, diasRestantes } from "@/utils";
 import type { Usuario, Negocio, Assinatura } from "@/types/database";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { abrirTutorialBoasVindas } from "@/components/tutorial-boas-vindas";
 import {
   User,
   Building,
@@ -20,6 +21,7 @@ import {
   MapPin,
   FileText,
   MessageCircle,
+  PlayCircle,
   Smartphone,
   ChevronRight,
   ExternalLink,
@@ -1384,6 +1386,22 @@ export default function ConfiguracoesPage() {
                         </div>
                         <ExternalLink className="h-4 w-4 text-muted-foreground" />
                       </a>
+
+                      <button
+                        onClick={() => abrirTutorialBoasVindas()}
+                        className="flex w-full items-center justify-between rounded-lg border p-4 text-sm font-medium hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <PlayCircle className="h-5 w-5 text-muted-foreground" />
+                          <div className="text-left">
+                            <p>Rever tutorial</p>
+                            <p className="text-xs text-muted-foreground font-normal">
+                              Relembre como usar o sistema, passo a passo
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
 
                       <button
                         onClick={abrirChatSuporte}
