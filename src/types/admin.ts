@@ -212,6 +212,10 @@ export interface UsuarioAdmin {
   atualizado_em: string;
   role?: Role;
   plano?: PlanoAdmin;
+  assinatura_status?: "trial" | "ativo" | "atrasado" | "cancelado" | "incompleto" | null;
+  assinatura_fim_periodo?: string | null;
+  assinatura_trial_termina?: string | null;
+  plano_nome?: string | null;
   _count?: { clientes: number; receitas: number; despesas: number };
 }
 
@@ -242,7 +246,6 @@ export interface Indicacao {
   user_agent_indicado: string | null;
   criado_em: string;
   atualizado_em: string;
-  // Joined fields
   indicador_nome?: string;
   indicador_email?: string;
   indicado_nome?: string;

@@ -536,8 +536,22 @@ export default function AdminUsuariosPage() {
                         {usuario.email}
                       </TableCell>
                       <TableCell>
-                        {usuario.plano ? (
-                          <Badge variant="secondary">{usuario.plano.nome}</Badge>
+                        {usuario.plano_nome ? (
+                          <div>
+                            <Badge variant="secondary">{usuario.plano_nome}</Badge>
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              {usuario.assinatura_status === "trial" &&
+                                usuario.assinatura_trial_termina &&
+                                `Teste ate ${formatarDataHora(usuario.assinatura_trial_termina)}`}
+                              {usuario.assinatura_status === "ativo" &&
+                                usuario.assinatura_fim_periodo &&
+                                `Renova em ${formatarDataHora(usuario.assinatura_fim_periodo)}`}
+                              {usuario.assinatura_status === "cancelado" &&
+                                usuario.assinatura_fim_periodo &&
+                                `Acesso ate ${formatarDataHora(usuario.assinatura_fim_periodo)}`}
+                              {usuario.assinatura_status === "atrasado" && "Pagamento atrasado"}
+                            </p>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             Sem plano

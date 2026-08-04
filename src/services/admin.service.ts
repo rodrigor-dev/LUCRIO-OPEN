@@ -72,11 +72,40 @@ export async function listarUsuarios(_busca?: string, _filtros?: { plano?: strin
 export async function obterUsuario(id: string) {
   const { data, error } = await supabase
     .from("usuarios")
-    .select("*, role:roles(*)")
+    .select("*, role:roles(*), assinaturas(status, fim_periodo, trial_termina, plano_id, criado_em)")
     .eq("id", id)
     .single();
   if (error) throw error;
-  return data as UsuarioAdmin;
+
+  const assinaturas = (data as { assinaturas?: Array<{
+    status: string;
+    fim_periodo: string;
+    trial_termina: string | null;
+    plano_id: string;
+    criado_em: string;
+  }> }).assinaturas || [];
+
+  const assinaturaAtual = [...assinaturas].sort(
+    (a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
+  )[0];
+
+  let planoNome: string | null = null;
+  if (assinaturaAtual?.plano_id) {
+    const { data: plano } = await supabase
+      .from("planos")
+      .select("nome")
+      .eq("id", assinaturaAtual.plano_id)
+      .single();
+    planoNome = plano?.nome || null;
+  }
+
+  return {
+    ...data,
+    assinatura_status: assinaturaAtual?.status || null,
+    assinatura_fim_periodo: assinaturaAtual?.fim_periodo || null,
+    assinatura_trial_termina: assinaturaAtual?.trial_termina || null,
+    plano_nome: planoNome,
+  } as UsuarioAdmin;
 }
 
 export async function atualizarUsuario(id: string, dados: Partial<UsuarioAdmin>) {

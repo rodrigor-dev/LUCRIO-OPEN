@@ -96,6 +96,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         localStorage.setItem("faturion_dispositivo_logado", "true");
 
+        // Registra o ultimo login para aparecer certinho no painel do admin
+        supabase
+          .from("usuarios")
+          .update({ ultimo_login_em: new Date().toISOString() })
+          .eq("id", authUser.id)
+          .then(({ error }) => {
+            if (error) console.error("[dashboard] erro ao registrar ultimo login:", error);
+          });
+
         const [perfil, negocioData] = await Promise.all([
           authService.getUserProfile(authUser.id),
           supabase
