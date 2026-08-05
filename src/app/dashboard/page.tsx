@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSupabase } from "@/hooks/use-supabase";
 import { formatarMoeda, formatarData } from "@/utils";
 import { gerarReceitasRecorrentes } from "@/services/recorrencia.service";
+import { ChecklistOnboarding } from "@/components/checklist-onboarding";
 import {
   DollarSign,
   Clock,
@@ -194,6 +195,7 @@ export default function DashboardPage() {
   const [despesasCategoria, setDespesasCategoria] = useState<DespesaCategoria[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [idsUsuarioNegocio, setIdsUsuarioNegocio] = useState<{ usuarioId: string; negocioId: string } | null>(null);
 
   useEffect(() => {
     async function carregarDados() {
@@ -218,6 +220,7 @@ export default function DashboardPage() {
       }
 
       const negocioId = negocio.id;
+      setIdsUsuarioNegocio({ usuarioId: user.id, negocioId });
 
       try {
         await gerarReceitasRecorrentes(negocioId);
@@ -729,6 +732,13 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {idsUsuarioNegocio && (
+        <ChecklistOnboarding
+          usuarioId={idsUsuarioNegocio.usuarioId}
+          negocioId={idsUsuarioNegocio.negocioId}
+        />
+      )}
 
       <motion.div
         className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
