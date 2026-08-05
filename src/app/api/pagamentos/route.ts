@@ -5,7 +5,7 @@ import { verificarRateLimit, obterChaveRateLimit } from "@/lib/rate-limit";
 export async function POST(request: Request) {
   try {
     const chave = obterChaveRateLimit(request, "pagamentos");
-    const rateLimit = verificarRateLimit(chave, 5, 60000);
+    const rateLimit = verificarRateLimit(chave, 10, 300000);
 
     if (!rateLimit.permitido) {
       return NextResponse.json(
