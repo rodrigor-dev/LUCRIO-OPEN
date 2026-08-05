@@ -434,6 +434,7 @@ export default function RelatoriosPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0 }}
+          className="min-w-0"
         >
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
@@ -455,6 +456,7 @@ export default function RelatoriosPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
+          className="min-w-0"
         >
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
@@ -476,6 +478,7 @@ export default function RelatoriosPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="min-w-0"
         >
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
@@ -511,6 +514,7 @@ export default function RelatoriosPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
+          className="min-w-0"
         >
           <Card className="min-w-0 overflow-hidden">
             <CardContent className="p-4">
@@ -546,6 +550,7 @@ export default function RelatoriosPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
+              className="min-w-0"
             >
               <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
@@ -590,6 +595,7 @@ export default function RelatoriosPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
+              className="min-w-0"
             >
               <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
@@ -659,6 +665,7 @@ export default function RelatoriosPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="min-w-0"
           >
             <Card className="min-w-0 overflow-hidden">
               <CardHeader>
@@ -737,6 +744,7 @@ export default function RelatoriosPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+            className="min-w-0"
           >
             <Card className="min-w-0 overflow-hidden">
               <CardHeader>
@@ -820,6 +828,7 @@ export default function RelatoriosPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
+              className="min-w-0"
             >
               <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
@@ -871,6 +880,7 @@ export default function RelatoriosPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
+              className="min-w-0"
             >
               <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
@@ -926,6 +936,7 @@ export default function RelatoriosPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
+              className="min-w-0"
             >
               <Card className="min-w-0 overflow-hidden">
                 <CardHeader>
@@ -974,6 +985,7 @@ export default function RelatoriosPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
+              className="min-w-0"
             >
               <Card className="min-w-0 overflow-hidden">
                 <CardHeader>

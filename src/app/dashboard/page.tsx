@@ -666,6 +666,7 @@ export default function DashboardPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
+        className="min-w-0"
       >
         <Card
           className={`overflow-hidden border-2 ${
@@ -1040,7 +1041,7 @@ export default function DashboardPage() {
               </Link>
               <Link
                 href="/dashboard/clientes?novo=true"
-                className="flex items-center gap-3 rounded-lg border p--4 text-sm font-medium transition-colors hover:bg-purple-50 hover:border-purple-200 group"
+                className="flex items-center gap-3 rounded-lg border p-4 text-sm font-medium transition-colors hover:bg-purple-50 hover:border-purple-200 group"
               >
                 <div className="rounded-full bg-purple-100 p-2 transition-colors group-hover:bg-purple-200">
                   <Users className="h-4 w-4 text-purple-600" />
