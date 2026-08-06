@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://faturion.com"),
   title: "FATURION - Gestão Financeira para Prestadores de Serviços",
   description:
     "Sistema financeiro completo para autônomos, MEIs e pequenos empresários. Controle receitas, despesas, clientes e propostas comerciais.",
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://lucrio.com.br",
+    url: "https://faturion.com",
     siteName: "FATURION",
     title: "FATURION - Gestão Financeira",
     description: "Controle financeiro completo para prestadores de serviços.",

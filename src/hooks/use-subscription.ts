@@ -31,7 +31,7 @@ export function useSubscription() {
         .from("assinaturas")
         .select("*, plano:planos(nome)")
         .eq("usuario_id", user.id)
-        .in("status", ["trial", "ativo"])
+        .in("status", ["trial", "ativo", "cancelado"])
         .order("criado_em", { ascending: false })
         .limit(1)
         .single();
@@ -56,8 +56,10 @@ export function useSubscription() {
       const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
       const isExpired = fimPeriodo < now;
 
+      const contaComoValida = data.status === "ativo" || data.status === "cancelado";
+
       setAssinatura({
-        is_valid: !isExpired && data.status === "ativo",
+        is_valid: !isExpired && contaComoValida,
         is_expired: isExpired,
         is_trial: data.status === "trial",
         is_active: data.status === "ativo" && !isExpired,

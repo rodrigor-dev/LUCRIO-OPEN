@@ -27,7 +27,6 @@ export async function obterStatsIndicacoes(
 
   const stats = data as unknown as IndicacoesUsuarioStats;
 
-  // Se nao tem codigo, gerar
   if (!stats.codigo) {
     const codigo = await gerarCodigoIndicacao(usuarioId);
     stats.codigo = codigo;
@@ -62,7 +61,7 @@ export function montarLinkIndicacao(codigo: string): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}/cadastro?ref=${codigo}`;
   }
-  return `${process.env.NEXT_PUBLIC_APP_URL || "https://lucrio-open.vercel.app"}/cadastro?ref=${codigo}`;
+  return `${process.env.NEXT_PUBLIC_APP_URL || "https://faturion.com"}/cadastro?ref=${codigo}`;
 }
 
 // ============================================================

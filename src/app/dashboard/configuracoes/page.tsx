@@ -19,12 +19,10 @@ import {
   Mail,
   Phone,
   MapPin,
-  FileText,
   MessageCircle,
   PlayCircle,
   Smartphone,
   ChevronRight,
-  ExternalLink,
   Loader2,
   Crown,
   Clock,
@@ -236,7 +234,6 @@ export default function ConfiguracoesPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
-  // Suporte
   const [chatAberto, setChatAberto] = useState(false);
   const [ticketSuporte, setTicketSuporte] = useState<{ id: string; status: string } | null>(null);
   const [mensagensSuporte, setMensagensSuporte] = useState<Array<{ id: string; remetente_tipo: string; mensagem: string; criado_em: string }>>([]);
@@ -601,7 +598,6 @@ export default function ConfiguracoesPage() {
   return (
     <div className="min-h-[100dvh] bg-background pb-24 md:pb-6">
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -620,7 +616,6 @@ export default function ConfiguracoesPage() {
           </div>
         </motion.div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto">
             <TabsList className="inline-flex w-full sm:w-auto">
@@ -661,7 +656,6 @@ export default function ConfiguracoesPage() {
                   exit="exit"
                   className="space-y-6"
                 >
-                  {/* Avatar Card */}
                   <Card>
                     <CardContent className="pt-6">
                       <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -697,7 +691,6 @@ export default function ConfiguracoesPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Personal Data Card */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">Dados Pessoais</CardTitle>
@@ -781,7 +774,6 @@ export default function ConfiguracoesPage() {
                       <CardDescription>Informações do seu estabelecimento</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-5">
-                      {/* Logo Upload */}
                       <div className="flex items-center gap-4">
                         <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/50">
                           {negocio?.logo_url ? (
@@ -819,7 +811,6 @@ export default function ConfiguracoesPage() {
 
                       <Separator />
 
-                      {/* Business Info */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="nome-negocio">Nome do Negócio</Label>
@@ -861,7 +852,6 @@ export default function ConfiguracoesPage() {
 
                       <Separator />
 
-                      {/* Address */}
                       <div className="space-y-3">
                         <h4 className="text-sm font-semibold flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -1007,7 +997,6 @@ export default function ConfiguracoesPage() {
                       <CardDescription>Escolha quais notificações deseja receber</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-1">
-                      {/* Email de lembretes */}
                       <div className="flex items-center justify-between py-4">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
@@ -1027,7 +1016,6 @@ export default function ConfiguracoesPage() {
                       </div>
                       <Separator />
 
-                      {/* Alertas de vencimento */}
                       <div className="flex items-center justify-between py-4">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
@@ -1047,7 +1035,6 @@ export default function ConfiguracoesPage() {
                       </div>
                       <Separator />
 
-                      {/* Novidades */}
                       <div className="flex items-center justify-between py-4">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
@@ -1095,7 +1082,6 @@ export default function ConfiguracoesPage() {
                   exit="exit"
                   className="space-y-6"
                 >
-                  {/* Current Plan */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">Plano Atual</CardTitle>
@@ -1165,7 +1151,6 @@ export default function ConfiguracoesPage() {
 
                       <Separator />
 
-                      {/* Botão de cancelar (ativo) */}
                       {assinatura?.status === "ativo" && (
                         <div className="flex flex-col sm:flex-row gap-3">
                           <Button
@@ -1178,7 +1163,6 @@ export default function ConfiguracoesPage() {
                         </div>
                       )}
 
-                      {/* Aviso de cancelado */}
                       {assinatura?.status === "cancelado" && (
                         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
                           <div className="flex items-start gap-3">
@@ -1204,10 +1188,8 @@ export default function ConfiguracoesPage() {
                         </div>
                       )}
 
-                      {/* Planos disponíveis (quando não está ativo OU quando está cancelado) */}
                       {assinatura?.status !== "ativo" && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {/* Plano Mensal */}
                           <Card className="border-2 border-primary/20 hover:border-primary/50 transition-colors">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-base flex items-center justify-between">
@@ -1256,7 +1238,6 @@ export default function ConfiguracoesPage() {
                             </CardContent>
                           </Card>
 
-                          {/* Plano Anual */}
                           <Card className="border-2 border-green-500/30 hover:border-green-500/60 transition-colors relative">
                             <div className="absolute -top-2 right-4 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                               ECONOMIZE 23%
@@ -1331,7 +1312,6 @@ export default function ConfiguracoesPage() {
                   exit="exit"
                   className="space-y-6"
                 >
-                  {/* FAQ */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -1363,30 +1343,11 @@ export default function ConfiguracoesPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Quick Links */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">Recursos</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <a
-                        href="https://docs.lucrio.com.br"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between rounded-lg border p-4 text-sm font-medium hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <p>Documentação</p>
-                            <p className="text-xs text-muted-foreground font-normal">
-                              Guias completos e tutoriais
-                            </p>
-                          </div>
-                        </div>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                      </a>
-
                       <button
                         onClick={() => abrirTutorialBoasVindas()}
                         className="flex w-full items-center justify-between rounded-lg border p-4 text-sm font-medium hover:bg-accent/50 transition-colors"
@@ -1539,7 +1500,6 @@ export default function ConfiguracoesPage() {
         </AnimatePresence>
       </div>
 
-      {/* Dialog de confirmação de cancelamento */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -46,16 +46,16 @@ function PagamentoSucessoInner() {
             return;
           }
 
-          // Idempotência: verificar se já existe assinatura ativa
           const { data: existente } = await supabase
             .from("assinaturas")
             .select("id, status")
             .eq("usuario_id", user.id)
-            .in("status", ["ativo", "trial"])
+            .in("status", ["ativo", "trial", "cancelado"])
+            .order("criado_em", { ascending: false })
+            .limit(1)
             .maybeSingle();
 
           if (existente?.status === "ativo") {
-            // Já ativo, não precisa atualizar
             setSucesso(true);
             return;
           }
@@ -64,7 +64,6 @@ function PagamentoSucessoInner() {
           const fim = new Date(now.getTime() + diasPlano * 24 * 60 * 60 * 1000);
 
           if (existente) {
-            // Atualizar trial existente para ativo
             await supabase
               .from("assinaturas")
               .update({
@@ -78,7 +77,6 @@ function PagamentoSucessoInner() {
               })
               .eq("id", existente.id);
           } else {
-            // Inserir nova assinatura
             await supabase.from("assinaturas").insert({
               usuario_id: user.id,
               plano_id: planoPro.id,
