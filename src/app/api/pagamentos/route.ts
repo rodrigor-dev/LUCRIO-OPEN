@@ -68,6 +68,8 @@ export async function POST(request: Request) {
       email: String(email),
       redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/pagamento/sucesso?plano=${planoTipo}`,
       webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mercopag`,
+      usuarioId: user.id,
+      planoTipo,
     });
 
     return NextResponse.json({ init_point: pagamento.init_point });

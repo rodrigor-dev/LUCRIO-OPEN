@@ -79,9 +79,14 @@ export async function POST(request: Request) {
     // Buscar dados do pagamento
     let pagamentoId = corpo.data?.id;
     let status = corpo.data?.status;
+    let externalReference: string | undefined = corpo.data?.external_reference;
 
-    // Se temos apenas o ID, consultar o pagamento
-    if (pagamentoId && !status) {
+    // Sempre buscamos os detalhes completos do pagamento (não só quando
+    // falta o status): é de lá que vem o external_reference com o
+    // usuario_id real, que é a forma confiável de saber de quem é esse
+    // pagamento — funciona mesmo se o navegador do usuário nunca voltou
+    // pro site (Pix, boleto, ou pagamento aprovado só depois).
+    if (pagamentoId && (!status || !externalReference)) {
       try {
         const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
         const resposta = await fetch(
@@ -94,7 +99,8 @@ export async function POST(request: Request) {
         if (resposta.ok) {
           const dadosPagamento = await resposta.json();
           status = dadosPagamento.status;
-          console.log(`[WEBHOOK] Pagamento ${pagamentoId} status: ${status}`);
+          externalReference = dadosPagamento.external_reference;
+          console.log(`[WEBHOOK] Pagamento ${pagamentoId} status: ${status}, ref: ${externalReference}`);
         }
       } catch (err) {
         console.error("[WEBHOOK] Erro ao consultar pagamento:", err);
@@ -122,19 +128,54 @@ export async function POST(request: Request) {
     const statusSupabase = statusMap[status] || "pendente";
     console.log(`[WEBHOOK] Pagamento ${pagamentoId}: ${status} → ${statusSupabase}`);
 
-    const { data, error } = await supabase
-      .rpc("webhook_atualizar_assinatura", {
-        p_pagamento_id: String(pagamentoId),
-        p_status: statusSupabase,
-        p_pago: status === "approved",
-      });
+    // Caminho principal: identificar o usuário direto pelo external_reference
+    // (formato "usuarioId|planoTipo", configurado na criação do pagamento).
+    const [usuarioIdRef, planoTipoRef] = (externalReference || "").split("|");
+    const pareceUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      usuarioIdRef || ""
+    );
 
-    if (error) {
-      console.error("[WEBHOOK] Erro ao atualizar:", error.message);
+    let atualizou = false;
+
+    if (pareceUuid) {
+      const { data: ok, error } = await supabase.rpc(
+        "webhook_ativar_assinatura_por_usuario",
+        {
+          p_usuario_id: usuarioIdRef,
+          p_plano_tipo: planoTipoRef === "anual" ? "anual" : "mensal",
+          p_pagamento_id: String(pagamentoId),
+          p_status: statusSupabase,
+          p_pago: status === "approved",
+        }
+      );
+
+      if (error) {
+        console.error("[WEBHOOK] Erro ao ativar por usuário:", error.message);
+      } else {
+        atualizou = !!ok;
+      }
+    } else {
+      console.log("[WEBHOOK] external_reference sem usuario_id reconhecível, tentando caminho antigo");
     }
 
-    if (!data) {
-      console.log(`[WEBHOOK] Nenhuma assinatura encontrada com pagamento_id: ${pagamentoId}`);
+    // Caminho de reforço (compatibilidade com pagamentos antigos criados
+    // antes desta correção): tenta casar pelo intent_pagamento_id já
+    // gravado por /pagamento/sucesso, se o caminho principal não achou nada.
+    if (!atualizou) {
+      const { data, error } = await supabase
+        .rpc("webhook_atualizar_assinatura", {
+          p_pagamento_id: String(pagamentoId),
+          p_status: statusSupabase,
+          p_pago: status === "approved",
+        });
+
+      if (error) {
+        console.error("[WEBHOOK] Erro ao atualizar (caminho antigo):", error.message);
+      }
+
+      if (!data) {
+        console.log(`[WEBHOOK] Nenhuma assinatura encontrada com pagamento_id: ${pagamentoId}`);
+      }
     }
 
     return NextResponse.json({ ok: true });

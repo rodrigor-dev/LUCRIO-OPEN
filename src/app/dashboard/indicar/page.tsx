@@ -16,12 +16,15 @@ import {
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { authService } from "@/services/auth.service";
 import {
   obterStatsIndicacoes,
   gerarLinksCompartilhamento,
   montarLinkIndicacao,
+  jaFoiIndicado,
+  aplicarCodigoIndicacao,
 } from "@/services/referral.service";
 import type { IndicacoesUsuarioStats } from "@/types/admin";
 
@@ -36,6 +39,9 @@ export default function IndicarPage() {
   const [erro, setErro] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
+  const [jaUsouCodigo, setJaUsouCodigo] = useState<boolean | null>(null);
+  const [codigoParaAplicar, setCodigoParaAplicar] = useState("");
+  const [aplicandoCodigo, setAplicandoCodigo] = useState(false);
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
@@ -44,7 +50,11 @@ export default function IndicarPage() {
       const user = await authService.getAuthUser();
       if (!user) return;
       setUsuarioId(user.id);
-      const dados = await obterStatsIndicacoes(user.id);
+      const [dados, jaUsou] = await Promise.all([
+        obterStatsIndicacoes(user.id),
+        jaFoiIndicado(user.id),
+      ]);
+      setJaUsouCodigo(jaUsou);
       if (!dados?.codigo) {
         setErro(true);
         toast.error("Erro ao carregar código de indicação");
@@ -63,6 +73,26 @@ export default function IndicarPage() {
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
+
+  async function aplicarCodigo() {
+    if (!usuarioId || !codigoParaAplicar.trim()) return;
+    setAplicandoCodigo(true);
+    try {
+      const resultado = await aplicarCodigoIndicacao(codigoParaAplicar, usuarioId);
+      if (!resultado.sucesso) {
+        toast.error(resultado.erro || "Não foi possível aplicar esse código.");
+        return;
+      }
+      toast.success("Código aplicado! Seus dias extras já foram liberados.");
+      setJaUsouCodigo(true);
+      setCodigoParaAplicar("");
+    } catch (e) {
+      console.error("[IndicarPage] erro ao aplicar código:", e);
+      toast.error("Erro ao aplicar o código. Tente novamente.");
+    } finally {
+      setAplicandoCodigo(false);
+    }
+  }
 
   async function copiarLink() {
     if (!stats?.codigo) {
@@ -118,6 +148,39 @@ export default function IndicarPage() {
           Convide amigos e ganhe dias extras de teste
         </p>
       </div>
+
+      {/* Aplicar código de um amigo (para quem já tem conta e não usou no cadastro) */}
+      {jaUsouCodigo === false && (
+        <motion.div {...fadeInUp} transition={{ delay: 0.05 }}>
+          <Card>
+            <CardContent className="p-4">
+              <p className="mb-1 font-medium">Recebeu um código de indicação?</p>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Se um amigo te passou um código, digite aqui embaixo pra ganhar seus dias extras de teste grátis.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={codigoParaAplicar}
+                  onChange={(e) => setCodigoParaAplicar(e.target.value.toUpperCase())}
+                  placeholder="Ex: AB12CD"
+                  maxLength={6}
+                  className="uppercase tracking-widest"
+                />
+                <Button
+                  onClick={aplicarCodigo}
+                  disabled={aplicandoCodigo || !codigoParaAplicar.trim()}
+                >
+                  {aplicandoCodigo ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Aplicar"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Card principal com codigo */}
       <motion.div {...fadeInUp} transition={{ delay: 0.1 }}>

@@ -212,3 +212,59 @@ export async function listarAdminIndicacoes(
 
   return (data || []) as Indicacao[];
 }
+
+// ============================================================
+// APLICAR CÓDIGO DEPOIS DE JÁ CADASTRADO
+// ============================================================
+
+/**
+ * Verifica se o usuário logado já usou um código de indicação de
+ * alguém (não importa se foi no cadastro ou depois) — usado pra
+ * decidir se ainda mostra o campo de "aplicar código de um amigo".
+ */
+export async function jaFoiIndicado(usuarioId: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("indicacoes")
+    .select("id", { count: "exact", head: true })
+    .eq("indicado_id", usuarioId);
+
+  if (error) {
+    console.error("[ReferralService] jaFoiIndicado error:", error);
+    return false;
+  }
+
+  return (count || 0) > 0;
+}
+
+/**
+ * Aplica o código de um amigo pra um usuário que já tem conta (não
+ * usou o código na hora do cadastro). Reaproveita a mesma função do
+ * banco usada no fluxo de cadastro.
+ */
+export async function aplicarCodigoIndicacao(
+  codigo: string,
+  usuarioId: string
+): Promise<{ sucesso: boolean; erro?: string }> {
+  const codigoLimpo = codigo.trim().toUpperCase();
+  if (!codigoLimpo) {
+    return { sucesso: false, erro: "Digite um código." };
+  }
+
+  const { data, error } = await supabase.rpc("registrar_indicacao" as never, {
+    p_indicador_codigo: codigoLimpo,
+    p_indicado_id: usuarioId,
+  } as never);
+
+  if (error) {
+    console.error("[ReferralService] aplicarCodigoIndicacao error:", error);
+    return { sucesso: false, erro: error.message || "Erro ao aplicar código." };
+  }
+
+  const resultado = data as { sucesso?: boolean; erro?: string } | null;
+
+  if (resultado && resultado.sucesso === false) {
+    return { sucesso: false, erro: resultado.erro || "Código inválido." };
+  }
+
+  return { sucesso: true };
+}

@@ -4,6 +4,8 @@ interface DadosPagamento {
   email: string;
   redirectUrl: string;
   webhookUrl: string;
+  usuarioId: string;
+  planoTipo: string;
 }
 
 interface PagamentoCriado {
@@ -46,7 +48,7 @@ export function createMercoPagClient() {
           payer: {
             email: dados.email,
           },
-          external_reference: `FATURION-${Date.now()}`,
+          external_reference: `${dados.usuarioId}|${dados.planoTipo}`,
           back_urls: {
             success: dados.redirectUrl,
             failure: dados.redirectUrl,

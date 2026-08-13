@@ -427,7 +427,8 @@ export default function ConfiguracoesPage() {
       toast.success("Foto de perfil atualizada!");
     } catch (err) {
       console.error("[Configuracoes] Erro ao enviar avatar:", err);
-      toast.error("Erro ao enviar imagem. Tente novamente.");
+      const mensagem = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Erro ao enviar imagem: ${mensagem}`, { duration: 10000 });
     } finally {
       setEnviandoAvatar(false);
       event.target.value = "";
@@ -472,7 +473,8 @@ export default function ConfiguracoesPage() {
       toast.success("Logo atualizada!");
     } catch (err) {
       console.error("[Configuracoes] Erro ao enviar logo:", err);
-      toast.error("Erro ao enviar logo. Tente novamente.");
+      const mensagem = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Erro ao enviar logo: ${mensagem}`, { duration: 10000 });
     } finally {
       setEnviandoLogo(false);
       event.target.value = "";
