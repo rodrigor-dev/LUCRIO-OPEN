@@ -587,7 +587,7 @@ export default function PropostasPage() {
       ) : (
         <>
           <div className="hidden overflow-x-auto md:block">
-            <Card>
+            <Card className="overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -616,7 +616,9 @@ export default function PropostasPage() {
                             <span className="font-medium">{proposta.numero_proposta}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{proposta.cliente?.nome || proposta.cliente_nome_manual || "Sem cliente"}</TableCell>
+                        <TableCell>
+                          <span className="block truncate">{proposta.cliente?.nome || proposta.cliente_nome_manual || "Sem cliente"}</span>
+                        </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <Calendar className="h-3.5 w-3.5" />
@@ -750,7 +752,7 @@ export default function PropostasPage() {
                               {proposta.numero_proposta}
                             </CardTitle>
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
+                          <p className="mt-1 text-sm text-muted-foreground truncate">
                             {proposta.cliente?.nome || proposta.cliente_nome_manual || "Sem cliente"}
                           </p>
                         </div>

@@ -603,8 +603,8 @@ export default function DashboardPage() {
   }) => {
     if (!active || !payload) return null;
     return (
-      <div className="rounded-lg border bg-white p-3 shadow-lg">
-        <p className="mb-1 text-sm font-semibold text-gray-900">{label}</p>
+      <div className="rounded-lg border bg-card p-3 shadow-lg text-card-foreground">
+        <p className="mb-1 text-sm font-semibold">{label}</p>
         {payload.map((entry, index) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
             {entry.name}: {formatarMoeda(entry.value)}
@@ -623,9 +623,9 @@ export default function DashboardPage() {
   }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="rounded-lg border bg-white p-3 shadow-lg">
-        <p className="text-sm font-semibold text-gray-900">{payload[0].name}</p>
-        <p className="text-sm text-gray-600">{formatarMoeda(payload[0].value)}</p>
+      <div className="rounded-lg border bg-card p-3 shadow-lg text-card-foreground">
+        <p className="text-sm font-semibold">{payload[0].name}</p>
+        <p className="text-sm text-muted-foreground">{formatarMoeda(payload[0].value)}</p>
       </div>
     );
   };

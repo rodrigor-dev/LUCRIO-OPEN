@@ -988,12 +988,12 @@ export default function ReceitasPage() {
                                 />
                               </TableCell>
                               <TableCell className="py-3">
-                                <span className="font-medium">
+                                <span className="block truncate font-medium">
                                   {receita.descricao}
                                 </span>
                               </TableCell>
                               <TableCell className="py-3 text-muted-foreground">
-                                {receita.cliente?.nome || "-"}
+                                <span className="block truncate">{receita.cliente?.nome || "-"}</span>
                               </TableCell>
                               <TableCell className="py-3 text-muted-foreground">
                                 {formatarData(receita.data)}

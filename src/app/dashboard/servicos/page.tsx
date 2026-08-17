@@ -378,13 +378,13 @@ export default function ServicosPage() {
           className="space-y-4"
         >
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-blue-600 truncate">
                   {formatarMoeda(totalFiltrado)}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -392,13 +392,13 @@ export default function ServicosPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
                 <CheckCircle className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">
+                <div className="text-2xl font-bold text-emerald-600 truncate">
                   {formatarMoeda(
                     servicosFiltrados
                       .filter((s) => s.status === "concluido")
@@ -410,13 +410,13 @@ export default function ServicosPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
                 <Clock className="h-4 w-4 text-yellow-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">
+                <div className="text-2xl font-bold text-yellow-600 truncate">
                   {formatarMoeda(
                     servicosFiltrados
                       .filter((s) => s.status === "pendente")
@@ -449,7 +449,7 @@ export default function ServicosPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
+            <Card className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="hidden overflow-x-auto md:block">
                     <Table>
@@ -476,8 +476,8 @@ export default function ServicosPage() {
                             className="border-b transition-colors hover:bg-muted/50"
                           >
                             <TableCell>
-                              <div>
-                                <p className="font-medium">{servico.nome}</p>
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{servico.nome}</p>
                                 {servico.descricao && (
                                   <p className="text-xs text-muted-foreground line-clamp-1">
                                     {servico.descricao}
@@ -486,10 +486,10 @@ export default function ServicosPage() {
                               </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {servico.cliente?.nome || "—"}
+                              <span className="block truncate">{servico.cliente?.nome || "—"}</span>
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {servico.categoria || "—"}
+                              <span className="block truncate">{servico.categoria || "—"}</span>
                             </TableCell>
                             <TableCell className="text-right font-semibold text-emerald-600">
                               {formatarMoeda(servico.valor)}

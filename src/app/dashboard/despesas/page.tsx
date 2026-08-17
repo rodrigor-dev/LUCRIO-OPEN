@@ -805,7 +805,7 @@ export default function DespesasPage() {
                                   className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_COLORS[d.status] || STATUS_DOT_COLORS.pendente}`}
                                 />
                                 <div className="min-w-0">
-                                  <p className="font-medium">
+                                  <p className="font-medium truncate">
                                     {d.descricao}
                                     {d.parcela_numero &&
                                       d.parcela_total && (

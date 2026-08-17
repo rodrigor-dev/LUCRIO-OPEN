@@ -112,7 +112,7 @@ export default function BottomNav() {
             <SheetHeader>
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-5 gap-2 py-4">
+            <div className="grid grid-cols-3 gap-2 py-4">
               {moreItems.map((item) => {
                 const active = isActive(item.href);
                 return (

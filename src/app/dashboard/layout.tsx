@@ -270,7 +270,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <aside
           role="navigation"
           aria-label="Menu principal"
-          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:flex-col lg:border-r lg:border-border lg:bg-card lg:transition-all lg:duration-300 ${
+          className={`hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:flex-col lg:border-r lg:border-border lg:bg-card lg:transition-all lg:duration-300 ${
             sidebarCollapsed ? "lg:w-[68px]" : "lg:w-64"
           }`}
         >
@@ -383,7 +383,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main Area */}
         <div
-          className={`flex flex-1 flex-col transition-all duration-300 ${
+          className={`flex flex-1 flex-col min-w-0 transition-all duration-300 ${
             sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-64"
           }`}
         >
@@ -422,10 +422,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </Avatar>
                 </button>
                 </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{usuario?.nome || "Usuário"}</p>
-                  <p className="text-xs text-muted-foreground">
+              <DropdownMenuContent align="end" className="w-56 max-w-[calc(100vw-2rem)]">
+                <div className="px-2 py-1.5 min-w-0">
+                  <p className="text-sm font-medium truncate">{usuario?.nome || "Usuário"}</p>
+                  <p className="text-xs text-muted-foreground truncate">
                     {negocio?.nome || "Meu Negócio"}
                   </p>
                 </div>
@@ -453,7 +453,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             id="main-content"
             role="main"
             aria-label="Conteúdo principal"
-            className="flex-1 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
+            className="flex-1 min-w-0 p-4 pb-24 pt-4 lg:p-6 lg:pb-6 lg:pt-6"
           >
             <SubscriptionGuard isAdmin={authService.isUserAdmin(usuario)}>{children}</SubscriptionGuard>
           </main>

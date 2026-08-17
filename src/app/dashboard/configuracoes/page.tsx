@@ -683,7 +683,7 @@ export default function ConfiguracoesPage() {
                           />
                         </div>
                         <div className="text-center sm:text-left">
-                          <h3 className="text-lg font-semibold">{perfil.nome}</h3>
+                           <h3 className="text-lg font-semibold truncate">{perfil.nome}</h3>
                           <p className="text-sm text-muted-foreground">{usuario?.email}</p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Membro desde {new Date(usuario?.criado_em || "").toLocaleDateString("pt-BR")}

@@ -710,7 +710,7 @@ export default function ClientesPage() {
       ) : (
         <>
           <div className="hidden overflow-x-auto md:block">
-            <Card>
+            <Card className="overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -736,7 +736,7 @@ export default function ClientesPage() {
                         className="border-b transition-colors hover:bg-muted/50"
                       >
                         <TableCell>
-                          <div className="flex items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                               {cliente.nome.charAt(0).toUpperCase()}
                             </div>
@@ -852,7 +852,7 @@ export default function ClientesPage() {
                             {cliente.nome.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <CardTitle className="text-base">
+                            <CardTitle className="text-base truncate">
                               {cliente.nome}
                             </CardTitle>
                             <div className="mt-0.5 flex gap-1.5">
@@ -923,9 +923,9 @@ export default function ClientesPage() {
                         </div>
                       )}
                       {cliente.email && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="h-3.5 w-3.5" />
-                          {cliente.email}
+                        <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{cliente.email}</span>
                         </div>
                       )}
                       {cliente.cpf_cnpj && (

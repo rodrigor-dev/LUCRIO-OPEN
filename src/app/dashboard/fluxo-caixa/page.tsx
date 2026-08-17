@@ -245,15 +245,15 @@ export default function FluxoCaixaPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-4"
           >
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Entradas</CardTitle>
                 <ArrowUpRight className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">
+                <div className="text-2xl font-bold text-emerald-600 truncate">
                   {formatarMoeda(totalEntradas)}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -261,13 +261,13 @@ export default function FluxoCaixaPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Saídas</CardTitle>
                 <ArrowDownRight className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold text-red-600 truncate">
                   {formatarMoeda(totalSaidas)}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -275,13 +275,13 @@ export default function FluxoCaixaPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Saldo</CardTitle>
                 <DollarSign className={`h-4 w-4 ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                <div className={`text-2xl font-bold truncate ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                   {formatarMoeda(saldo)}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -289,13 +289,13 @@ export default function FluxoCaixaPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Lucro</CardTitle>
                 <TrendingUp className={`h-4 w-4 ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                <div className={`text-2xl font-bold truncate ${saldo >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                   {formatarMoeda(saldo)}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -321,7 +321,7 @@ export default function FluxoCaixaPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Filter className="h-4 w-4" />
@@ -431,7 +431,7 @@ export default function FluxoCaixaPage() {
                               <TrendingDown className="h-4 w-4" />
                             )}
                           </div>
-                          <span className="font-medium">{mov.descricao}</span>
+                           <span className="font-medium truncate block">{mov.descricao}</span>
                         </div>
                         <div className="flex items-center justify-between pt-1 border-t">
                           <span className={`text-lg font-bold ${mov.tipo === "entrada" ? "text-emerald-600" : "text-red-600"}`}>
