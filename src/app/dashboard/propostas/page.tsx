@@ -105,7 +105,7 @@ type FormState = {
 };
 
 const emptyForm: FormState = {
-  cliente_id: "",
+  cliente_id: "none",
   cliente_nome_manual: "",
   validade: "",
   desconto: 0,
@@ -246,7 +246,7 @@ export default function PropostasPage() {
   function abrirDialogEditar(proposta: Proposta) {
     setPropostaEditando(proposta);
     setForm({
-      cliente_id: proposta.cliente_id || "",
+      cliente_id: proposta.cliente_id || "none",
       cliente_nome_manual: proposta.cliente_nome_manual || "",
       validade: proposta.validade,
       desconto: proposta.desconto,
@@ -328,8 +328,14 @@ export default function PropostasPage() {
 
     const payload = {
       negocio_id: negocio.id,
-      cliente_id: form.cliente_id || null,
-      cliente_nome_manual: form.cliente_id ? null : (form.cliente_nome_manual || null),
+      cliente_id:
+        form.cliente_id && form.cliente_id !== "none"
+          ? form.cliente_id
+          : null,
+      cliente_nome_manual:
+        form.cliente_id && form.cliente_id !== "none"
+          ? null
+          : form.cliente_nome_manual || null,
       validade: form.validade || dateToLocalISO(new Date(Date.now() + 30 * 86400000)),
       subtotal,
       desconto: form.desconto,
@@ -882,7 +888,7 @@ export default function PropostasPage() {
               <div className="space-y-2">
                 <Label>Cliente (opcional)</Label>
                 <Select
-                  value={form.cliente_id}
+                  value={form.cliente_id === "none" ? undefined : form.cliente_id}
                   onValueChange={(v) => setForm({ ...form, cliente_id: v, cliente_nome_manual: "" })}
                 >
                   <SelectTrigger>
@@ -896,7 +902,7 @@ export default function PropostasPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {!form.cliente_id && (
+                {(form.cliente_id === "none" || !form.cliente_id) && (
                   <Input
                     placeholder="Nome do cliente"
                     value={form.cliente_nome_manual}

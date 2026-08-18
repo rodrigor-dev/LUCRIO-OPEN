@@ -74,7 +74,7 @@ const FORM_DEFAULTS = {
   data: dateToLocalISO(),
   status: "pendente",
   forma_pagamento: "pix",
-  cliente_id: "",
+  cliente_id: "none",
   observacoes: "",
 };
 
@@ -258,7 +258,7 @@ export default function ServicosPage() {
       data: servico.data,
       status: servico.status,
       forma_pagamento: servico.forma_pagamento || "pix",
-      cliente_id: servico.cliente_id || "",
+      cliente_id: servico.cliente_id || "none",
       observacoes: servico.observacoes || "",
     });
     setDialogAberto(true);
@@ -710,7 +710,10 @@ export default function ServicosPage() {
                   <SelectContent>
                     <SelectItem value="pix">PIX</SelectItem>
                     <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="debito">Débito</SelectItem>
+                    <SelectItem value="credito">Crédito</SelectItem>
                     <SelectItem value="cartao">Cartão</SelectItem>
+                    <SelectItem value="boleto">Boleto</SelectItem>
                     <SelectItem value="transferencia">Transferência</SelectItem>
                   </SelectContent>
                 </Select>

@@ -112,7 +112,7 @@ const FORM_DEFAULTS = {
   data_pagamento: "",
   status: "pendente",
   forma_pagamento: "pix",
-  categoria_id: "",
+  categoria_id: "none",
   fornecedor: "",
   comprovante_url: "",
   observacoes: "",
@@ -305,6 +305,11 @@ export default function DespesasPage() {
         return;
       }
 
+      if (!form.descricao.trim()) {
+        toast.error("Descrição é obrigatória");
+        return;
+      }
+
       const isCredito = form.forma_pagamento === "credito";
       const isParcelado = isCredito && form.cartao_tipo === "parcelado";
 
@@ -329,7 +334,7 @@ export default function DespesasPage() {
         cartao_tipo: isCredito ? form.cartao_tipo : null,
         cartao_parcelas:
           isCredito && form.cartao_tipo === "parcelado"
-            ? parseInt(form.cartao_parcelas, 10)
+            ? parseInt(form.cartao_parcelas, 10) || null
             : null,
         cartao_valor_total:
           isCredito && form.cartao_tipo === "parcelado"
@@ -350,6 +355,11 @@ export default function DespesasPage() {
         toast.success("Despesa atualizada com sucesso!");
       } else if (isParcelado) {
         const numParcelas = parseInt(form.cartao_parcelas, 10);
+        if (!numParcelas || numParcelas < 2) {
+          toast.error("Número de parcelas inválido (mínimo 2)");
+          setSubmitting(false);
+          return;
+        }
         const valorTotal = form.cartao_valor_total;
         const valorParcela = valorTotal / numParcelas;
         const grupoId = crypto.randomUUID();
@@ -421,7 +431,7 @@ export default function DespesasPage() {
         const { error: insertError } = await supabase.from("despesas").insert({
           id: despesaDeletada.id,
           negocio_id: despesaDeletada.negocio_id,
-          categoria_id: despesaDeletada.categoria_id,
+          categoria_id: despesaDeletada.categoria_id || null,
           descricao: despesaDeletada.descricao,
           valor: despesaDeletada.valor,
           data: despesaDeletada.data,
@@ -462,7 +472,7 @@ export default function DespesasPage() {
       data_pagamento: d.data_pagamento || "",
       status: d.status,
       forma_pagamento: d.forma_pagamento || "pix",
-      categoria_id: d.categoria_id || "",
+      categoria_id: d.categoria_id || "none",
       fornecedor: d.fornecedor || "",
       comprovante_url: d.comprovante_url || "",
       observacoes: d.observacoes || "",

@@ -98,7 +98,7 @@ type Receita = ReceitaDB & {
   cliente?: { nome: string } | null;
 };
 
-type RecorrenciaTipo = "" | "mensal" | "semanal" | "quinzenal" | "anual";
+type RecorrenciaTipo = "none" | "mensal" | "semanal" | "quinzenal" | "anual";
 
 const FORM_DEFAULTS = {
   descricao: "",
@@ -108,8 +108,8 @@ const FORM_DEFAULTS = {
   data_pagamento: "",
   status: "pendente" as string,
   forma_pagamento: "pix",
-  cliente_id: "",
-  recorrencia_tipo: "" as RecorrenciaTipo,
+  cliente_id: "none",
+  recorrencia_tipo: "none" as RecorrenciaTipo,
   observacoes: "",
 };
 
@@ -360,7 +360,10 @@ export default function ReceitasPage() {
           form.cliente_id && form.cliente_id !== "none"
             ? form.cliente_id
             : null,
-        recorrencia_tipo: form.recorrencia_tipo || null,
+        recorrencia_tipo:
+          form.recorrencia_tipo && form.recorrencia_tipo !== "none"
+            ? form.recorrencia_tipo
+            : null,
         observacoes: form.observacoes,
       };
 
@@ -624,8 +627,8 @@ export default function ReceitasPage() {
       data_pagamento: receita.data_pagamento || "",
       status: receita.status,
       forma_pagamento: receita.forma_pagamento || "pix",
-      cliente_id: receita.cliente_id || "",
-      recorrencia_tipo: (receita.recorrencia_tipo as RecorrenciaTipo) || "",
+      cliente_id: receita.cliente_id || "none",
+      recorrencia_tipo: (receita.recorrencia_tipo as RecorrenciaTipo) || "none",
       observacoes: receita.observacoes || "",
     });
     setValorInicial(receita.valor);
@@ -1369,6 +1372,7 @@ export default function ReceitasPage() {
                   <SelectContent>
                     <SelectItem value="pendente">Pendente</SelectItem>
                     <SelectItem value="pago">Pago</SelectItem>
+                    <SelectItem value="atrasado">Atrasado</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
