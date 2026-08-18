@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatarMoeda } from "@/utils";
+import { formatarMoeda, dateToLocalISO } from "@/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -89,7 +89,7 @@ export default function FluxoCaixaPage() {
 
       if (!negocio) return;
 
-      const dataInicio = obterDataInicio(periodo).toISOString().split("T")[0];
+      const dataInicio = dateToLocalISO(obterDataInicio(periodo));
 
       const [receitasRes, despesasRes] = await Promise.all([
         supabase

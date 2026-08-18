@@ -12,6 +12,7 @@ import {
   formatarInputMoeda,
   parseMoeda,
   toastComDesfazer,
+  dateToLocalISO,
 } from "@/utils";
 import {
   atualizarStatusVencidos,
@@ -102,7 +103,7 @@ type RecorrenciaTipo = "" | "mensal" | "semanal" | "quinzenal" | "anual";
 const FORM_DEFAULTS = {
   descricao: "",
   valor: "",
-  data: new Date().toISOString().split("T")[0],
+  data: dateToLocalISO(),
   data_vencimento: "",
   data_pagamento: "",
   status: "pendente" as string,
@@ -472,7 +473,7 @@ export default function ReceitasPage() {
         negocio_id: negocio.id,
         descricao: `${receita.descricao} (Cópia)`,
         valor: receita.valor,
-        data: new Date().toISOString().split("T")[0],
+  data: dateToLocalISO(),
         data_vencimento: receita.data_vencimento,
         status: "pendente",
         forma_pagamento: receita.forma_pagamento,
@@ -501,7 +502,7 @@ export default function ReceitasPage() {
         setReceitaSelecionada({
           ...receita,
           status: "pago",
-          data_pagamento: new Date().toISOString().split("T")[0],
+          data_pagamento: dateToLocalISO(),
         });
       }
     } catch {
@@ -514,7 +515,7 @@ export default function ReceitasPage() {
       await desmarcarPago("receitas", receita.id);
       toast.success("Receita desmarcada como paga");
       carregarDados();
-      const novaData = new Date().toISOString().split("T")[0];
+      const novaData = dateToLocalISO();
       const novoStatus =
         receita.data_vencimento && receita.data_vencimento < novaData
           ? "atrasado"

@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion } from "framer-motion";
-import { formatarMoeda, formatarDataHora } from "@/utils";
+import { formatarMoeda, formatarDataHora, dateToLocalISO } from "@/utils";
 import {
   obterFinanceiroAdmin,
   listarAssinaturas,
@@ -331,7 +331,7 @@ export default function AdminFinanceiroPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `financeiro-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `financeiro-${dateToLocalISO()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

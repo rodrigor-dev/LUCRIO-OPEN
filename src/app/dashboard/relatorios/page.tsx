@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatarMoeda } from "@/utils";
+import { formatarMoeda, dateToLocalISO } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -263,7 +263,7 @@ export default function RelatoriosPage() {
     });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `faturion_${tipo}_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `faturion_${tipo}_${dateToLocalISO()}.csv`;
     link.click();
   }
 
@@ -330,7 +330,7 @@ export default function RelatoriosPage() {
         doc.setFont(fontName, "normal");
         doc.text("Gerado pelo FATURION - Sistema Financeiro", 105, 285, { align: "center" });
 
-        doc.save(`faturion_relatorio_${new Date().toISOString().split("T")[0]}.pdf`);
+        doc.save(`faturion_relatorio_${dateToLocalISO()}.pdf`);
         toast.success("PDF exportado com sucesso!");
       });
     });

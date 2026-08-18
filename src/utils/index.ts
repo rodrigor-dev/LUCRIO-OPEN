@@ -163,3 +163,23 @@ export async function salvarComRetry<T>(
   }
   throw lastError;
 }
+
+/**
+ * Converte uma Date para string ISO (YYYY-MM-DD) usando horário LOCAL,
+ * evitando o bug de toISOString() que converte pra UTC e pode deslocar
+ * a data em 1 dia dependendo do timezone.
+ */
+export function dateToLocalISO(d?: Date): string {
+  const d2 = d || new Date();
+  const year = d2.getFullYear();
+  const month = String(d2.getMonth() + 1).padStart(2, "0");
+  const day = String(d2.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Mesmo que dateToLocalISO, mas aceita year, month (1-12), day.
+ */
+export function buildLocalISO(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}

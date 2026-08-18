@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
+import { dateToLocalISO } from "@/utils";
 
 const supabase = createClient();
 
 export async function atualizarStatusVencidos(negocioId: string): Promise<void> {
-  const hoje = new Date().toISOString().split("T")[0];
+  const hoje = dateToLocalISO();
 
   await supabase
     .from("receitas")
@@ -26,7 +27,7 @@ export async function marcarComoPago(
   tabela: "receitas" | "despesas",
   id: string
 ): Promise<void> {
-  const hoje = new Date().toISOString().split("T")[0];
+  const hoje = dateToLocalISO();
   const { error } = await supabase
     .from(tabela)
     .update({ status: "pago", data_pagamento: hoje })
@@ -39,7 +40,7 @@ export async function desmarcarPago(
   tabela: "receitas" | "despesas",
   id: string
 ): Promise<void> {
-  const hoje = new Date().toISOString().split("T")[0];
+  const hoje = dateToLocalISO();
 
   const { data: registro } = await supabase
     .from(tabela)
@@ -67,7 +68,7 @@ export async function alterarStatusEmMassa(
 ): Promise<void> {
   const updateData: Record<string, unknown> = { status: novoStatus };
   if (novoStatus === "pago") {
-    updateData.data_pagamento = new Date().toISOString().split("T")[0];
+    updateData.data_pagamento = dateToLocalISO();
   } else if (novoStatus === "pendente" || novoStatus === "atrasado") {
     updateData.data_pagamento = null;
   }

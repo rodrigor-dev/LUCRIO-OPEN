@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/select";
 
 import { motion } from "framer-motion";
-import { formatarDataHora } from "@/utils";
+import { formatarDataHora, dateToLocalISO } from "@/utils";
 import { listarAuditoria } from "@/services/admin.service";
 import type { Auditoria } from "@/types/admin";
 
@@ -236,7 +236,7 @@ export default function AdminAuditoriaPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `auditoria-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `auditoria-${dateToLocalISO()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatarMoeda } from "@/utils";
+import { formatarMoeda, dateToLocalISO } from "@/utils";
 import { gerarPDFOrcamento } from "@/utils/pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -330,7 +330,7 @@ export default function PropostasPage() {
       negocio_id: negocio.id,
       cliente_id: form.cliente_id || null,
       cliente_nome_manual: form.cliente_id ? null : (form.cliente_nome_manual || null),
-      validade: form.validade || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+      validade: form.validade || dateToLocalISO(new Date(Date.now() + 30 * 86400000)),
       subtotal,
       desconto: form.desconto,
       frete: form.frete,

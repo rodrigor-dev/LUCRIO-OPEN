@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
 import { FORMAS_PAGAMENTO, STATUS_LABELS, STATUS_VARIANTS } from "@/lib/constants";
 import type { Servico as ServicoDB } from "@/types/database";
-import { formatarMoeda } from "@/utils";
+import { formatarMoeda, dateToLocalISO } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,7 +71,7 @@ const FORM_DEFAULTS = {
   descricao: "",
   categoria: "",
   valor: "",
-  data: new Date().toISOString().split("T")[0],
+  data: dateToLocalISO(),
   status: "pendente",
   forma_pagamento: "pix",
   cliente_id: "",

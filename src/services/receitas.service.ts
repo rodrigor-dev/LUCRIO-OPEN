@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { dateToLocalISO } from "@/utils";
 import type { Receita } from "@/types/database";
 
 const supabase = createClient();
@@ -82,7 +83,7 @@ export async function duplicarReceita(id: string): Promise<Receita> {
     servico_id: receita.servico_id,
     descricao: `${receita.descricao} (cópia)`,
     valor: receita.valor,
-    data: new Date().toISOString().split("T")[0],
+    data: dateToLocalISO(),
     status: "pendente",
     forma_pagamento: receita.forma_pagamento,
     observacoes: receita.observacoes,

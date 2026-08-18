@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
-import { formatarTelefone, formatarCPFCNPJ, formatarMoeda } from "@/utils";
+import { formatarTelefone, formatarCPFCNPJ, formatarMoeda, dateToLocalISO, buildLocalISO } from "@/utils";
 import type { Cliente, Endereco, Receita } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,18 +95,17 @@ const emptyForm: FormState = {
 
 function calcularDataVencimentoMesAtual(diaVencimento: number): string {
   const hoje = new Date();
-  return new Date(hoje.getFullYear(), hoje.getMonth(), diaVencimento)
-    .toISOString()
-    .split("T")[0];
+  return buildLocalISO(hoje.getFullYear(), hoje.getMonth() + 1, diaVencimento);
 }
 
 function calcularProximoCiclo(dataBaseISO: string): string {
   const [ano, mes, dia] = dataBaseISO.split("-").map(Number);
-  return new Date(ano, mes - 1 + 1, dia).toISOString().split("T")[0];
+  const d = new Date(ano, mes, dia);
+  return buildLocalISO(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 
 function hojeISO(): string {
-  return new Date().toISOString().split("T")[0];
+  return dateToLocalISO();
 }
 
 /**

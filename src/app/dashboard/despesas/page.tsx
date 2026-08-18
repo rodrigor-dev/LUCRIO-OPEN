@@ -15,6 +15,7 @@ import {
   formatarInputMoeda,
   parseMoeda,
   toastComDesfazer,
+  dateToLocalISO,
 } from "@/utils";
 import {
   atualizarStatusVencidos,
@@ -106,7 +107,7 @@ type FiltroStatus = "todos" | "pago" | "pendente" | "atrasado";
 const FORM_DEFAULTS = {
   descricao: "",
   valor: 0,
-  data: new Date().toISOString().split("T")[0],
+  data: dateToLocalISO(),
   data_vencimento: "",
   data_pagamento: "",
   status: "pendente",
@@ -314,7 +315,7 @@ export default function DespesasPage() {
         data_vencimento: form.data_vencimento || null,
         data_pagamento:
           form.status === "pago"
-            ? form.data_pagamento || new Date().toISOString().split("T")[0]
+            ? form.data_pagamento || dateToLocalISO()
             : null,
         status: form.status,
         forma_pagamento: form.forma_pagamento,
@@ -361,7 +362,7 @@ export default function DespesasPage() {
             ...basePayload,
             valor: valorParcela,
             descricao: `${form.descricao} (${i + 1}/${numParcelas})`,
-            data_vencimento: dataParcela.toISOString().split("T")[0],
+            data_vencimento: dateToLocalISO(dataParcela),
             data: form.data,
             parcela_numero: i + 1,
             parcela_total: numParcelas,

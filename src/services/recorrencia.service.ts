@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { dateToLocalISO } from "@/utils";
 import type { Recorrencia } from "@/types/database";
 
 const supabase = createClient();
@@ -67,7 +68,7 @@ export async function obterRecorrencia(id: string): Promise<Recorrencia | null> 
 }
 
 export async function gerarReceitasRecorrentes(negocioId: string): Promise<number> {
-  const hoje = new Date().toISOString().split("T")[0];
+  const hoje = dateToLocalISO();
 
   const { data: recorrencias, error } = await supabase
     .from("recorrencias")
@@ -140,5 +141,5 @@ function calcularProximaData(dataAtual: string, recorrencia: string): string {
       break;
   }
 
-  return d.toISOString().split("T")[0];
+  return dateToLocalISO(d);
 }
