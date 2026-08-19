@@ -340,9 +340,9 @@ export default function ConfiguracoesPage() {
       .from("negocios")
       .update({
         nome: negocioForm.nome,
-        cnpj_cpf: negocioForm.cnpj_cpf,
-        telefone: negocioForm.telefone,
-        email: negocioForm.email,
+        cnpj_cpf: negocioForm.cnpj_cpf || null,
+        telefone: negocioForm.telefone || null,
+        email: negocioForm.email || null,
         endereco: negocioForm.endereco,
       })
       .eq("id", negocio.id);
