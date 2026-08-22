@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSupabase } from "@/hooks/use-supabase";
-import { formatarMoeda, formatarData } from "@/utils";
+import { formatarMoeda, formatarData, dateToLocalISO } from "@/utils";
 import { gerarReceitasRecorrentes } from "@/services/recorrencia.service";
 import { ChecklistOnboarding } from "@/components/checklist-onboarding";
 import {
@@ -228,19 +228,11 @@ export default function DashboardPage() {
         console.error("[dashboard] erro ao gerar receitas recorrentes:", recErro);
       }
       const agora = new Date();
-      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
-        .toISOString()
-        .split("T")[0];
-      const inicioAno = new Date(agora.getFullYear(), 0, 1)
-        .toISOString()
-        .split("T")[0];
-      const inicio12Meses = new Date(
-        agora.getFullYear(),
-        agora.getMonth() - 11,
-        1
-      )
-        .toISOString()
-        .split("T")[0];
+      const inicioMes = dateToLocalISO(new Date(agora.getFullYear(), agora.getMonth(), 1));
+      const inicioAno = dateToLocalISO(new Date(agora.getFullYear(), 0, 1));
+      const inicio12Meses = dateToLocalISO(
+        new Date(agora.getFullYear(), agora.getMonth() - 11, 1)
+      );
 
       const [
         receitasMes,

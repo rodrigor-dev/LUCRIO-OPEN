@@ -1245,7 +1245,7 @@ export default function DespesasPage() {
                   setForm({ ...form, descricao: e.target.value })
                 }
                 placeholder="Ex: Compra de materiais"
-                className="h-11 text-sm"
+                className="h-11 text-base md:text-sm"
                 required
               />
             </div>
@@ -1262,7 +1262,7 @@ export default function DespesasPage() {
                   setForm({ ...form, fornecedor: e.target.value })
                 }
                 placeholder="Nome do fornecedor"
-                className="h-11 text-sm"
+                className="h-11 text-base md:text-sm"
               />
             </div>
 
@@ -1277,7 +1277,7 @@ export default function DespesasPage() {
                   value={form.valor}
                   onChange={(v) => setForm({ ...form, valor: v })}
                   placeholder="R$ 0,00"
-                  className="h-11 text-sm"
+                  className="h-11 text-base md:text-sm"
                 />
               </div>
               <div className="space-y-1.5">
@@ -1291,7 +1291,7 @@ export default function DespesasPage() {
                   onChange={(e) =>
                     setForm({ ...form, data: e.target.value })
                   }
-                  className="h-11 text-sm"
+                  className="h-11 text-base md:text-sm"
                   required
                 />
               </div>
@@ -1311,7 +1311,7 @@ export default function DespesasPage() {
                     onChange={(e) =>
                       setForm({ ...form, data_vencimento: e.target.value })
                     }
-                    className="h-11 text-sm"
+                    className="h-11 text-base md:text-sm"
                   />
                 </div>
               )}
@@ -1327,7 +1327,7 @@ export default function DespesasPage() {
                     onChange={(e) =>
                       setForm({ ...form, data_pagamento: e.target.value })
                     }
-                    className="h-11 text-sm"
+                    className="h-11 text-base md:text-sm"
                   />
                 </div>
               )}
@@ -1340,7 +1340,7 @@ export default function DespesasPage() {
                 value={form.categoria_id}
                 onValueChange={(v) => setForm({ ...form, categoria_id: v })}
               >
-                <SelectTrigger className="h-11 text-sm">
+                <SelectTrigger className="h-11 text-base md:text-sm">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1369,7 +1369,7 @@ export default function DespesasPage() {
                     })
                   }
                 >
-                  <SelectTrigger className="h-11 text-sm">
+                  <SelectTrigger className="h-11 text-base md:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1389,7 +1389,7 @@ export default function DespesasPage() {
                   value={form.status}
                   onValueChange={(v) => setForm({ ...form, status: v })}
                 >
-                  <SelectTrigger className="h-11 text-sm">
+                  <SelectTrigger className="h-11 text-base md:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1465,7 +1465,7 @@ export default function DespesasPage() {
                               cartao_parcelas: e.target.value,
                             })
                           }
-                          className="h-11 text-sm"
+                          className="h-11 text-base md:text-sm"
                           required
                         />
                       </div>
@@ -1483,7 +1483,7 @@ export default function DespesasPage() {
                             setForm({ ...form, cartao_valor_total: v })
                           }
                           placeholder="R$ 0,00"
-                          className="h-11 text-sm"
+                          className="h-11 text-base md:text-sm"
                         />
                       </div>
                     </div>
@@ -1511,7 +1511,7 @@ export default function DespesasPage() {
                   setForm({ ...form, comprovante_url: e.target.value })
                 }
                 placeholder="URL do comprovante"
-                className="h-11 text-sm"
+                className="h-11 text-base md:text-sm"
               />
             </div>
 
@@ -1527,7 +1527,7 @@ export default function DespesasPage() {
                   setForm({ ...form, observacoes: e.target.value })
                 }
                 placeholder="Observações adicionais..."
-                className="min-h-[60px] text-sm"
+                className="min-h-[60px] text-base md:text-sm"
                 rows={2}
               />
             </div>

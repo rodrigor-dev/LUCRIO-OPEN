@@ -118,17 +118,11 @@ export default function RelatoriosPage() {
     let dataInicio: string;
 
     if (periodo === "mes") {
-      dataInicio = new Date(agora.getFullYear(), agora.getMonth(), 1)
-        .toISOString()
-        .split("T")[0];
+      dataInicio = dateToLocalISO(new Date(agora.getFullYear(), agora.getMonth(), 1));
     } else if (periodo === "trimestre") {
-      dataInicio = new Date(agora.getFullYear(), agora.getMonth() - 2, 1)
-        .toISOString()
-        .split("T")[0];
+      dataInicio = dateToLocalISO(new Date(agora.getFullYear(), agora.getMonth() - 2, 1));
     } else {
-      dataInicio = new Date(agora.getFullYear(), 0, 1)
-        .toISOString()
-        .split("T")[0];
+      dataInicio = dateToLocalISO(new Date(agora.getFullYear(), 0, 1));
     }
 
     const [receitasRes, despesasRes, clientesRes, servicosRes] =

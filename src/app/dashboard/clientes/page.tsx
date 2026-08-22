@@ -555,9 +555,7 @@ export default function ClientesPage() {
 
     try {
       const hoje = new Date();
-      const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
-        .toISOString()
-        .split("T")[0];
+      const inicioMesAtual = dateToLocalISO(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
 
       await supabase
         .from("receitas")

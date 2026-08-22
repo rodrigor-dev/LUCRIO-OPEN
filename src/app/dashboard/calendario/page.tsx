@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
 import { STATUS_LABELS } from "@/lib/constants";
 import type { Receita, Despesa } from "@/types/database";
-import { formatarMoeda } from "@/utils";
+import { formatarMoeda, dateToLocalISO } from "@/utils";
 import { marcarComoPago, desmarcarPago } from "@/services/status.service";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -125,12 +125,8 @@ export default function CalendarioPage() {
         return;
       }
 
-      const inicioMes = new Date(anoAtual, mesAtual, 1)
-        .toISOString()
-        .split("T")[0];
-      const fimMes = new Date(anoAtual, mesAtual + 1, 0)
-        .toISOString()
-        .split("T")[0];
+      const inicioMes = dateToLocalISO(new Date(anoAtual, mesAtual, 1));
+      const fimMes = dateToLocalISO(new Date(anoAtual, mesAtual + 1, 0));
 
       const [receitasRes, despesasRes] = await Promise.all([
         supabase

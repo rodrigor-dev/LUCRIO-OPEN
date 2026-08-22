@@ -1266,7 +1266,7 @@ export default function ReceitasPage() {
                 }
                 placeholder="Ex: Serviço de instalação"
                 required
-                className="h-11 w-full min-w-0 text-sm"
+                className="h-11 w-full min-w-0 text-base md:text-sm"
               />
             </div>
 
@@ -1284,7 +1284,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, valor: val > 0 ? String(val) : "" });
                   }}
                   placeholder="R$ 0,00"
-                  className="h-11 w-full min-w-0 text-sm"
+                  className="h-11 w-full min-w-0 text-base md:text-sm"
                 />
               </div>
               <div className="space-y-1.5">
@@ -1299,7 +1299,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, data: e.target.value })
                   }
                   required
-                  className="h-11 w-full min-w-0 text-sm"
+                  className="h-11 w-full min-w-0 text-base md:text-sm"
                 />
               </div>
             </div>
@@ -1317,7 +1317,7 @@ export default function ReceitasPage() {
                   onChange={(e) =>
                     setForm({ ...form, data_vencimento: e.target.value })
                   }
-                  className="h-11 w-full min-w-0 text-sm"
+                  className="h-11 w-full min-w-0 text-base md:text-sm"
                 />
               </div>
               <div className="space-y-1.5">
@@ -1331,7 +1331,7 @@ export default function ReceitasPage() {
                   onChange={(e) =>
                     setForm({ ...form, data_pagamento: e.target.value })
                   }
-                  className="h-11 w-full min-w-0 text-sm"
+                  className="h-11 w-full min-w-0 text-base md:text-sm"
                 />
               </div>
             </div>
@@ -1346,7 +1346,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, forma_pagamento: value })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-base md:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1366,7 +1366,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, status: value })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-base md:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1389,7 +1389,7 @@ export default function ReceitasPage() {
                     setForm({ ...form, cliente_id: value })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-base md:text-sm">
                     <SelectValue placeholder="Selecione um cliente" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1413,7 +1413,7 @@ export default function ReceitasPage() {
                     })
                   }
                 >
-                  <SelectTrigger className="h-11 w-full min-w-0 text-sm">
+                  <SelectTrigger className="h-11 w-full min-w-0 text-base md:text-sm">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1441,7 +1441,7 @@ export default function ReceitasPage() {
                 }
                 placeholder="Observações adicionais..."
                 rows={3}
-                className="flex w-full min-w-0 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full min-w-0 resize-none rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 

@@ -124,7 +124,8 @@ export async function gerarReceitasRecorrentes(negocioId: string): Promise<numbe
 }
 
 function calcularProximaData(dataAtual: string, recorrencia: string): string {
-  const d = new Date(dataAtual);
+  const [ano, mes, dia] = dataAtual.split("-").map(Number);
+  const d = new Date(ano, mes - 1, dia);
 
   switch (recorrencia) {
     case "mensal":
