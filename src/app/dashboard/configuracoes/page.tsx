@@ -443,8 +443,8 @@ export default function ConfiguracoesPage() {
       toast.error("Selecione uma imagem");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Imagem deve ter no máximo 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem deve ter no máximo 5MB");
       return;
     }
 
@@ -786,7 +786,7 @@ export default function ConfiguracoesPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium">Logo do Negócio</p>
-                          <p className="text-xs text-muted-foreground">PNG ou JPG (máx. 2MB)</p>
+                          <p className="text-xs text-muted-foreground">PNG ou JPG (máx. 5MB)</p>
                           <Button
                             variant="outline"
                             size="sm"

@@ -26,6 +26,7 @@ interface PDFData {
   total: number;
   condicoes_gerais?: string;
   observacoes?: string;
+  logoUrl?: string;
 }
 
 let fontLoaded = false;
@@ -53,31 +54,48 @@ export async function gerarPDFOrcamento(data: PDFData, acao: "baixar" | "imprimi
   const doc = new jsPDF();
   await loadFont(doc);
 
+  let logoHeight = 0;
+  if (data.logoUrl) {
+    try {
+      const logoRes = await fetch(data.logoUrl);
+      const logoBlob = await logoRes.blob();
+      const logoBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(logoBlob);
+      });
+      doc.addImage(logoBase64, "PNG", 14, 10, 25, 25);
+      logoHeight = 30;
+    } catch (e) {
+      console.error("Erro ao carregar logo para PDF:", e);
+    }
+  }
+
   const fontName = fontLoaded ? "Liberation" : "times";
 
   // Header
   doc.setFontSize(20);
   doc.setFont(fontName, "bold");
-  doc.text("ORÇAMENTO", 105, 20, { align: "center" });
+  doc.text("ORÇAMENTO", 105, 20 + logoHeight, { align: "center" });
 
   doc.setFontSize(10);
   doc.setFont(fontName, "normal");
-  doc.text(`Nº: ${data.numero}`, 105, 28, { align: "center" });
-  doc.text(`Data: ${data.data}`, 105, 34, { align: "center" });
-  doc.text(`Validade: ${data.validade}`, 105, 40, { align: "center" });
+  doc.text(`Nº: ${data.numero}`, 105, 28 + logoHeight, { align: "center" });
+  doc.text(`Data: ${data.data}`, 105, 34 + logoHeight, { align: "center" });
+  doc.text(`Validade: ${data.validade}`, 105, 40 + logoHeight, { align: "center" });
 
   // Company
   doc.setFontSize(11);
   doc.setFont(fontName, "bold");
-  doc.text("EMPRESA:", 14, 55);
+  doc.text("EMPRESA:", 14, 55 + logoHeight);
   doc.setFont(fontName, "normal");
-  doc.text(data.empresa || "Não informado", 14, 61);
+  doc.text(data.empresa || "Não informado", 14, 61 + logoHeight);
 
   // Client
   doc.setFont(fontName, "bold");
-  doc.text("CLIENTE:", 14, 73);
+  doc.text("CLIENTE:", 14, 73 + logoHeight);
   doc.setFont(fontName, "normal");
-  doc.text(data.cliente || "Não informado", 14, 79);
+  doc.text(data.cliente || "Não informado", 14, 79 + logoHeight);
 
   // Items table
   const tableBody = data.itens.map((item, i) => [
@@ -89,7 +107,7 @@ export async function gerarPDFOrcamento(data: PDFData, acao: "baixar" | "imprimi
   ]);
 
   (doc as any).autoTable({
-    startY: 88,
+    startY: 88 + logoHeight,
     head: [["#", "Descrição", "Qtd", "Valor Unit.", "Total"]],
     body: tableBody,
     theme: "grid",

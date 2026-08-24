@@ -53,13 +53,11 @@ import {
   FileText,
   Pencil,
   Trash2,
-  Send,
   Eye,
-  Copy,
   Download,
   Calendar,
   DollarSign,
-  Printer,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -168,6 +166,7 @@ export default function PropostasPage() {
   const [propostaPdf, setPropostaPdf] = useState<Proposta | null>(null);
   const [pdfEmpresa, setPdfEmpresa] = useState("");
   const [pdfCliente, setPdfCliente] = useState("");
+  const [negocioLogo, setNegocioLogo] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [itens, setItens] = useState<ItemProposta[]>([
     { descricao: "", quantidade: 1, valor_unitario: 0, total: 0 },
@@ -203,6 +202,8 @@ export default function PropostasPage() {
       if (!negocio) {
         return;
       }
+
+      setNegocioLogo((negocio as Record<string, unknown>).logo_url as string || null);
 
       const [propostasRes, clientesRes] = await Promise.all([
         supabase
@@ -314,11 +315,11 @@ export default function PropostasPage() {
       return;
     }
 
-    const { data: negocio } = await supabase
-      .from("negocios")
-      .select("id")
-      .eq("usuario_id", user.id)
-      .single();
+      const { data: negocio } = await supabase
+        .from("negocios")
+        .select("id, logo_url")
+        .eq("usuario_id", user.id)
+        .single();
 
     if (!negocio) {
       toast.error("Negócio não encontrado.");
@@ -525,6 +526,25 @@ export default function PropostasPage() {
     }
   }
 
+  async function compartilharProposta(proposta: Proposta) {
+    const cliente = proposta.cliente?.nome || proposta.cliente_nome_manual || "Cliente";
+    const itens = (proposta.itens_proposta || [])
+      .map((item) => `- ${item.descricao}: ${item.quantidade}x ${formatarMoeda(item.valor_unitario)} = ${formatarMoeda(item.total)}`)
+      .join("\n");
+    const texto = `ORÇAMENTO ${proposta.numero_proposta}\n\nCliente: ${cliente}\nValidade: ${new Intl.DateTimeFormat("pt-BR").format(new Date(proposta.validade))}\n\nItens:\n${itens}\n\nTotal: ${formatarMoeda(proposta.total)}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Orçamento ${proposta.numero_proposta}`, text: texto });
+      } catch {
+        // usuário cancelou
+      }
+    } else {
+      await navigator.clipboard.writeText(texto);
+      toast.success("Orçamento copiado! Cole no WhatsApp ou outro app.");
+    }
+  }
+
   return (
     <div className="space-y-6 pb-24 md:pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -643,54 +663,47 @@ export default function PropostasPage() {
                           <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="sm"
                               onClick={() => setPropostaVisualizando(proposta)}
-                              title="Visualizar"
+                              className="gap-1.5"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">Ver</span>
                             </Button>
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="sm"
+                              className="gap-1.5"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setPropostaPdf(proposta);
-                              setPdfCliente(proposta.cliente?.nome || proposta.cliente_nome_manual || "");
-                              setPdfDialogAberto(true);
+                                setPdfCliente(proposta.cliente?.nome || proposta.cliente_nome_manual || "");
+                                setPdfDialogAberto(true);
                               }}
-                              title="Exportar PDF"
                             >
-                              <FileText className="h-4 w-4" />
+                              <Download className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">PDF</span>
                             </Button>
-                            {proposta.status === "rascunho" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => abrirDialogEditar(proposta)}
-                                title="Editar"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {proposta.status === "rascunho" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => enviarProposta(proposta)}
-                                title="Enviar"
-                                className="text-blue-600 hover:text-blue-700"
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                            )}
                             <Button
                               variant="ghost"
-                              size="icon"
-                              onClick={() => duplicarProposta(proposta)}
-                              title="Duplicar"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => compartilharProposta(proposta)}
                             >
-                              <Copy className="h-4 w-4" />
+                              <Share2 className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">Compartilhar</span>
                             </Button>
+                            {proposta.status === "rascunho" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => abrirDialogEditar(proposta)}
+                                className="gap-1.5"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                <span className="hidden lg:inline">Editar</span>
+                              </Button>
+                            )}
                             <AlertDialog
                               open={propostaDeletando?.id === proposta.id}
                               onOpenChange={(open) => {
@@ -783,53 +796,47 @@ export default function PropostasPage() {
                       </div>
                       <div className="flex justify-end gap-1">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-11 w-11"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-9"
                           onClick={() => setPropostaVisualizando(proposta)}
                         >
                           <Eye className="h-3.5 w-3.5" />
+                          Ver
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-11 w-11"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-9"
                           onClick={() => {
                             setPropostaPdf(proposta);
                             setPdfCliente(proposta.cliente?.nome || proposta.cliente_nome_manual || "");
                             setPdfDialogAberto(true);
                           }}
                         >
-                          <FileText className="h-3.5 w-3.5" />
+                          <Download className="h-3.5 w-3.5" />
+                          PDF
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-9"
+                          onClick={() => compartilharProposta(proposta)}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          Enviar
                         </Button>
                         {proposta.status === "rascunho" && (
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-11 w-11"
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 h-9"
                             onClick={() => abrirDialogEditar(proposta)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
+                            Editar
                           </Button>
                         )}
-                        {proposta.status === "rascunho" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-11 w-11 text-blue-600 hover:text-blue-700"
-                            onClick={() => enviarProposta(proposta)}
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-11 w-11"
-                          onClick={() => duplicarProposta(proposta)}
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
                         <AlertDialog
                           open={propostaDeletando?.id === proposta.id}
                           onOpenChange={(open) => {
@@ -1204,8 +1211,28 @@ export default function PropostasPage() {
                 <Button variant="outline" onClick={() => setPropostaVisualizando(null)}>
                   Fechar
                 </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    setPropostaPdf(propostaVisualizando);
+                    setPdfCliente(propostaVisualizando.cliente?.nome || propostaVisualizando.cliente_nome_manual || "");
+                    setPropostaVisualizando(null);
+                    setPdfDialogAberto(true);
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => compartilharProposta(propostaVisualizando)}
+                >
+                  <Share2 className="h-4 w-4" />
+                  Compartilhar
+                </Button>
                 {propostaVisualizando.status === "rascunho" && (
-                  <>
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -1217,17 +1244,6 @@ export default function PropostasPage() {
                       <Pencil className="h-4 w-4" />
                       Editar
                     </Button>
-                    <Button
-                      onClick={() => {
-                        setPropostaVisualizando(null);
-                        enviarProposta(propostaVisualizando);
-                      }}
-                      className="gap-2"
-                    >
-                      <Send className="h-4 w-4" />
-                      Enviar
-                    </Button>
-                  </>
                 )}
               </div>
             </div>
@@ -1279,6 +1295,7 @@ export default function PropostasPage() {
                   total: propostaPdf.total,
                   condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
                   observacoes: propostaPdf.observacoes || undefined,
+                  logoUrl: negocioLogo || undefined,
                 }, "imprimir");
                 setPdfDialogAberto(false);
               }}
@@ -1307,6 +1324,7 @@ export default function PropostasPage() {
                   total: propostaPdf.total,
                   condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
                   observacoes: propostaPdf.observacoes || undefined,
+                  logoUrl: negocioLogo || undefined,
                 }, "baixar");
                 setPdfDialogAberto(false);
                 toast.success("PDF gerado com sucesso!");
