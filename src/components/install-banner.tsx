@@ -17,6 +17,7 @@ export default function InstallBanner() {
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as deferredPrompt);
+      (window as unknown as Record<string, unknown>).deferredInstallPrompt = e;
 
       const jaInstalado = window.matchMedia("(display-mode: standalone)").matches;
       if (!jaInstalado) {
@@ -62,9 +63,9 @@ export default function InstallBanner() {
               <span className="text-xl">📱</span>
             </div>
             <div>
-              <p className="text-sm font-medium">Instalar FATURION</p>
+              <p className="text-sm font-medium">Instalar na tela principal</p>
               <p className="text-xs text-muted-foreground">
-                Acesse offline pelo seu celular
+                Acesse pelo seu celular como um app
               </p>
             </div>
           </div>

@@ -61,9 +61,9 @@ const features = [
   },
   {
     icon: Smartphone,
-    title: "PWA - Acesse de Qualquer Lugar",
+    title: "Instale no Celular",
     description:
-      "Instale direto no seu celular como um app. Funciona offline e sincroniza quando você volta a ficar online.",
+      "Adicione à tela inicial do seu celular como um app. Funciona offline e sincroniza quando você volta a ficar online.",
   },
 ];
 
@@ -368,7 +368,7 @@ export function LandingContent() {
                     "Relatórios avançados",
                     "Propostas comerciais em PDF",
                     "Suporte prioritário",
-                    "Acesso PWA no celular",
+                    "Instale no celular",
                     "Atualizações gratuitas",
                   ].map((feature) => (
                     <li key={feature} className="flex items-center gap-3">

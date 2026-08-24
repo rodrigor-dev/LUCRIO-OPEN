@@ -1332,7 +1332,7 @@ export default function ConfiguracoesPage() {
                       />
                       <FaqItem
                         question="Posso usar o sistema no celular?"
-                        answer="Sim! O FATURION é um PWA e pode ser instalado no seu celular pela tela de Configurações > Ajuda."
+                        answer="Sim! Você pode instalar o FATURION na tela do seu celular pela tela de Configurações > Ajuda."
                       />
                       <FaqItem
                         question="Como gerar um orçamento?"
@@ -1394,7 +1394,7 @@ export default function ConfiguracoesPage() {
                             });
                           } else {
                             toast.info(
-                              "Para instalar, acesse o menu do navegador e selecione 'Instalar app'"
+                              "Para instalar, acesse o menu do navegador e selecione 'Adicionar à tela inicial'"
                             );
                           }
                         }}
@@ -1403,9 +1403,9 @@ export default function ConfiguracoesPage() {
                         <div className="flex items-center gap-3">
                           <Smartphone className="h-5 w-5 text-muted-foreground" />
                           <div className="text-left">
-                            <p>Tutorial PWA</p>
+                            <p>Instalar na tela principal</p>
                             <p className="text-xs text-muted-foreground font-normal">
-                              Instale o FATURION no seu dispositivo
+                              Adicione o FATURION à tela do seu celular
                             </p>
                           </div>
                         </div>
