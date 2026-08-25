@@ -185,12 +185,16 @@ async function criarPerfilSeNecessario(
   if (!existenteAssinatura) {
     let planoId: string | null = null;
 
-    const { data: planoPro } = await supabase
+    const { data: planoPro, error: planoError } = await supabase
       .from("planos")
       .select("id")
       .eq("slug", "pro")
       .eq("is_ativo", true)
       .maybeSingle();
+
+    if (planoError) {
+      console.error("[Callback] Erro ao buscar plano PRO:", planoError.message);
+    }
 
     if (planoPro) {
       planoId = planoPro.id;
@@ -220,12 +224,14 @@ async function criarPerfilSeNecessario(
 
       if (trialError && trialError.code !== "23505") {
         console.error("[Callback] Erro ao criar trial:", trialError.message);
+      } else {
+        await supabase
+          .from("usuarios")
+          .update({ trial_termina_em: trialTermina.toISOString() })
+          .eq("id", user.id);
       }
-
-      await supabase
-        .from("usuarios")
-        .update({ trial_termina_em: trialTermina.toISOString() })
-        .eq("id", user.id);
+    } else {
+      console.error("[Callback] Nenhum plano ativo encontrado! Trial NAO criado para usuario:", user.id);
     }
   }
 
