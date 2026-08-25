@@ -1,5 +1,5 @@
--- Migration 024: Trigger para criar trial automaticamente para novos usuarios
--- Garante que TODO novo usuario receba 7 dias de trial
+-- Migration 024: Trigger para criar trial automaticamente para novos usuarios (exceto admins)
+-- Garante que TODO novo usuario NAO-admin receba 7 dias de trial
 -- A funcao e SECURITY DEFINER para evitar problemas de RLS
 
 -- Funcao que cria o trial
@@ -10,6 +10,11 @@ DECLARE
     v_trial_fim TIMESTAMPTZ;
     v_ja_possui_assinatura BOOLEAN;
 BEGIN
+    -- PULAR admins - nao criam trial
+    IF NEW.is_admin = true THEN
+        RETURN NEW;
+    END IF;
+
     -- Verificar se ja possui assinatura (evitar duplicar)
     SELECT EXISTS(
         SELECT 1 FROM assinaturas WHERE usuario_id = NEW.id LIMIT 1
@@ -56,12 +61,13 @@ CREATE TRIGGER trigger_criar_trial
     AFTER INSERT ON usuarios
     FOR EACH ROW EXECUTE FUNCTION criar_trial_para_novo_usuario();
 
--- Criar assinatura para usuarios existentes que nao tem trial
+-- Criar assinatura trial para usuarios existentes que nao tem assinatura e NAO sao admins
 DO $$
 DECLARE
     v_plano_id UUID;
     v_trial_fim TIMESTAMPTZ;
     v_usuario RECORD;
+    v_count INTEGER := 0;
 BEGIN
     -- Buscar plano PRO
     SELECT id INTO v_plano_id FROM planos WHERE slug = 'pro' AND is_ativo = true LIMIT 1;
@@ -82,15 +88,19 @@ BEGIN
 
     v_trial_fim := NOW() + INTERVAL '7 days';
 
-    -- Inserir trial para usuarios que nao tem nenhuma assinatura
+    -- Inserir trial para usuarios que nao tem assinatura e NAO sao admins
     FOR v_usuario IN
         SELECT u.id FROM usuarios u
-        WHERE NOT EXISTS (SELECT 1 FROM assinaturas a WHERE a.usuario_id = u.id)
+        WHERE u.is_admin IS NOT true
+        AND NOT EXISTS (SELECT 1 FROM assinaturas a WHERE a.usuario_id = u.id)
     LOOP
         INSERT INTO assinaturas (usuario_id, plano_id, status, trial_termina, inicio_periodo, fim_periodo)
         VALUES (v_usuario.id, v_plano_id, 'trial', v_trial_fim, NOW(), v_trial_fim)
         ON CONFLICT DO NOTHING;
 
         UPDATE usuarios SET trial_termina_em = v_trial_fim WHERE id = v_usuario.id;
+        v_count := v_count + 1;
     END LOOP;
+
+    RAISE NOTICE 'Trial criado para % usuarios (admins excluidos)', v_count;
 END $$;
