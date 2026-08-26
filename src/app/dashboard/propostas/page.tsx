@@ -761,13 +761,13 @@ export default function PropostasPage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Card>
+                  <Card className="overflow-hidden">
                     <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div>
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <CardTitle className="text-base">
+                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <CardTitle className="text-base truncate">
                               {proposta.numero_proposta}
                             </CardTitle>
                           </div>
@@ -777,24 +777,24 @@ export default function PropostasPage() {
                         </div>
                         <Badge
                           variant={statusBadgeVariant[proposta.status] || "secondary"}
-                          className="text-xs"
+                          className="text-xs flex-shrink-0 whitespace-nowrap"
                         >
                           {statusLabel[proposta.status] || proposta.status}
                         </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3 pt-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" />
-                          Valido ate{" "}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground min-w-0">
+                          <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">Valido ate{" "}
                           {new Intl.DateTimeFormat("pt-BR").format(
                             new Date(proposta.validade)
-                          )}
+                          )}</span>
                         </div>
-                        <span className="font-bold">{formatarMoeda(proposta.total)}</span>
+                        <span className="font-bold whitespace-nowrap">{formatarMoeda(proposta.total)}</span>
                       </div>
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-1 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
