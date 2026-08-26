@@ -729,7 +729,7 @@ export default function ReceitasPage() {
         {carregando ? (
           <div className="space-y-4">
             {/* KPI Skeleton */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i}>
                   <CardContent className="p-3 sm:p-4">
@@ -769,7 +769,7 @@ export default function ReceitasPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+              className="grid grid-cols-2 gap-3"
             >
               <FinanceiroKpiCard label="Recebido" valor={kpis.recebido} icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-100" valorColor="text-emerald-600" />
               <FinanceiroKpiCard label="A receber" valor={kpis.aReceber} icon={Clock} iconColor="text-blue-600" iconBg="bg-blue-100" valorColor="text-blue-600" />
