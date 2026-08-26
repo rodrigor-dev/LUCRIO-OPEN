@@ -742,18 +742,18 @@ export default function DashboardPage() {
         {kpiCards.map((card) => (
           <motion.div key={card.titulo} variants={itemVariants} className="min-w-0">
             <Card className="transition-colors hover:border-gray-200">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
+              <CardContent className="p-3 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-muted-foreground truncate">
+                    <p className="text-[10px] font-medium text-muted-foreground truncate sm:text-xs">
                       {card.titulo}
                     </p>
-                    <p className={`mt-1 truncate text-xl font-bold ${card.cor}`}>
+                    <p className={`mt-1 text-base font-bold sm:text-xl ${card.cor}`}>
                       <AnimatedNumber value={card.valor} format={card.formato} />
                     </p>
                   </div>
-                  <div className={`shrink-0 rounded-full p-2.5 ${card.bg}`}>
-                    <card.icone className={`h-5 w-5 ${card.cor}`} />
+                  <div className={`shrink-0 rounded-full p-2 sm:p-2.5 ${card.bg}`}>
+                    <card.icone className={`h-4 w-4 sm:h-5 sm:w-5 ${card.cor}`} />
                   </div>
                 </div>
               </CardContent>
@@ -776,18 +776,18 @@ export default function DashboardPage() {
           {kpiCardsSecundarios.map((card) => (
             <motion.div key={card.titulo} variants={itemVariants} className="min-w-0">
               <Card className="border-dashed transition-colors hover:border-gray-300">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between">
+                <CardContent className="p-2.5 sm:p-4">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-muted-foreground truncate">
+                      <p className="text-[10px] font-medium text-muted-foreground truncate sm:text-[11px]">
                         {card.titulo}
                       </p>
-                      <p className={`mt-0.5 truncate text-base font-bold ${card.cor}`}>
+                      <p className={`mt-0.5 text-sm font-bold sm:text-base ${card.cor}`}>
                         <AnimatedNumber value={card.valor} format={card.formato} />
                       </p>
                     </div>
-                    <div className={`shrink-0 rounded-full p-2 ${card.bg}`}>
-                      <card.icone className={`h-4 w-4 ${card.cor}`} />
+                    <div className={`shrink-0 rounded-full p-1.5 sm:p-2 ${card.bg}`}>
+                      <card.icone className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${card.cor}`} />
                     </div>
                   </div>
                 </CardContent>
