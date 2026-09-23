@@ -20,6 +20,10 @@
 --    trata como "ok, já existe".
 -- ============================================================
 
+-- 0) Adicionar colunas que a migration 003 não aplicou (se não existirem)
+ALTER TABLE receitas ADD COLUMN IF NOT EXISTS recorrencia_id UUID REFERENCES recorrencias(id) ON DELETE SET NULL;
+ALTER TABLE despesas ADD COLUMN IF NOT EXISTS recorrencia_id UUID REFERENCES recorrencias(id) ON DELETE SET NULL;
+
 -- 1) Limpar duplicatas existentes (mesma recorrencia_id + mesma data)
 WITH duplicatas AS (
   SELECT
