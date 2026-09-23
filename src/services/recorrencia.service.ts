@@ -84,15 +84,6 @@ export async function gerarReceitasRecorrentes(negocioId: string): Promise<numbe
   let geradas = 0;
 
   for (const rec of recorrencias) {
-    const { data: existente } = await supabase
-      .from("receitas")
-      .select("id")
-      .eq("recorrencia_id", rec.id)
-      .eq("data", rec.proximo_gerar_em || "")
-      .limit(1);
-
-    if (existente && existente.length > 0) continue;
-
     const { error: insertError } = await supabase.from("receitas").insert({
       negocio_id: rec.negocio_id,
       cliente_id: rec.cliente_id,
@@ -106,8 +97,16 @@ export async function gerarReceitasRecorrentes(negocioId: string): Promise<numbe
       recorrencia_id: rec.id,
     });
 
-    if (!insertError) {
-      geradas++;
+    // Código 23505 = violação de índice único: outra chamada (Dashboard
+    // e Receitas às vezes disparam essa função quase ao mesmo tempo) já
+    // inseriu essa mesma receita um instante antes. Isso não é um erro
+    // de verdade — é a trava do banco funcionando como esperado, então
+    // só pulamos essa recorrência sem duplicar nada.
+    const jaExistiaPorOutraChamada = insertError?.code === "23505";
+
+    if (!insertError || jaExistiaPorOutraChamada) {
+      if (!insertError) geradas++;
+
       const proximaData = calcularProximaData(
         rec.proximo_gerar_em || hoje,
         rec.recorrencia
@@ -116,7 +115,10 @@ export async function gerarReceitasRecorrentes(negocioId: string): Promise<numbe
       await supabase
         .from("recorrencias")
         .update({ proximo_gerar_em: proximaData })
-        .eq("id", rec.id);
+        .eq("id", rec.id)
+        .eq("proximo_gerar_em", rec.proximo_gerar_em); // só avança se ninguém mais já avançou
+    } else {
+      console.error("[recorrencia] erro ao gerar receita:", insertError);
     }
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
 import { usePagination } from "@/hooks/use-pagination";
@@ -87,6 +88,7 @@ import { FinanceiroFilterBar, FinanceiroSearch } from "@/components/financeiro";
 import { FinanceiroEmptyState } from "@/components/financeiro";
 import { FinanceiroBulkBar, FinanceiroBulkBarDesktop } from "@/components/financeiro";
 
+
 type Categoria = {
   id: string;
   nome: string;
@@ -98,11 +100,14 @@ type Categoria = {
   criado_em: string;
 };
 
+
 type Despesa = DespesaDB & {
   categoria?: { nome: string; icone: string; cor: string } | null;
 };
 
+
 type FiltroStatus = "todos" | "pago" | "pendente" | "atrasado";
+
 
 const FORM_DEFAULTS = {
   descricao: "",
@@ -121,6 +126,7 @@ const FORM_DEFAULTS = {
   cartao_valor_total: 0,
 };
 
+
 export default function DespesasPage() {
   const supabase = useSupabase();
   const [despesas, setDespesas] = useState<Despesa[]>([]);
@@ -129,6 +135,10 @@ export default function DespesasPage() {
   const [busca, setBusca] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todos");
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string | null>("este_mes");
+  const hoje = new Date();
+  const [mesAtual] = useState(hoje.getMonth());
+  const [anoAtual] = useState(hoje.getFullYear());
   const [formAberto, setFormAberto] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState(false);
   const [despesaDetalhe, setDespesaDetalhe] = useState<Despesa | null>(null);
@@ -144,6 +154,7 @@ export default function DespesasPage() {
   const [processandoMassa, setProcessandoMassa] = useState(false);
   const [form, setForm] = useState(FORM_DEFAULTS);
 
+
   const {
     currentPage,
     paginatedItems,
@@ -155,6 +166,7 @@ export default function DespesasPage() {
     totalItems,
   } = usePagination<Despesa>({ itemsPerPage: 50 });
 
+
   const valorParcelaCalculado = useMemo(() => {
     if (form.forma_pagamento !== "credito" || form.cartao_tipo !== "parcelado")
       return 0;
@@ -163,6 +175,30 @@ export default function DespesasPage() {
     if (isNaN(parcelas) || parcelas <= 0) return 0;
     return total / parcelas;
   }, [form.forma_pagamento, form.cartao_tipo, form.cartao_valor_total, form.cartao_parcelas]);
+
+
+  const periodoMatch = useCallback(
+    (dataStr: string) => {
+      if (!filtroPeriodo) return true;
+      const data = new Date(dataStr);
+      if (filtroPeriodo === "este_mes") {
+        return data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
+      }
+      if (filtroPeriodo === "proximo_mes") {
+        const proximoMes = mesAtual === 11 ? 0 : mesAtual + 1;
+        const proximoAno = mesAtual === 11 ? anoAtual + 1 : anoAtual;
+        return data.getMonth() === proximoMes && data.getFullYear() === proximoAno;
+      }
+      if (filtroPeriodo === "ultimos_30_dias") {
+        const trintaDiasAtras = new Date();
+        trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+        return data >= trintaDiasAtras;
+      }
+      return true;
+    },
+    [filtroPeriodo, mesAtual, anoAtual]
+  );
+
 
   const despesasFiltradas = useMemo(() => {
     return despesas.filter((d) => {
@@ -175,13 +211,15 @@ export default function DespesasPage() {
         filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
       const statusMatch =
         filtroStatus === "todos" || d.status === filtroStatus;
-      return buscaMatch && categoriaMatch && statusMatch;
+      return buscaMatch && categoriaMatch && statusMatch && periodoMatch(d.data);
     });
-  }, [despesas, busca, filtroCategoria, filtroStatus]);
+  }, [despesas, busca, filtroCategoria, filtroStatus, periodoMatch]);
+
 
   useEffect(() => {
     setPageItems(despesasFiltradas);
   }, [despesasFiltradas, setPageItems]);
+
 
   const contarPorStatus = useCallback(
     (status: FiltroStatus) => {
@@ -193,13 +231,14 @@ export default function DespesasPage() {
           d.fornecedor?.toLowerCase().includes(busca.toLowerCase());
         const categoriaMatch =
           filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
-        return buscaMatch && categoriaMatch;
+        return buscaMatch && categoriaMatch && periodoMatch(d.data);
       });
       if (status === "todos") return base.length;
       return base.filter((d) => d.status === status).length;
     },
-    [despesas, busca, filtroCategoria]
+    [despesas, busca, filtroCategoria, periodoMatch]
   );
+
 
   const totais = useMemo(() => {
     const filtered = despesas.filter((d) => {
@@ -210,7 +249,7 @@ export default function DespesasPage() {
         d.fornecedor?.toLowerCase().includes(busca.toLowerCase());
       const categoriaMatch =
         filtroCategoria === "todas" || d.categoria_id === filtroCategoria;
-      return buscaMatch && categoriaMatch;
+      return buscaMatch && categoriaMatch && periodoMatch(d.data);
     });
     return {
       total: filtered.reduce((a, d) => a + d.valor, 0),
@@ -228,7 +267,8 @@ export default function DespesasPage() {
       aPagarQtd: filtered.filter((d) => d.status === "pendente").length,
       atrasadoQtd: filtered.filter((d) => d.status === "atrasado").length,
     };
-  }, [despesas, busca, filtroCategoria]);
+  }, [despesas, busca, filtroCategoria, periodoMatch]);
+
 
   const carregarDados = useCallback(async () => {
     try {
@@ -243,11 +283,13 @@ export default function DespesasPage() {
         .single();
       if (!negocio) return;
 
+
       try {
         await atualizarStatusVencidos(negocio.id);
       } catch (err) {
         console.error("[Despesas] Erro ao atualizar status vencidos:", err);
       }
+
 
       const [despesasRes, categoriasRes] = await Promise.all([
         supabase
@@ -264,10 +306,12 @@ export default function DespesasPage() {
           .order("nome"),
       ]);
 
+
       if (despesasRes.error) {
         toast.error("Erro ao carregar despesas");
         return;
       }
+
 
       setDespesas(despesasRes.data || []);
       setCategorias((categoriasRes.data || []) as Categoria[]);
@@ -278,9 +322,11 @@ export default function DespesasPage() {
     }
   }, [supabase]);
 
+
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -300,18 +346,22 @@ export default function DespesasPage() {
         .single();
       if (!negocio) return;
 
+
       if (form.valor <= 0) {
         toast.error("Valor inválido");
         return;
       }
+
 
       if (!form.descricao.trim()) {
         toast.error("Descrição é obrigatória");
         return;
       }
 
+
       const isCredito = form.forma_pagamento === "credito";
       const isParcelado = isCredito && form.cartao_tipo === "parcelado";
+
 
       const basePayload = {
         descricao: form.descricao,
@@ -341,6 +391,7 @@ export default function DespesasPage() {
             ? form.cartao_valor_total
             : null,
       };
+
 
       if (editando) {
         const { error } = await supabase
@@ -401,6 +452,7 @@ export default function DespesasPage() {
         toast.success("Despesa criada com sucesso!");
       }
 
+
       setFormAberto(false);
       setEditando(null);
       setForm(FORM_DEFAULTS);
@@ -412,6 +464,7 @@ export default function DespesasPage() {
       setSubmitting(false);
     }
   }
+
 
   async function handleExcluir() {
     if (!excluindo) return;
@@ -462,6 +515,7 @@ export default function DespesasPage() {
     }
   }
 
+
   function abrirEdicao(d: Despesa) {
     setEditando(d);
     setForm({
@@ -484,16 +538,19 @@ export default function DespesasPage() {
     setFormAberto(true);
   }
 
+
   function abrirNovo() {
     setEditando(null);
     setForm(FORM_DEFAULTS);
     setFormAberto(true);
   }
 
+
   function abrirDetalhe(d: Despesa) {
     setDespesaDetalhe(d);
     setDetalheAberto(true);
   }
+
 
   function toggleSelecionado(id: string) {
     setSelecionados((prev) => {
@@ -505,6 +562,7 @@ export default function DespesasPage() {
     });
   }
 
+
   function toggleTodos() {
     if (selecionados.size === paginatedItems.length) {
       setSelecionados(new Set());
@@ -514,14 +572,26 @@ export default function DespesasPage() {
     }
   }
 
+
+  function handleFiltraPeriodo(periodo: string) {
+    if (filtroPeriodo === periodo) {
+      setFiltroPeriodo(null);
+    } else {
+      setFiltroPeriodo(periodo);
+    }
+  }
+
+
   function iniciarModoSelecao() {
     setModoSelecao(true);
   }
+
 
   function cancelarModoSelecao() {
     setModoSelecao(false);
     setSelecionados(new Set());
   }
+
 
   async function executarAcaoEmMassa() {
     if (selecionados.size === 0 || !acaoEmMassa) return;
@@ -547,12 +617,14 @@ export default function DespesasPage() {
     }
   }
 
+
   const kpiCards = [
     { label: "Total do mês", valor: totais.total, qtd: totais.totalQtd, icon: Wallet, iconColor: "text-slate-600", iconBg: "bg-slate-100" },
     { label: "A Pagar", valor: totais.aPagar, qtd: totais.aPagarQtd, icon: AlertTriangle, iconColor: "text-amber-600", iconBg: "bg-amber-100" },
     { label: "Pago", valor: totais.pago, qtd: totais.pagoQtd, icon: CheckCheck, iconColor: "text-blue-600", iconBg: "bg-blue-100" },
     { label: "Atrasado", valor: totais.atrasado, qtd: totais.atrasadoQtd, icon: Clock, iconColor: "text-red-600", iconBg: "bg-red-100" },
   ];
+
 
   return (
     <div className="space-y-4 pb-[max(7rem,env(safe-area-inset-bottom)+4rem)] md:pb-6">
@@ -604,6 +676,7 @@ export default function DespesasPage() {
           </div>
         </div>
       </div>
+
 
       <div className="space-y-4">
         {/* Loading Skeleton */}
@@ -662,6 +735,7 @@ export default function DespesasPage() {
               ))}
             </motion.div>
 
+
             {/* Search */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -671,6 +745,7 @@ export default function DespesasPage() {
             >
               <FinanceiroSearch value={busca} onChange={setBusca} placeholder="Buscar despesa..." />
             </motion.div>
+
 
             {/* Filter Bar - Status Pills + Category */}
             <motion.div
@@ -687,9 +762,19 @@ export default function DespesasPage() {
                       { label: "Pagos", value: "pago", count: contarPorStatus("pago"), color: "border-emerald-600 bg-emerald-600 text-white" },
                       { label: "Pendentes", value: "pendente", count: contarPorStatus("pendente"), color: "border-yellow-500 bg-yellow-500 text-white" },
                       { label: "Atrasados", value: "atrasado", count: contarPorStatus("atrasado"), color: "border-red-600 bg-red-600 text-white" },
+                      { label: "---", value: "__divider__" },
+                      { label: "Este mês", value: "este_mes" },
+                      { label: "Próximo mês", value: "proximo_mes" },
+                      { label: "Últimos 30 dias", value: "ultimos_30_dias" },
                     ]}
-                    activeValue={filtroStatus}
-                    onSelect={(v) => setFiltroStatus(v as FiltroStatus)}
+                    activeValue={filtroStatus !== "todos" ? filtroStatus : (filtroPeriodo || "todos")}
+                    onSelect={(v) => {
+                      if (["este_mes", "proximo_mes", "ultimos_30_dias"].includes(v)) {
+                        handleFiltraPeriodo(v);
+                      } else {
+                        setFiltroStatus(v as FiltroStatus);
+                      }
+                    }}
                   />
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -714,6 +799,7 @@ export default function DespesasPage() {
               </div>
             </motion.div>
 
+
             {/* Bulk Action Bar - Desktop only */}
             <FinanceiroBulkBarDesktop
               count={selecionados.size}
@@ -724,6 +810,7 @@ export default function DespesasPage() {
               processing={processandoMassa}
             />
 
+
             {/* Results count */}
             {despesasFiltradas.length > 0 && (
               <div className="mt-3 flex items-center justify-end">
@@ -732,6 +819,7 @@ export default function DespesasPage() {
                 </span>
               </div>
             )}
+
 
             {/* Empty State */}
             {despesasFiltradas.length === 0 && (
@@ -746,10 +834,11 @@ export default function DespesasPage() {
                   description="Adicione sua primeira despesa"
                   actionLabel="Adicionar Despesa"
                   onAction={abrirNovo}
-                  hasFilters={!!busca || filtroCategoria !== "todas" || filtroStatus !== "todos"}
+                  hasFilters={!!busca || filtroCategoria !== "todas" || filtroStatus !== "todos" || (!!filtroPeriodo && filtroPeriodo !== "este_mes")}
                 />
               </motion.div>
             )}
+
 
             {/* Desktop Table */}
             {despesasFiltradas.length > 0 && (
@@ -898,6 +987,7 @@ export default function DespesasPage() {
               </motion.div>
             )}
 
+
             {/* Mobile Cards */}
             {despesasFiltradas.length > 0 && (
               <motion.div
@@ -942,6 +1032,7 @@ export default function DespesasPage() {
                         </span>
                       </div>
 
+
                       {/* Row 2: date + payment + status */}
                       <div className="mt-1.5 flex items-center gap-2 pl-[18px] text-xs text-muted-foreground">
                         <span>
@@ -956,6 +1047,7 @@ export default function DespesasPage() {
                         <span className="text-muted-foreground/40">•</span>
                         <FinanceiroStatusBadge status={d.status} />
                       </div>
+
 
                       {/* Row 3: category + checkbox */}
                       <div className="mt-2 flex items-center gap-2 pl-[18px]">
@@ -1019,6 +1111,7 @@ export default function DespesasPage() {
         )}
       </div>
 
+
       {/* Mobile FAB */}
       {!carregando && despesasFiltradas.length > 0 && !modoSelecao && (
         <motion.div
@@ -1041,6 +1134,7 @@ export default function DespesasPage() {
         </motion.div>
       )}
 
+
       {/* Mobile Bottom Bulk Action Bar */}
       <FinanceiroBulkBar
         count={selecionados.size}
@@ -1050,6 +1144,7 @@ export default function DespesasPage() {
         onDelete={() => setAcaoEmMassa("excluir")}
         processing={processandoMassa}
       />
+
 
       {/* Detail Drawer */}
       <Sheet open={detalheAberto} onOpenChange={setDetalheAberto}>
@@ -1068,6 +1163,7 @@ export default function DespesasPage() {
                 </SheetDescription>
               </SheetHeader>
 
+
               <div className="space-y-4 py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1082,6 +1178,7 @@ export default function DespesasPage() {
                     {formatarMoeda(despesaDetalhe.valor)}
                   </span>
                 </div>
+
 
                 <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="rounded-xl bg-muted/50 p-2.5 md:p-3">
@@ -1181,6 +1278,7 @@ export default function DespesasPage() {
                     )}
                 </div>
 
+
                 {despesaDetalhe.observacoes && (
                   <div>
                     <p className="mb-1 text-[11px] font-medium text-muted-foreground">
@@ -1191,6 +1289,7 @@ export default function DespesasPage() {
                     </p>
                   </div>
                 )}
+
 
                 <div className="flex gap-2 pb-4 pt-2">
                   <Button
@@ -1218,6 +1317,7 @@ export default function DespesasPage() {
           )}
         </SheetContent>
       </Sheet>
+
 
       {/* Create / Edit Dialog */}
       <Dialog open={formAberto} onOpenChange={setFormAberto}>
@@ -1250,6 +1350,7 @@ export default function DespesasPage() {
               />
             </div>
 
+
             {/* Fornecedor */}
             <div className="space-y-1.5">
               <Label htmlFor="fornecedor" className="text-xs">
@@ -1265,6 +1366,7 @@ export default function DespesasPage() {
                 className="h-11 text-base md:text-sm"
               />
             </div>
+
 
             {/* Valor + Data */}
             <div className="grid grid-cols-2 gap-3">
@@ -1296,6 +1398,7 @@ export default function DespesasPage() {
                 />
               </div>
             </div>
+
 
             {/* Vencimento (só aparece se não foi pago) + Pagamento */}
             <div className="grid grid-cols-2 gap-3">
@@ -1333,6 +1436,7 @@ export default function DespesasPage() {
               )}
             </div>
 
+
             {/* Categoria */}
             <div className="space-y-1.5">
               <Label className="text-xs">Categoria</Label>
@@ -1353,6 +1457,7 @@ export default function DespesasPage() {
                 </SelectContent>
               </Select>
             </div>
+
 
             {/* Forma de pagamento + Status */}
             <div className="grid grid-cols-2 gap-3">
@@ -1402,6 +1507,7 @@ export default function DespesasPage() {
               </div>
             </div>
 
+
             {/* Credit Card Section */}
             {form.forma_pagamento === "credito" && (
               <motion.div
@@ -1442,6 +1548,7 @@ export default function DespesasPage() {
                     Parcelado
                   </button>
                 </div>
+
 
                 {form.cartao_tipo === "parcelado" && (
                   <div className="space-y-3">
@@ -1499,6 +1606,7 @@ export default function DespesasPage() {
               </motion.div>
             )}
 
+
             {/* Comprovante URL */}
             <div className="space-y-1.5">
               <Label htmlFor="comprovante_url" className="text-xs">
@@ -1514,6 +1622,7 @@ export default function DespesasPage() {
                 className="h-11 text-base md:text-sm"
               />
             </div>
+
 
             {/* Observações */}
             <div className="space-y-1.5">
@@ -1531,6 +1640,7 @@ export default function DespesasPage() {
                 rows={2}
               />
             </div>
+
 
             <DialogFooter className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
               <DialogClose asChild>
@@ -1558,6 +1668,7 @@ export default function DespesasPage() {
         </DialogContent>
       </Dialog>
 
+
       {/* Delete Confirmation */}
       <AlertDialog open={!!excluindo} onOpenChange={(o) => !o && setExcluindo(null)}>
         <AlertDialogContent className="max-w-sm">
@@ -1582,6 +1693,7 @@ export default function DespesasPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
 
       {/* Bulk Action Confirmation */}
       <AlertDialog

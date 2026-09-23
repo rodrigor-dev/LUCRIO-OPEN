@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
 import { usePagination } from "@/hooks/use-pagination";
@@ -120,7 +119,7 @@ export default function ReceitasPage() {
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
-  const [filtroPeriodo, setFiltroPeriodo] = useState<string | null>(null);
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string | null>("este_mes");
 
   const [dialogAberto, setDialogAberto] = useState(false);
   const [editando, setEditando] = useState<Receita | null>(null);
@@ -654,7 +653,6 @@ export default function ReceitasPage() {
 
   function handleFiltraStatus(status: string) {
     setFiltroStatus(status);
-    setFiltroPeriodo(null);
   }
 
   function handleFiltraPeriodo(periodo: string) {
@@ -805,7 +803,7 @@ export default function ReceitasPage() {
                   { label: "Próximo mês", value: "proximo_mes" },
                   { label: "Últimos 30 dias", value: "ultimos_30_dias" },
                 ]}
-                activeValue={filtroPeriodo || filtroStatus}
+                activeValue={filtroStatus !== "todos" ? filtroStatus : (filtroPeriodo || "todos")}
                 onSelect={(value) => {
                   if (["este_mes", "proximo_mes", "ultimos_30_dias"].includes(value)) {
                     handleFiltraPeriodo(value);
@@ -856,7 +854,7 @@ export default function ReceitasPage() {
                   description="Adicione sua primeira receita"
                   actionLabel="Adicionar Receita"
                   onAction={abrirNovo}
-                  hasFilters={!!busca || filtroStatus !== "todos" || !!filtroPeriodo}
+                  hasFilters={!!busca || filtroStatus !== "todos" || (!!filtroPeriodo && filtroPeriodo !== "este_mes")}
                 />
               </motion.div>
             ) : (
