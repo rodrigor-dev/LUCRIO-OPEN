@@ -660,7 +660,6 @@ export default function ReceitasPage() {
       setFiltroPeriodo(null);
     } else {
       setFiltroPeriodo(periodo);
-      setFiltroStatus("todos");
     }
   }
 
