@@ -4,6 +4,11 @@ import type { Recorrencia } from "@/types/database";
 
 const supabase = createClient();
 
+// Lock em memória: evita que gerarReceitasRecorrentes/gerarDespesasRecorrentes
+// execute duas vezes ao mesmo tempo para o mesmo negócio (Dashboard + Financeiro
+// disparam a função ao carregar, causando condição de corrida).
+const locksEmExecucao = new Map<string, Promise<unknown>>();
+
 export async function listarRecorrencias(
   negocioId: string,
   tipo?: "receita" | "despesa"
@@ -68,6 +73,23 @@ export async function obterRecorrencia(id: string): Promise<Recorrencia | null> 
 }
 
 export async function gerarReceitasRecorrentes(negocioId: string): Promise<number> {
+  // Se já existe uma execução em andamento para este negócio, retorna o
+  // resultado dela em vez de iniciar outra — impede a condição de corrida
+  // no nível da aplicação (Dashboard e Financeiro disparam ao carregar).
+  const execucaoAnterior = locksEmExecucao.get(`receita_${negocioId}`);
+  if (execucaoAnterior) return execucaoAnterior as Promise<number>;
+
+  const promessa = _gerarReceitasRecorrentesInterno(negocioId);
+  locksEmExecucao.set(`receita_${negocioId}`, promessa);
+
+  try {
+    return await promessa;
+  } finally {
+    locksEmExecucao.delete(`receita_${negocioId}`);
+  }
+}
+
+async function _gerarReceitasRecorrentesInterno(negocioId: string): Promise<number> {
   const hoje = dateToLocalISO();
 
   const { data: recorrencias, error } = await supabase
@@ -97,11 +119,6 @@ export async function gerarReceitasRecorrentes(negocioId: string): Promise<numbe
       recorrencia_id: rec.id,
     });
 
-    // Código 23505 = violação de índice único: outra chamada (Dashboard
-    // e Receitas às vezes disparam essa função quase ao mesmo tempo) já
-    // inseriu essa mesma receita um instante antes. Isso não é um erro
-    // de verdade — é a trava do banco funcionando como esperado, então
-    // só pulamos essa recorrência sem duplicar nada.
     const jaExistiaPorOutraChamada = insertError?.code === "23505";
 
     if (!insertError || jaExistiaPorOutraChamada) {
@@ -116,7 +133,7 @@ export async function gerarReceitasRecorrentes(negocioId: string): Promise<numbe
         .from("recorrencias")
         .update({ proximo_gerar_em: proximaData })
         .eq("id", rec.id)
-        .eq("proximo_gerar_em", rec.proximo_gerar_em); // só avança se ninguém mais já avançou
+        .eq("proximo_gerar_em", rec.proximo_gerar_em);
     } else {
       console.error("[recorrencia] erro ao gerar receita:", insertError);
     }
