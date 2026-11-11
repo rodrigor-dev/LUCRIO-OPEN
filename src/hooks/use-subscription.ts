@@ -31,7 +31,7 @@ export function useSubscription() {
         .from("assinaturas")
         .select("*, plano:planos(nome)")
         .eq("usuario_id", user.id)
-        .in("status", ["trial", "ativo", "cancelado"])
+        .in("status", ["trial", "ativo", "cancelado", "atrasado"])
         .order("criado_em", { ascending: false })
         .limit(1)
         .single();
@@ -56,7 +56,9 @@ export function useSubscription() {
       const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
       const isExpired = fimPeriodo < now;
 
-      const contaComoValida = data.status === "ativo" || data.status === "cancelado";
+      // "cancelado" e "atrasado" mantêm o acesso até o fim do período já pago.
+      const contaComoValida =
+        data.status === "ativo" || data.status === "cancelado" || data.status === "atrasado";
 
       setAssinatura({
         is_valid: !isExpired && contaComoValida,

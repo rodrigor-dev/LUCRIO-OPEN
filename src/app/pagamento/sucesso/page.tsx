@@ -1,115 +1,100 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
-import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+import { CheckCircle, ArrowRight, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 
-function PagamentoSucessoInner() {
+/**
+ * Página para onde a Cakto redireciona depois do pagamento.
+ *
+ * Ela NÃO libera nada sozinha: quem libera é o webhook da Cakto, no
+ * servidor. Aqui só acompanhamos a assinatura até ela ficar ativa —
+ * com Pix/cartão costuma levar poucos segundos; boleto pode levar dias.
+ */
+const INTERVALO_MS = 3000;
+const TEMPO_MAXIMO_MS = 90_000;
+
+type Estado = "verificando" | "ativo" | "aguardando";
+
+export default function PagamentoSucesso() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [processando, setProcessando] = useState(true);
-  const [sucesso, setSucesso] = useState(false);
+  const [estado, setEstado] = useState<Estado>("verificando");
+  const inicio = useRef(Date.now());
 
-  useEffect(() => {
-    const pagamentoId = searchParams?.get("collection_id") ?? searchParams?.get("payment_id") ?? null;
-    const status = searchParams?.get("status") ?? null;
+  const verificar = useCallback(async (): Promise<boolean> => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    async function processarPagamento() {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-          router.push("/login");
-          return;
-        }
-
-        if (status === "approved" || status === "authorized") {
-          const planoParam = searchParams?.get("plano") ?? "mensal";
-          const diasPlano = planoParam === "anual" ? 365 : 30;
-
-          const { data: planoPro } = await supabase
-            .from("planos")
-            .select("id")
-            .eq("slug", "pro")
-            .eq("is_ativo", true)
-            .single();
-
-          if (!planoPro) {
-            console.error("Plano PRO nao encontrado");
-            setSucesso(false);
-            return;
-          }
-
-          const { data: existente } = await supabase
-            .from("assinaturas")
-            .select("id, status")
-            .eq("usuario_id", user.id)
-            .in("status", ["ativo", "trial", "cancelado"])
-            .order("criado_em", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (existente?.status === "ativo") {
-            setSucesso(true);
-            return;
-          }
-
-          const now = new Date();
-          const fim = new Date(now.getTime() + diasPlano * 24 * 60 * 60 * 1000);
-
-          if (existente) {
-            await supabase
-              .from("assinaturas")
-              .update({
-                status: "ativo",
-                plano_id: planoPro.id,
-                intent_pagamento_id: pagamentoId,
-                trial_termina: now.toISOString(),
-                ultimo_pagamento: now.toISOString(),
-                proximo_pagamento: fim.toISOString(),
-                fim_periodo: fim.toISOString(),
-              })
-              .eq("id", existente.id);
-          } else {
-            await supabase.from("assinaturas").insert({
-              usuario_id: user.id,
-              plano_id: planoPro.id,
-              status: "ativo",
-              intent_pagamento_id: pagamentoId,
-              ultimo_pagamento: now.toISOString(),
-              proximo_pagamento: fim.toISOString(),
-              fim_periodo: fim.toISOString(),
-            });
-          }
-
-          setSucesso(true);
-        } else {
-          setSucesso(false);
-        }
-      } catch (error) {
-        console.error("Erro ao processar pagamento:", error);
-        setSucesso(false);
-      } finally {
-        setProcessando(false);
-      }
+    if (!user) {
+      router.push("/login?redirect=/pagamento/sucesso");
+      return true;
     }
 
-    processarPagamento();
-  }, [searchParams, router]);
+    const { data } = await supabase
+      .from("assinaturas")
+      .select("status, fim_periodo, ultimo_pagamento")
+      .eq("usuario_id", user.id)
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (processando) {
+    const ativo =
+      data?.status === "ativo" &&
+      !!data.fim_periodo &&
+      new Date(data.fim_periodo).getTime() > Date.now();
+
+    if (ativo) {
+      setEstado("ativo");
+      return true;
+    }
+    return false;
+  }, [router]);
+
+  useEffect(() => {
+    let cancelado = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    async function loop() {
+      if (cancelado) return;
+      let terminou = false;
+      try {
+        terminou = await verificar();
+      } catch (erro) {
+        console.error("[pagamento/sucesso] erro ao verificar assinatura:", erro);
+      }
+      if (cancelado || terminou) return;
+
+      if (Date.now() - inicio.current > TEMPO_MAXIMO_MS) {
+        setEstado("aguardando");
+        return;
+      }
+      timer = setTimeout(loop, INTERVALO_MS);
+    }
+
+    loop();
+    return () => {
+      cancelado = true;
+      clearTimeout(timer);
+    };
+  }, [verificar]);
+
+  if (estado === "verificando") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10">
         <Card className="w-full max-w-md mx-4">
-          <CardContent className="pt-6 flex flex-col items-center gap-4">
+          <CardContent className="pt-6 flex flex-col items-center gap-4 text-center">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
-            <p className="text-muted-foreground">Processando seu pagamento...</p>
+            <p className="font-medium">Confirmando seu pagamento...</p>
+            <p className="text-sm text-muted-foreground">
+              Isso costuma levar poucos segundos. Pode deixar esta página aberta.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -125,7 +110,7 @@ function PagamentoSucessoInner() {
       >
         <Card className="w-full max-w-md mx-4">
           <CardContent className="pt-6 flex flex-col items-center gap-4">
-            {sucesso ? (
+            {estado === "ativo" ? (
               <>
                 <motion.div
                   initial={{ scale: 0 }}
@@ -147,36 +132,37 @@ function PagamentoSucessoInner() {
               </>
             ) : (
               <>
-                <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <span className="text-3xl">⚠️</span>
+                <div className="h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-amber-600" />
                 </div>
-                <h1 className="text-2xl font-bold">Pagamento não confirmado</h1>
+                <h1 className="text-2xl font-bold text-center">Aguardando confirmação</h1>
                 <p className="text-muted-foreground text-center">
-                  Seu pagamento ainda está sendo processado ou não foi aprovado.
-                  Verifique seu email para mais detalhes.
+                  Ainda não recebemos a confirmação do pagamento. Se você pagou por Pix ou
+                  cartão, deve liberar em instantes; boleto pode levar até 3 dias úteis.
+                  Assim que for confirmado, seu acesso é liberado automaticamente.
                 </p>
-                <Link href="/dashboard/configuracoes">
-                  <Button variant="outline" className="mt-4">
-                    Voltar às Configurações
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      inicio.current = Date.now();
+                      setEstado("verificando");
+                      verificar().then((ok) => {
+                        if (!ok) setEstado("aguardando");
+                      });
+                    }}
+                  >
+                    Verificar de novo
                   </Button>
-                </Link>
+                  <Link href="/dashboard">
+                    <Button>Ir para o Dashboard</Button>
+                  </Link>
+                </div>
               </>
             )}
           </CardContent>
         </Card>
       </motion.div>
     </div>
-  );
-}
-
-export default function PagamentoSucesso() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    }>
-      <PagamentoSucessoInner />
-    </Suspense>
   );
 }

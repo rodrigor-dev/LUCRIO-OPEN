@@ -42,6 +42,10 @@ export async function updateSession(request: NextRequest) {
   const rotasPublicasComPrefixo = [
     "/auth/callback",
     "/auth/confirm",
+    // Webhooks são chamados pelo gateway de pagamento, sem login. Antes
+    // eram redirecionados para /login e o pagamento nunca liberava o acesso.
+    // A segurança deles é a assinatura HMAC verificada na própria rota.
+    "/api/webhooks/",
   ];
 
   const ehRotaExataPublica = rotasPublicasExatas.includes(pathname);
