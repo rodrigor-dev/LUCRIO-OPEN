@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSupabase } from "@/hooks/use-supabase";
-import { formatarTelefone, formatarCPFCNPJ, formatarMoeda, dateToLocalISO, buildLocalISO } from "@/utils";
+import { formatarTelefone, formatarCPFCNPJ, formatarMoeda, dateToLocalISO } from "@/utils";
 import type { Cliente, Endereco, Receita } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,11 +59,7 @@ import {
   Power,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  criarRecorrencia,
-  atualizarRecorrencia,
-  listarRecorrencias,
-} from "@/services/recorrencia.service";
+import { sincronizarRecorrenciaCliente } from "@/services/recorrencia.service";
 
 type FormState = {
   nome: string;
@@ -93,94 +89,6 @@ const emptyForm: FormState = {
   observacoes: "",
 };
 
-function calcularDataVencimentoMesAtual(diaVencimento: number): string {
-  const hoje = new Date();
-  return buildLocalISO(hoje.getFullYear(), hoje.getMonth() + 1, diaVencimento);
-}
-
-function calcularProximoCiclo(dataBaseISO: string): string {
-  const [ano, mes, dia] = dataBaseISO.split("-").map(Number);
-  const d = new Date(ano, mes, dia);
-  return buildLocalISO(d.getFullYear(), d.getMonth() + 1, d.getDate());
-}
-
-function hojeISO(): string {
-  return dateToLocalISO();
-}
-
-/**
- * Garante que um cliente Fixo ativo tenha uma recorrência mensal de receita,
- * criando a primeira cobrança imediatamente NO MÊS ATUAL (para já contar nos
- * totais do mês em Receitas/Dashboard, mesmo que o dia de vencimento já
- * tenha passado — nesse caso ela some como "atrasado"). Os meses seguintes
- * ficam a cargo do motor de recorrência. Se o cliente deixar de ser
- * Fixo/ativo, a recorrência é pausada (não apaga o histórico).
- */
-async function sincronizarRecorrenciaCliente(params: {
-  supabase: ReturnType<typeof useSupabase>;
-  negocioId: string;
-  clienteId: string;
-  clienteNome: string;
-  tipo: "fixo" | "esporadico";
-  isAtivo: boolean;
-  valorMensal: number | null;
-  diaVencimento: number | null;
-}) {
-  const { supabase, negocioId, clienteId, clienteNome, tipo, isAtivo, valorMensal, diaVencimento } = params;
-
-  const recorrenciasExistentes = await listarRecorrencias(negocioId, "receita");
-  const recorrenciaExistente = recorrenciasExistentes.find((r) => r.cliente_id === clienteId);
-
-  const deveEstarAtiva = tipo === "fixo" && isAtivo && !!valorMensal && valorMensal > 0;
-
-  if (!deveEstarAtiva) {
-    if (recorrenciaExistente && recorrenciaExistente.is_ativa) {
-      await atualizarRecorrencia(recorrenciaExistente.id, { is_ativa: false });
-    }
-    return;
-  }
-
-  const dataCobrancaMesAtual = diaVencimento
-    ? calcularDataVencimentoMesAtual(diaVencimento)
-    : hojeISO();
-  const proximoCiclo = calcularProximoCiclo(dataCobrancaMesAtual);
-
-  if (recorrenciaExistente) {
-    await atualizarRecorrencia(recorrenciaExistente.id, {
-      valor: valorMensal!,
-      descricao: `Mensalidade - ${clienteNome}`,
-      dia_vencimento: diaVencimento || undefined,
-      is_ativa: true,
-      ...(recorrenciaExistente.is_ativa ? {} : { proximo_gerar_em: proximoCiclo }),
-    });
-    return;
-  }
-
-  const novaRecorrencia = await criarRecorrencia({
-    negocio_id: negocioId,
-    cliente_id: clienteId,
-    tipo: "receita",
-    recorrencia: "mensal",
-    valor: valorMensal!,
-    descricao: `Mensalidade - ${clienteNome}`,
-    dia_vencimento: diaVencimento || undefined,
-    is_ativa: true,
-    proximo_gerar_em: proximoCiclo,
-  });
-
-  await supabase.from("receitas").insert({
-    negocio_id: negocioId,
-    cliente_id: clienteId,
-    descricao: `Mensalidade - ${clienteNome}`,
-    valor: valorMensal,
-    data: dataCobrancaMesAtual,
-    data_vencimento: dataCobrancaMesAtual,
-    status: "pendente",
-    recorrencia_tipo: "mensal",
-    recorrencia_id: novaRecorrencia.id,
-  });
-}
-
 /**
  * Lança uma receita única (não recorrente) para um cliente Esporádico,
  * apenas no momento do cadastro (não se repete em edições futuras).
@@ -193,9 +101,9 @@ async function lancarReceitaEsporadica(params: {
   valor: number;
 }) {
   const { supabase, negocioId, clienteId, clienteNome, valor } = params;
-  const hoje = hojeISO();
+  const hoje = dateToLocalISO();
 
-  await supabase.from("receitas").insert({
+  const { error } = await supabase.from("receitas").insert({
     negocio_id: negocioId,
     cliente_id: clienteId,
     descricao: `Serviço - ${clienteNome}`,
@@ -205,6 +113,7 @@ async function lancarReceitaEsporadica(params: {
     status: "pendente",
     recorrencia_tipo: "nenhuma",
   });
+  if (error) throw error;
 }
 
 export default function ClientesPage() {
@@ -340,7 +249,6 @@ export default function ClientesPage() {
 
         if (negocio) {
           await sincronizarRecorrenciaCliente({
-            supabase,
             negocioId: negocio.id,
             clienteId: cliente.id,
             clienteNome: cliente.nome,
@@ -353,6 +261,7 @@ export default function ClientesPage() {
       }
     } catch (recErro) {
       console.error("[clientes] erro ao sincronizar recorrência:", recErro);
+      toast.error("Situação salva, mas não foi possível atualizar a mensalidade. Recarregue a página.");
     }
 
     toast.success(
@@ -414,7 +323,6 @@ export default function ClientesPage() {
 
         try {
           await sincronizarRecorrenciaCliente({
-            supabase,
             negocioId: negocio.id,
             clienteId: clienteEditando.id,
             clienteNome: form.nome,
@@ -425,6 +333,7 @@ export default function ClientesPage() {
           });
         } catch (recErro) {
           console.error("[clientes] erro ao sincronizar recorrência:", recErro);
+          toast.error("Cliente salvo, mas a mensalidade não foi atualizada. Recarregue a página para tentar de novo.");
         }
 
         toast.success("Cliente atualizado com sucesso!");
@@ -450,7 +359,6 @@ export default function ClientesPage() {
           try {
             if (form.tipo === "fixo" && payload.valor_mensal) {
               await sincronizarRecorrenciaCliente({
-                supabase,
                 negocioId: negocio.id,
                 clienteId: clienteCriado.id,
                 clienteNome: form.nome,
@@ -472,6 +380,7 @@ export default function ClientesPage() {
             }
           } catch (recErro) {
             console.error("[clientes] erro ao lançar receita:", recErro);
+            toast.error("Cliente criado, mas o valor não foi lançado em Receitas. Recarregue a página para tentar de novo.");
           }
         }
 
