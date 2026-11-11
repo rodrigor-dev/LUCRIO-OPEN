@@ -181,11 +181,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
 OPENROUTER_API_KEY=sua-chave-openrouter
 OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free
-MERCADO_PAGO_ACCESS_TOKEN=seu-token
-MERCADO_PAGO_PUBLIC_KEY=sua-public-key
-MERCADO_PAGO_WEBHOOK_SECRET=seu-secret
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
+CAKTO_CHECKOUT_MENSAL_URL=https://pay.cakto.com.br/xxxxxxx
+CAKTO_CHECKOUT_ANUAL_URL=https://pay.cakto.com.br/yyyyyyy
+CAKTO_WEBHOOK_SECRET=seu-secret
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_APP_NAME=LUCRIO
+NEXT_PUBLIC_APP_NAME=FATURION
 ```
 
 ### 2.5 Testar Localmente
@@ -241,14 +242,17 @@ OPENROUTER_API_KEY
 OPENROUTER_MODEL
 → meta-llama/llama-3.1-8b-instruct:free
 
-MERCADO_PAGO_ACCESS_TOKEN
-→ TEST-xxx ou APP_USR-xxx
+SUPABASE_SERVICE_ROLE_KEY
+→ Supabase → Project Settings → API → service_role (secreta!)
 
-MERCADO_PAGO_PUBLIC_KEY
-→ APP_USR-xxx
+CAKTO_CHECKOUT_MENSAL_URL
+→ https://pay.cakto.com.br/<oferta-mensal>
 
-MERCADO_PAGO_WEBHOOK_SECRET
-→ seu-webhook-secret
+CAKTO_CHECKOUT_ANUAL_URL
+→ https://pay.cakto.com.br/<oferta-anual>
+
+CAKTO_WEBHOOK_SECRET
+→ secret do webhook criado na Cakto
 
 NEXT_PUBLIC_APP_URL
 → https://seu-app.vercel.app
@@ -304,33 +308,45 @@ Após o deploy, volte ao Supabase e atualize:
 
 ---
 
-## PARTE 5: CONFIGURAÇÃO DO MERCADO PAGO (PAGAMENTOS)
+## PARTE 5: CONFIGURAÇÃO DA CAKTO (PAGAMENTOS)
 
-### 5.1 Criar Conta
+### 5.1 Produto e ofertas
 
-1. Acesse **https://www.mercadopago.com.br**
-2. Clique em **"Criar conta"** ou **"Cadastrar"**
-3. Preencha seus dados
+1. Acesse **https://app.cakto.com.br** e crie o produto **FATURION PRO**
+   como **assinatura**.
+2. Crie duas ofertas: **Mensal** (R$ 14,99/mês) e **Anual** (R$ 139,99/ano).
+3. Copie o link de cada oferta (`https://pay.cakto.com.br/...`) para
+   `CAKTO_CHECKOUT_MENSAL_URL` e `CAKTO_CHECKOUT_ANUAL_URL`.
 
-### 5.2 Obter Credenciais
+### 5.2 Redirecionamento após o pagamento
 
-#### Para Testes (Sandbox):
-1. No Dashboard, vá em **"Seu negócio"** → **"Credenciais"**
-2. Copie:
-   - **Access Token (produção)**
-   - **Public Key (produção)**
+Em **Produto → Configurações → Checkout → Redirecionar após o pagamento**:
 
-#### Para Produção:
-1. Complete a verificação de identidade
-2. As credenciais serão liberadas automaticamente
+```
+https://seu-app.vercel.app/pagamento/sucesso?ref={{callback}}
+```
 
-### 5.3 Webhooks (Produção)
+### 5.3 Webhook
 
-1. No Dashboard, vá em **"Seu negócio"** → **"Webhooks"**
-2. Clique em **"Adicionar webhook"**
-3. URL: `https://seu-app.vercel.app/api/webhooks/mercopag`
-4. Eventos: marque **"Pagamentos"**
-5. Salve
+1. Em **Integrações → Webhooks**, crie um webhook com a URL
+   `https://seu-app.vercel.app/api/webhooks/cakto`.
+2. Selecione o produto FATURION PRO e marque os eventos:
+   `purchase_approved`, `subscription_created`, `subscription_renewed`,
+   `subscription_canceled`, `subscription_late`,
+   `subscription_late_recovered`, `subscription_renewal_refused`,
+   `refund`, `chargeback`.
+3. Copie o **secret** do webhook para `CAKTO_WEBHOOK_SECRET`.
+4. Use o botão **Enviar evento de teste** e confira nos logs da Vercel
+   a linha `[CAKTO] ...`.
+
+### 5.4 Como a liberação funciona
+
+- O botão "Assinar" abre o link da oferta com `?callback=<id do usuário>`.
+- A Cakto chama o webhook; ele confere a assinatura HMAC, identifica o
+  usuário (pelo callback ou pelo e-mail) e chama a função
+  `processar_evento_pagamento` no banco.
+- Cada evento é registrado em `pagamentos_eventos` (auditoria) e nunca é
+  aplicado duas vezes.
 
 ---
 
@@ -342,7 +358,8 @@ Após o deploy, volte ao Supabase e atualize:
 - [ ] Vercel: Todas as variáveis de ambiente configuradas
 - [ ] Vercel: Build realizado com sucesso
 - [ ] OpenRouter: Chave da API configurada
-- [ ] Mercado Pago: Credenciais configuradas (se aplicável)
+- [ ] Cakto: ofertas, redirect e webhook configurados
+- [ ] Supabase: migrations 025, 026 e 027 aplicadas
 - [ ] Teste: Login com email/senha funcionando
 - [ ] Teste: Login com Google funcionando
 - [ ] Teste: Cadastro de clientes funcionando

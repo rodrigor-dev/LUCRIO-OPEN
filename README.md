@@ -1,4 +1,4 @@
-# LUCRIO - Sistema Financeiro para Prestadores de Serviços
+# FATURION - Sistema Financeiro para Prestadores de Serviços
 
 Um SaaS completo e profissional para gestão financeira de prestadores de serviços autônomos, MEIs e pequenos empresários.
 
@@ -41,8 +41,8 @@ Um SaaS completo e profissional para gestão financeira de prestadores de servi�
 - Assistente Financeiro
 
 ### Pagamentos
-- Mercado Pago (preferencial)
-- Webhooks
+- Cakto (checkout, assinaturas, Pix e cartão)
+- Webhook com assinatura HMAC (`/api/webhooks/cakto`)
 
 ## Funcionalidades Principais
 

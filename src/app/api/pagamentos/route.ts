@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verificarRateLimit, obterChaveRateLimit } from "@/lib/rate-limit";
+import { montarLinkCheckout, type PlanoTipo } from "@/services/cakto.service";
 
+/**
+ * Devolve o link do checkout da Cakto para o plano escolhido.
+ * O preço fica configurado na oferta da Cakto (antes o valor vinha do
+ * navegador e podia ser alterado pelo usuário).
+ */
 export async function POST(request: Request) {
   try {
     const chave = obterChaveRateLimit(request, "pagamentos");
@@ -15,69 +21,26 @@ export async function POST(request: Request) {
     }
 
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { erro: "Não autorizado" },
-        { status: 401 }
-      );
+      return NextResponse.json({ erro: "Não autorizado" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { dados } = body;
+    const body = await request.json().catch(() => ({}));
+    const planoBruto = body?.plano ?? body?.dados?.plano;
+    const plano: PlanoTipo = planoBruto === "anual" ? "anual" : "mensal";
 
-    if (!dados || typeof dados !== "object") {
-      return NextResponse.json(
-        { erro: "Dados inválidos" },
-        { status: 400 }
-      );
-    }
+    const url = montarLinkCheckout(plano, user.id);
 
-    const { valor, descricao, email, plano } = dados;
-
-    if (typeof valor !== "number" || valor <= 0 || valor > 100000) {
-      return NextResponse.json(
-        { erro: "Valor inválido. Deve ser um número entre 0.01 e 100.000" },
-        { status: 400 }
-      );
-    }
-
-    if (!email || typeof email !== "string" || !email.includes("@")) {
-      return NextResponse.json(
-        { erro: "Email inválido" },
-        { status: 400 }
-      );
-    }
-
-    if (descricao && typeof descricao === "string" && descricao.length > 500) {
-      return NextResponse.json(
-        { erro: "Descrição muito longa (máximo 500 caracteres)" },
-        { status: 400 }
-      );
-    }
-
-    const planoTipo = plano === "anual" ? "anual" : "mensal";
-
-    const { createMercoPagClient } = await import("@/services/mercopag.service");
-    const mercopag = createMercoPagClient();
-
-    const pagamento = await mercopag.criarPagamento({
-      valor,
-      descricao: String(descricao || "Assinatura FATURION").slice(0, 500),
-      email: String(email),
-      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/pagamento/sucesso?plano=${planoTipo}`,
-      webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/mercopag`,
-      usuarioId: user.id,
-      planoTipo,
-    });
-
-    return NextResponse.json({ init_point: pagamento.init_point });
+    return NextResponse.json({ url });
   } catch (error: unknown) {
     const mensagem = error instanceof Error ? error.message : String(error);
-    console.error("[PAGAMENTOS] Erro completo:", mensagem);
+    console.error("[PAGAMENTOS] Erro:", mensagem);
     return NextResponse.json(
-      { erro: "Erro ao processar pagamento", detalhe: mensagem },
+      { erro: "Não foi possível abrir o pagamento agora. Tente novamente em instantes." },
       { status: 500 }
     );
   }

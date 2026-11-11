@@ -229,6 +229,27 @@ export default function ConfiguracoesPage() {
   });
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [abrindoCheckout, setAbrindoCheckout] = useState<"mensal" | "anual" | null>(null);
+
+  async function abrirCheckout(plano: "mensal" | "anual") {
+    setAbrindoCheckout(plano);
+    try {
+      const res = await fetch("/api/pagamentos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plano }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      toast.error(data.erro || "Não foi possível abrir o pagamento.");
+    } catch {
+      toast.error("Erro de conexão ao abrir o pagamento.");
+    }
+    setAbrindoCheckout(null);
+  }
   const [enviandoAvatar, setEnviandoAvatar] = useState(false);
   const [enviandoLogo, setEnviandoLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -1209,30 +1230,8 @@ export default function ConfiguracoesPage() {
                               <Button
                                 className="w-full"
                                 size="sm"
-                                onClick={async () => {
-                                  try {
-                                    const res = await fetch("/api/pagamentos", {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({
-                                        dados: {
-                                          valor: 14.99,
-                                          descricao: "FATURION PRO - Plano Mensal",
-                                          email: usuario?.email || "",
-                                          plano: "mensal",
-                                        },
-                                      }),
-                                    });
-                                    const data = await res.json();
-                                    if (data.init_point) {
-                                      window.location.href = data.init_point;
-                                    } else {
-                                      toast.error(data.erro || "Erro ao criar pagamento");
-                                    }
-                                  } catch {
-                                    toast.error("Erro ao processar pagamento");
-                                  }
-                                }}
+                                onClick={() => abrirCheckout("mensal")}
+                                disabled={abrindoCheckout !== null}
                               >
                                 <CreditCard className="mr-2 h-4 w-4" />
                                 Assinar Mensal
@@ -1261,30 +1260,8 @@ export default function ConfiguracoesPage() {
                                 className="w-full"
                                 size="sm"
                                 variant="outline"
-                                onClick={async () => {
-                                  try {
-                                    const res = await fetch("/api/pagamentos", {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({
-                                        dados: {
-                                          valor: 139.99,
-                                          descricao: "FATURION PRO - Plano Anual",
-                                          email: usuario?.email || "",
-                                          plano: "anual",
-                                        },
-                                      }),
-                                    });
-                                    const data = await res.json();
-                                    if (data.init_point) {
-                                      window.location.href = data.init_point;
-                                    } else {
-                                      toast.error(data.erro || "Erro ao criar pagamento");
-                                    }
-                                  } catch {
-                                    toast.error("Erro ao processar pagamento");
-                                  }
-                                }}
+                                onClick={() => abrirCheckout("anual")}
+                                disabled={abrindoCheckout !== null}
                               >
                                 <CreditCard className="mr-2 h-4 w-4" />
                                 Assinar Anual
@@ -1510,8 +1487,11 @@ export default function ConfiguracoesPage() {
               Ao cancelar, sua assinatura será encerrada. O acesso ao sistema continua
               ativo até <strong>{assinatura?.fim_periodo
                 ? new Date(assinatura.fim_periodo).toLocaleDateString("pt-BR")
-                : "o fim do período atual"}</strong>, e você não será mais cobrado
-              após essa data.
+                : "o fim do período atual"}</strong>.
+              <br />
+              <br />
+              Para não ser cobrado na próxima renovação, cancele também a
+              assinatura na Cakto, pelo link enviado no e-mail da sua compra.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
