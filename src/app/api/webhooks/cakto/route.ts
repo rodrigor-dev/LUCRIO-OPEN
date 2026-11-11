@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   EVENTOS_TRATADOS,
   ehUuid,
+  idOfertaDoLink,
   planoDaOferta,
   webhookEhAutentico,
 } from "@/services/cakto.service";
@@ -20,6 +21,7 @@ type PayloadCakto = {
     callback?: string;
     customer?: { email?: string; name?: string };
     offer?: { id?: string; name?: string };
+    checkoutUrl?: string | null;
     product?: { id?: string; name?: string };
     subscription?: unknown;
   };
@@ -62,7 +64,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ignorado: true });
   }
 
-  const plano = planoDaOferta(dados.offer?.id);
+  const plano =
+    planoDaOferta(dados.offer?.id) ?? planoDaOferta(idOfertaDoLink(dados.checkoutUrl ?? undefined));
   if (!plano) {
     console.error(
       `[CAKTO] Oferta "${dados.offer?.id}" não é nenhuma das ofertas configuradas ` +

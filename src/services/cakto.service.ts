@@ -65,11 +65,23 @@ export function montarLinkCheckout(plano: PlanoTipo, usuarioId: string): string 
   return url.toString();
 }
 
+/**
+ * Normaliza o código da oferta: alguns links trazem um sufixo numérico
+ * (ex.: "sceo2oh_1311315") e o webhook pode mandar com ou sem ele.
+ * Comparamos só a parte antes do "_", sem diferenciar maiúsculas.
+ */
+function normalizarOferta(id: string | undefined | null): string | null {
+  if (!id) return null;
+  const base = id.trim().split("_")[0].toLowerCase();
+  return base || null;
+}
+
 /** Descobre o plano pelo id da oferta. null = oferta que não é do Faturion. */
 export function planoDaOferta(ofertaId: string | undefined | null): PlanoTipo | null {
-  if (!ofertaId) return null;
-  if (ofertaId === idOfertaDoLink(process.env.CAKTO_CHECKOUT_ANUAL_URL)) return "anual";
-  if (ofertaId === idOfertaDoLink(process.env.CAKTO_CHECKOUT_MENSAL_URL)) return "mensal";
+  const alvo = normalizarOferta(ofertaId);
+  if (!alvo) return null;
+  if (alvo === normalizarOferta(idOfertaDoLink(process.env.CAKTO_CHECKOUT_ANUAL_URL))) return "anual";
+  if (alvo === normalizarOferta(idOfertaDoLink(process.env.CAKTO_CHECKOUT_MENSAL_URL))) return "mensal";
   return null;
 }
 
