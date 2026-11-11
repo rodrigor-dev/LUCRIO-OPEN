@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { marcarCheckoutAberto, useRevalidarAssinatura } from "@/lib/revalidar-assinatura";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda, diasRestantes } from "@/utils";
@@ -241,6 +242,7 @@ export default function ConfiguracoesPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.url) {
+        marcarCheckoutAberto();
         window.location.href = data.url;
         return;
       }
@@ -265,6 +267,28 @@ export default function ConfiguracoesPage() {
     const tab = searchParams?.get("tab") ?? "perfil";
     return ["perfil", "negocio", "notificacoes", "assinatura", "ajuda"].includes(tab) ? tab : "perfil";
   });
+
+  async function recarregarAssinatura() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("assinaturas")
+        .select("*")
+        .eq("usuario_id", user.id)
+        .order("criado_em", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) setAssinatura(data);
+    } catch (err) {
+      console.error("[Configuracoes] Erro ao atualizar assinatura:", err);
+    }
+  }
+
+  // Atualiza o plano sozinho ao voltar do pagamento
+  useRevalidarAssinatura(recarregarAssinatura, assinatura?.status !== "ativo");
 
   useEffect(() => {
     async function carregarDados() {

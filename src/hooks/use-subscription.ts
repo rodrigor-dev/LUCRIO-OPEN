@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useRevalidarAssinatura } from "@/lib/revalidar-assinatura";
 
 interface AssinaturaInfo {
   is_valid: boolean;
@@ -18,7 +19,7 @@ export function useSubscription() {
   const [assinatura, setAssinatura] = useState<AssinaturaInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkSubscription = useCallback(async () => {
+  const checkSubscription = useCallback(async (silencioso = false) => {
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -72,7 +73,9 @@ export function useSubscription() {
       });
     } catch (error) {
       console.error("Erro ao verificar assinatura:", error);
-      setAssinatura(null);
+      // Em recargas em segundo plano, mantém o último estado conhecido
+      // (não bloqueia a tela por uma falha momentânea de rede).
+      if (!silencioso) setAssinatura(null);
     } finally {
       setLoading(false);
     }
@@ -82,5 +85,8 @@ export function useSubscription() {
     checkSubscription();
   }, [checkSubscription]);
 
-  return { ...assinatura, loading, refresh: checkSubscription };
+  // Libera a tela sozinha depois do pagamento (sem fechar e abrir o sistema)
+  useRevalidarAssinatura(() => checkSubscription(true), assinatura?.is_active !== true);
+
+  return { ...assinatura, loading, refresh: () => checkSubscription() };
 }
