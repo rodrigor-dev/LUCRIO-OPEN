@@ -272,6 +272,22 @@ export default function ClientesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Cliente fixo precisa de valor e dia: sem eles a mensalidade não é
+    // gerada e o cliente "some" de Receitas todo mês.
+    if (form.tipo === "fixo") {
+      const valor = parseFloat(form.valor_mensal);
+      const dia = parseInt(form.dia_vencimento, 10);
+      if (!Number.isFinite(valor) || valor <= 0) {
+        toast.error("Informe o valor mensal do cliente fixo (maior que zero).");
+        return;
+      }
+      if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
+        toast.error("Informe o dia de vencimento do cliente fixo (de 1 a 31).");
+        return;
+      }
+    }
+
     setSalvando(true);
 
     try {
@@ -427,6 +443,16 @@ export default function ClientesPage() {
     }
   }
 
+  /** Cliente excluído não pode continuar gerando mensalidade. */
+  async function pausarMensalidadesDoCliente(clienteId: string) {
+    const { error } = await supabase
+      .from("recorrencias")
+      .update({ is_ativa: false })
+      .eq("cliente_id", clienteId)
+      .eq("is_ativa", true);
+    if (error) throw error;
+  }
+
   async function handleExcluirClick(cliente: Cliente) {
     await verificarRecorrencia(cliente);
     setClienteDeletando(cliente);
@@ -436,17 +462,12 @@ export default function ClientesPage() {
     if (!clienteDeletando || receitasRecorrentes.length === 0) return;
 
     try {
-      const hoje = new Date();
-      const mesAtual = hoje.getMonth();
-      const anoAtual = hoje.getFullYear();
+      const mesAtual = dateToLocalISO().slice(0, 7); // "AAAA-MM"
 
       for (const receita of receitasRecorrentes) {
-        const dataReceita = new Date(receita.data);
-        if (
-          dataReceita.getMonth() === mesAtual &&
-          dataReceita.getFullYear() === anoAtual
-        ) {
-          await supabase.from("receitas").delete().eq("id", receita.id);
+        if (String(receita.data).slice(0, 7) === mesAtual) {
+          const { error } = await supabase.from("receitas").delete().eq("id", receita.id);
+          if (error) throw error;
         }
       }
 
@@ -463,6 +484,8 @@ export default function ClientesPage() {
     if (!clienteDeletando) return;
 
     try {
+      await pausarMensalidadesDoCliente(clienteDeletando.id);
+
       const hoje = new Date();
       const inicioMesAtual = dateToLocalISO(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
 
@@ -495,6 +518,8 @@ export default function ClientesPage() {
     if (!clienteDeletando) return;
 
     try {
+      await pausarMensalidadesDoCliente(clienteDeletando.id);
+
       await supabase
         .from("receitas")
         .delete()
@@ -523,6 +548,8 @@ export default function ClientesPage() {
     if (!clienteDeletando) return;
 
     try {
+      await pausarMensalidadesDoCliente(clienteDeletando.id);
+
       const { error } = await supabase
         .from("clientes")
         .delete()
@@ -678,9 +705,18 @@ export default function ClientesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          {cliente.valor_mensal != null
-                            ? formatarMoeda(Number(cliente.valor_mensal))
-                            : "—"}
+                          {cliente.valor_mensal != null && Number(cliente.valor_mensal) > 0 ? (
+                            formatarMoeda(Number(cliente.valor_mensal))
+                          ) : cliente.tipo === "fixo" && cliente.is_ativo ? (
+                            <span
+                              className="text-xs font-medium text-amber-600"
+                              title="Sem valor mensal a cobrança não é gerada. Edite o cliente."
+                            >
+                              Defina o valor
+                            </span>
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {cliente.tipo === "fixo" && cliente.dia_vencimento != null
@@ -840,6 +876,12 @@ export default function ClientesPage() {
                           {formatarCPFCNPJ(cliente.cpf_cnpj)}
                         </div>
                       )}
+                      {cliente.tipo === "fixo" && cliente.is_ativo &&
+                        !(cliente.valor_mensal != null && Number(cliente.valor_mensal) > 0) && (
+                        <div className="text-xs font-medium text-amber-600">
+                          Defina o valor mensal para gerar a cobrança
+                        </div>
+                      )}
                       {cliente.valor_mensal != null && (
                         <div className="flex items-center gap-2 text-sm font-medium text-primary">
                           <DollarSign className="h-3.5 w-3.5" />
@@ -930,7 +972,7 @@ export default function ClientesPage() {
                     id="valor_mensal"
                     type="number"
                     step="0.01"
-                    min="0"
+                    min="0.01"
                     value={form.valor_mensal}
                     onChange={(e) =>
                       setForm({ ...form, valor_mensal: e.target.value })
@@ -940,7 +982,7 @@ export default function ClientesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
+                  <Label htmlFor="dia_vencimento">Dia de vencimento (obrigatório) *</Label>
                   <Input
                     id="dia_vencimento"
                     type="number"
@@ -951,6 +993,7 @@ export default function ClientesPage() {
                       setForm({ ...form, dia_vencimento: e.target.value })
                     }
                     placeholder="1 a 31"
+                    required={form.tipo === "fixo"}
                   />
                 </div>
               </div>
