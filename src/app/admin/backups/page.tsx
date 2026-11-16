@@ -70,7 +70,7 @@ const STATUS_CONFIG: Record<
     color: "text-blue-600",
   },
   concluido: {
-    label: "Concluido",
+    label: "Concluído",
     variant: "default",
     icon: CheckCircle2,
     color: "text-green-600",
@@ -220,7 +220,7 @@ export default function AdminBackupsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Ultimo Backup</p>
+                <p className="text-xs font-medium text-muted-foreground">Último Backup</p>
                 <p className="mt-1 text-sm font-medium">
                   {ultimoBackup ? formatarDataHora(ultimoBackup.criado_em) : "Nenhum"}
                 </p>
@@ -240,7 +240,7 @@ export default function AdminBackupsPage() {
             Agendamento
           </CardTitle>
           <CardDescription>
-            Configure o intervalo para backups automaticos
+            Configure o intervalo para backups automáticos
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -250,7 +250,7 @@ export default function AdminBackupsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="diario">Diario</SelectItem>
+                <SelectItem value="diario">Diário</SelectItem>
                 <SelectItem value="semanal">Semanal</SelectItem>
                 <SelectItem value="mensal">Mensal</SelectItem>
               </SelectContent>
@@ -276,7 +276,7 @@ export default function AdminBackupsPage() {
               <TableHead>Status</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Data</TableHead>
-              <TableHead className="w-24">Acoes</TableHead>
+              <TableHead className="w-24">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

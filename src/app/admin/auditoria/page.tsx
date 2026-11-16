@@ -86,7 +86,7 @@ function DiffView({
   if (chaves.size === 0) {
     return (
       <p className="text-sm text-muted-foreground py-2">
-        Nenhum dado detalhado disponivel
+        Nenhum dado detalhado disponível
       </p>
     );
   }
@@ -219,7 +219,7 @@ export default function AdminAuditoriaPage() {
 
   const handleExportar = () => {
     const csv = [
-      ["Data", "Usuario", "Acao", "Entidade", "IP", "Detalhes"].join(","),
+      ["Data", "Usuário", "Ação", "Entidade", "IP", "Detalhes"].join(","),
       ...logsFiltrados.map((log) =>
         [
           log.criado_em,
@@ -267,7 +267,7 @@ export default function AdminAuditoriaPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Auditoria</h1>
           <p className="text-muted-foreground">
-            Registro de todas as acoes realizadas no sistema
+            Registro de todas as ações realizadas no sistema
           </p>
         </div>
         <div className="flex items-center gap-2">

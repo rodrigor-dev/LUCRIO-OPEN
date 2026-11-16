@@ -42,11 +42,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Usuarios", href: "/admin/usuarios", icon: Users },
+  { label: "Usuários", href: "/admin/usuarios", icon: Users },
   { label: "Planos", href: "/admin/planos", icon: CreditCard },
   { label: "Assinaturas", href: "/admin/assinaturas", icon: Receipt },
   { label: "Cupons", href: "/admin/cupons", icon: Tag },
-  { label: "Indicacoes", href: "/admin/indicacoes", icon: UserPlus },
+  { label: "Indicações", href: "/admin/indicacoes", icon: UserPlus },
   { label: "Campanhas", href: "/admin/campanhas", icon: Megaphone },
   { label: "Financeiro", href: "/admin/financeiro", icon: DollarSign },
   { label: "Suporte", href: "/admin/suporte", icon: MessageSquare },
@@ -54,10 +54,10 @@ const navItems: NavItem[] = [
   { label: "Auditoria", href: "/admin/auditoria", icon: Shield },
   { label: "Logs", href: "/admin/logs", icon: FileText },
   { label: "Feature Flags", href: "/admin/feature-flags", icon: ToggleLeft },
-  { label: "Configuracoes", href: "/admin/configuracoes", icon: Settings },
-  { label: "Atualizacoes", href: "/admin/atualizacoes", icon: RefreshCw },
+  { label: "Configurações", href: "/admin/configuracoes", icon: Settings },
+  { label: "Atualizações", href: "/admin/atualizacoes", icon: RefreshCw },
   { label: "Backups", href: "/admin/backups", icon: Database },
-  { label: "Diagnostico", href: "/admin/debug", icon: ShieldCheck },
+  { label: "Diagnóstico", href: "/admin/debug", icon: ShieldCheck },
 ];
 
 interface AdminSidebarProps {
@@ -283,9 +283,7 @@ export function AdminMobileSidebar({
                 onClick={onMobileClose}
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                  <span className="text-sm font-bold text-primary-foreground">
-                    L
-                  </span>
+                  <LogoMark className="h-[18px] w-[18px] text-primary-foreground" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-lg font-bold tracking-tight text-foreground">

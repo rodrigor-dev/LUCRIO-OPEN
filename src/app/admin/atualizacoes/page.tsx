@@ -133,13 +133,13 @@ export default function AdminAtualizacoesPage() {
 
   const handleCriar = async () => {
     if (!form.versao.trim() || !form.titulo.trim()) {
-      toast.error("Versao e titulo sao obrigatorios");
+      toast.error("Versão e titulo sao obrigatorios");
       return;
     }
     setSalvando(true);
     try {
       await criarAtualizacao(form);
-      toast.success("Atualizacao criada com sucesso");
+      toast.success("Atualização criada com sucesso");
       setDialogOpen(false);
       setForm(defaultForm);
       await carregarDados();
@@ -155,7 +155,7 @@ export default function AdminAtualizacoesPage() {
     setSalvando(true);
     try {
       await excluirAtualizacao(deleteDialog.id);
-      toast.success("Atualizacao excluida com sucesso");
+      toast.success("Atualização excluida com sucesso");
       setDeleteDialog(null);
       await carregarDados();
     } catch {
@@ -190,14 +190,14 @@ export default function AdminAtualizacoesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Atualizacoes</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Atualizações</h1>
           <p className="text-muted-foreground">
-            Histórico de atualizacoes e changelog do sistema
+            Histórico de atualizações e changelog do sistema
           </p>
         </div>
         <Button onClick={() => { setForm(defaultForm); setDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
-          Nova Atualizacao
+          Nova Atualização
         </Button>
       </div>
 
@@ -206,9 +206,9 @@ export default function AdminAtualizacoesPage() {
       ) : atualizacoes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <RefreshCw className="mb-4 h-12 w-12 text-muted-foreground/40" />
-          <h3 className="text-lg font-semibold">Nenhuma atualizacao</h3>
+          <h3 className="text-lg font-semibold">Nenhuma atualização</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Comece criando a primeira atualizacao do sistema
+            Comece criando a primeira atualização do sistema
           </p>
         </div>
       ) : (
@@ -297,15 +297,15 @@ export default function AdminAtualizacoesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nova Atualizacao</DialogTitle>
+            <DialogTitle>Nova Atualização</DialogTitle>
             <DialogDescription>
-              Registre uma nova atualizacao do sistema
+              Registre uma nova atualização do sistema
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Versao *</Label>
+                <Label>Versão *</Label>
                 <Input
                   placeholder="1.2.0"
                   value={form.versao}
@@ -340,9 +340,9 @@ export default function AdminAtualizacoesPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Titulo *</Label>
+              <Label>Título *</Label>
               <Input
-                placeholder="Titulo da atualizacao"
+                placeholder="Título da atualizacao"
                 value={form.titulo}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, titulo: e.target.value }))
@@ -350,7 +350,7 @@ export default function AdminAtualizacoesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Descricao</Label>
+              <Label>Descrição</Label>
               <Textarea
                 placeholder="Detalhes da atualizacao..."
                 value={form.descricao}
@@ -362,7 +362,7 @@ export default function AdminAtualizacoesPage() {
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <Label>Visivel para usuarios</Label>
+                <Label>Visivel para usuários</Label>
                 <p className="text-xs text-muted-foreground">
                   Aparece no changelog publico
                 </p>
@@ -396,7 +396,7 @@ export default function AdminAtualizacoesPage() {
       <Dialog open={!!deleteDialog} onOpenChange={(open) => { if (!open) setDeleteDialog(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Excluir Atualizacao</DialogTitle>
+            <DialogTitle>Excluir Atualização</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir a atualizacao{" "}
               <strong>{deleteDialog?.titulo}</strong>? Esta acao nao pode ser desfeita.

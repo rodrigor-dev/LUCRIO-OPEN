@@ -305,7 +305,7 @@ export default function AdminPlanosPage() {
                     <span className="text-3xl font-bold">
                       {formatarMoeda(plano.preco_mensal)}
                     </span>
-                    <span className="text-sm text-muted-foreground">/mes</span>
+                    <span className="text-sm text-muted-foreground">/mês</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {formatarMoeda(plano.preco_anual)}/ano (economize{" "}
@@ -444,11 +444,11 @@ export default function AdminPlanosPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Descricao</label>
+              <label className="text-sm font-medium">Descrição</label>
               <Textarea
                 value={form.descricao}
                 onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))}
-                placeholder="Descricao curta do plano..."
+                placeholder="Descrição curta do plano..."
                 rows={2}
               />
             </div>

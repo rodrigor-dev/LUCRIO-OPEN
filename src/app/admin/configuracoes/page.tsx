@@ -100,7 +100,7 @@ export default function AdminConfiguracoesPage() {
           await salvarConfiguracao(chave, configs[chave]);
         }
       }
-      toast.success("Configuracoes salvas com sucesso");
+      toast.success("Configurações salvas com sucesso");
       await carregarDados();
     } catch {
       toast.error("Erro ao salvar configuracoes");
@@ -120,14 +120,14 @@ export default function AdminConfiguracoesPage() {
       id: "geral",
       label: "Geral",
       icon: Settings,
-      title: "Configuracoes Gerais",
-      description: "Informacoes basicas do aplicativo",
+      title: "Configurações Gerais",
+      description: "Informações basicas do aplicativo",
     },
     {
       id: "aparencia",
-      label: "Aparencia",
+      label: "Aparência",
       icon: Palette,
-      title: "Aparencia",
+      title: "Aparência",
       description: "Visual e identidade do app",
     },
     {
@@ -142,7 +142,7 @@ export default function AdminConfiguracoesPage() {
       label: "Sistema",
       icon: Wrench,
       title: "Sistema",
-      description: "Configuracoes tecnicas do sistema",
+      description: "Configurações tecnicas do sistema",
     },
     {
       id: "redes",
@@ -156,9 +156,9 @@ export default function AdminConfiguracoesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Configuracoes</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Gerencie as configuracoes globais do sistema
+          Gerencie as configurações globais do sistema
         </p>
       </div>
 
@@ -181,10 +181,10 @@ export default function AdminConfiguracoesPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Configuracoes Gerais
+                  Configurações Gerais
                 </CardTitle>
                 <CardDescription>
-                  Informacoes basicas do aplicativo
+                  Informações básicas do aplicativo
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -214,7 +214,7 @@ export default function AdminConfiguracoesPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Fuso Horario</Label>
+                    <Label>Fuso Horário</Label>
                     <Input
                       value={configs.app_fuso_horario || ""}
                       onChange={(e) =>
@@ -226,7 +226,7 @@ export default function AdminConfiguracoesPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Cor Primaria</Label>
+                    <Label>Cor Primária</Label>
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
@@ -247,7 +247,7 @@ export default function AdminConfiguracoesPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Cor Secundaria</Label>
+                    <Label>Cor Secundária</Label>
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
@@ -305,7 +305,7 @@ export default function AdminConfiguracoesPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="h-5 w-5" />
-                  Aparencia
+                  Aparência
                 </CardTitle>
                 <CardDescription>
                   Visual e identidade do aplicativo
@@ -380,7 +380,7 @@ export default function AdminConfiguracoesPage() {
                   URLs e Contato
                 </CardTitle>
                 <CardDescription>
-                  Links uteis e informacoes de contato
+                  Links uteis e informações de contato
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -465,15 +465,15 @@ export default function AdminConfiguracoesPage() {
                   Sistema
                 </CardTitle>
                 <CardDescription>
-                  Configuracoes tecnicas do sistema
+                  Configurações tecnicas do sistema
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <Label>Modo Manutencao</Label>
+                    <Label>Modo Manutenção</Label>
                     <p className="text-xs text-muted-foreground">
-                      Ativar modo manutencao bloqueia acesso dos usuarios
+                      Ativar modo manutenção bloqueia acesso dos usuários
                     </p>
                   </div>
                   <Switch
@@ -496,7 +496,7 @@ export default function AdminConfiguracoesPage() {
                     max="90"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Numero de dias de teste gratuito para novos usuarios
+                    Número de dias de teste gratuito para novos usuários
                   </p>
                 </div>
                 <Separator />
@@ -547,7 +547,7 @@ export default function AdminConfiguracoesPage() {
                     className="font-mono text-sm min-h-[200px]"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Formato JSON valido. Chaves: instagram, facebook, twitter,
+                    Formato JSON válido. Chaves: instagram, facebook, twitter,
                     linkedin, youtube, tiktok
                   </p>
                 </div>
@@ -568,7 +568,7 @@ export default function AdminConfiguracoesPage() {
                     } catch {
                       return (
                         <div className="col-span-2 rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                          Formato JSON invalido - corrija antes de salvar
+                          Formato JSON inválido - corrija antes de salvar
                         </div>
                       );
                     }

@@ -69,8 +69,10 @@ import {
   estenderTrial,
   tornarAdmin,
   atualizarAssinatura,
+  estenderPeriodo,
   listarPlanos,
 } from "@/services/admin.service";
+import { assinaturaLiberaAcesso } from "@/lib/assinatura-acesso";
 import { formatarData, formatarDataHora, formatarMoeda } from "@/utils";
 import type { PlanoAdmin } from "@/types/admin";
 
@@ -91,28 +93,44 @@ interface UsuarioAssinatura {
   fim_periodo: string | null;
   trial_termina: string | null;
   criado_em: string | null;
+  metodo_pagamento_id?: string | null;
+  cancelar_ao_fim_periodo?: boolean | null;
+  tem_acesso?: boolean | null;
+  categoria?: string | null;
 }
 
 type TipoFiltro = "todos" | "ativo" | "trial" | "sem_acesso" | "admin" | "vitalicio";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType; color: string }> = {
   ativo: { label: "PRO Ativo", variant: "default", icon: CheckCircle2, color: "bg-green-500" },
+  atrasado: { label: "Pagamento atrasado", variant: "outline", icon: AlertTriangle, color: "bg-amber-500" },
   trial: { label: "Teste", variant: "secondary", icon: Clock, color: "bg-amber-500" },
   cancelado: { label: "Cancelado", variant: "destructive", icon: XCircle, color: "bg-red-500" },
   expirado: { label: "Expirado", variant: "outline", icon: AlertTriangle, color: "bg-gray-500" },
   sem_acesso: { label: "Sem Acesso", variant: "outline", icon: FlaskConical, color: "bg-gray-400" },
-  vitalicio: { label: "Vitalicio", variant: "default", icon: Crown, color: "bg-purple-500" },
+  vitalicio: { label: "Vitalício", variant: "default", icon: Crown, color: "bg-purple-500" },
 };
 
+/**
+ * Status como o USUÁRIO vê: assinatura vencida aparece como "Expirado"
+ * (antes continuava "PRO Ativo" e entrava no MRR).
+ */
 function getUsuarioStatus(u: UsuarioAssinatura): string {
-  if (u.status === "ativo" && u.fim_periodo) {
-    const fim = new Date(u.fim_periodo);
-    if (fim.getFullYear() > 2090) return "vitalicio";
-    return "ativo";
-  }
+  if (!u.assinatura_id || !u.status) return "sem_acesso";
+  if (u.fim_periodo && new Date(u.fim_periodo).getFullYear() > 2090) return "vitalicio";
+  const liberado =
+    u.tem_acesso ??
+    assinaturaLiberaAcesso({
+      status: u.status,
+      fim_periodo: u.fim_periodo,
+      metodo_pagamento_id: u.metodo_pagamento_id,
+      cancelar_ao_fim_periodo: u.cancelar_ao_fim_periodo,
+    });
+  if (!liberado && !u.is_admin) return "expirado";
   if (u.status === "trial") return "trial";
   if (u.status === "cancelado") return "cancelado";
-  return "sem_acesso";
+  if (u.status === "atrasado") return "atrasado";
+  return "ativo";
 }
 
 function TableSkeleton() {
@@ -185,7 +203,7 @@ export default function AdminAssinaturasPage() {
     let matchFiltro = true;
     if (filtro === "ativo") matchFiltro = status === "ativo";
     else if (filtro === "trial") matchFiltro = status === "trial";
-    else if (filtro === "sem_acesso") matchFiltro = status === "sem_acesso";
+    else if (filtro === "sem_acesso") matchFiltro = status === "sem_acesso" || status === "expirado";
     else if (filtro === "admin") matchFiltro = u.is_admin;
     else if (filtro === "vitalicio") matchFiltro = status === "vitalicio";
 
@@ -198,7 +216,7 @@ export default function AdminAssinaturasPage() {
 
   const contagem = (tipo: TipoFiltro) => {
     if (tipo === "todos") return usuarios.length;
-    if (tipo === "sem_acesso") return usuarios.filter((u) => getUsuarioStatus(u) === "sem_acesso").length;
+    if (tipo === "sem_acesso") return usuarios.filter((u) => ["sem_acesso", "expirado"].includes(getUsuarioStatus(u))).length;
     if (tipo === "admin") return usuarios.filter((u) => u.is_admin).length;
     if (tipo === "vitalicio") return usuarios.filter((u) => getUsuarioStatus(u) === "vitalicio").length;
     return usuarios.filter((u) => getUsuarioStatus(u) === tipo).length;
@@ -207,15 +225,21 @@ export default function AdminAssinaturasPage() {
   const totalAtivos = usuarios.filter((u) => ["ativo", "vitalicio"].includes(getUsuarioStatus(u))).length;
   const totalTrials = usuarios.filter((u) => getUsuarioStatus(u) === "trial").length;
   const totalMRR = usuarios
-    .filter((u) => getUsuarioStatus(u) === "ativo")
-    .reduce((acc, u) => acc + (u.plano_preco || 0), 0);
+    .filter((u) => ["ativo", "atrasado", "cancelado"].includes(getUsuarioStatus(u)) && !u.is_admin)
+    .reduce((acc, u) => {
+      if (u.categoria === "anual") {
+        const plano = planos.find((p) => p.id === u.plano_id);
+        return acc + (plano?.preco_anual ? plano.preco_anual / 12 : 0);
+      }
+      return acc + (u.plano_preco || 0);
+    }, 0);
 
   const handleConcederAcesso = async () => {
     if (!acessoDialog) return;
     setProcessando(true);
     try {
       await liberarAcesso(acessoDialog.usuario_id, acessoDias);
-      toast.success(`Acesso concedido por ${acessoDias} dias`);
+      toast.success(`${acessoDias} dia(s) de acesso adicionados`);
       setAcessoDialog(null);
       await carregarDados();
     } catch {
@@ -259,13 +283,8 @@ export default function AdminAssinaturasPage() {
     if (!extendDialog?.assinatura_id) return;
     setProcessando(true);
     try {
-      const fimAtual = extendDialog.fim_periodo ? new Date(extendDialog.fim_periodo) : new Date();
-      fimAtual.setDate(fimAtual.getDate() + diasExtensao);
-      await atualizarAssinatura(extendDialog.assinatura_id, {
-        fim_periodo: fimAtual.toISOString(),
-        status: "ativo",
-      });
-      toast.success("Periodo estendido com sucesso");
+      await estenderPeriodo(extendDialog.assinatura_id, diasExtensao);
+      toast.success(`Período estendido em ${diasExtensao} dia(s)`);
       setExtendDialog(null);
       await carregarDados();
     } catch {
@@ -323,7 +342,7 @@ export default function AdminAssinaturasPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Assinaturas</h1>
           <p className="text-muted-foreground">
-            Gerencie acesso e assinaturas dos usuarios
+            Gerencie acesso e assinaturas dos usuários
           </p>
         </div>
       </div>
@@ -332,7 +351,7 @@ export default function AdminAssinaturasPage() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckCircle2 className="h-4 w-4 text-green-500" />
-            Ativos / Vitalicios
+            Ativos / Vitalícios
           </div>
           <p className="mt-1 text-2xl font-bold">{totalAtivos}</p>
         </motion.div>
@@ -354,12 +373,12 @@ export default function AdminAssinaturasPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Tabs value={filtro} onValueChange={(v) => setFiltro(v as TipoFiltro)}>
-          <TabsList className="flex w-full overflow-x-auto">
+          <TabsList className="flex h-auto w-full justify-start overflow-x-auto">
             {([
               { value: "todos", label: "Todos" },
               { value: "ativo", label: "Ativos" },
               { value: "trial", label: "Testes" },
-              { value: "vitalicio", label: "Vitalicios" },
+              { value: "vitalicio", label: "Vitalícios" },
               { value: "sem_acesso", label: "Sem Acesso" },
               { value: "admin", label: "Admins" },
             ] as const).map((tab) => (
@@ -380,10 +399,10 @@ export default function AdminAssinaturasPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Usuario</TableHead>
+              <TableHead>Usuário</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Plano</TableHead>
-              <TableHead>Valido Ate</TableHead>
+              <TableHead>Válido Até</TableHead>
               <TableHead>Teste Termina</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -394,7 +413,7 @@ export default function AdminAssinaturasPage() {
                 <TableCell colSpan={6} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <Users className="h-10 w-10 text-muted-foreground/40" />
-                    <p className="text-sm text-muted-foreground">Nenhum usuario encontrado</p>
+                    <p className="text-sm text-muted-foreground">Nenhum usuário encontrado</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -504,8 +523,8 @@ export default function AdminAssinaturasPage() {
       <Sheet open={sheetOpen} onOpenChange={(open) => { setSheetOpen(open); if (!open) setDetail(null); }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Detalhes do Usuario</SheetTitle>
-            <SheetDescription>Informacoes e gerenciamento de acesso</SheetDescription>
+            <SheetTitle>Detalhes do Usuário</SheetTitle>
+            <SheetDescription>Informações e gerenciamento de acesso</SheetDescription>
           </SheetHeader>
           {detail && (
             <div className="mt-6 space-y-6">
@@ -539,7 +558,7 @@ export default function AdminAssinaturasPage() {
                   <p className="mt-1 text-sm font-medium">{detail.plano_nome || "Nenhum"}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Valido Ate</p>
+                  <p className="text-xs text-muted-foreground">Válido Até</p>
                   <p className="mt-1 text-sm font-medium">{detail.fim_periodo ? formatarData(detail.fim_periodo) : "-"}</p>
                 </div>
                 <div className="rounded-lg border p-3">
@@ -592,7 +611,7 @@ export default function AdminAssinaturasPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Key className="h-5 w-5 text-emerald-600" /> Conceder Acesso</DialogTitle>
-            <DialogDescription>Conceder acesso PRO para <strong>{acessoDialog?.usuario_nome}</strong></DialogDescription>
+            <DialogDescription>Adicionar dias de acesso PRO para <strong>{acessoDialog?.usuario_nome}</strong>. Os dias são somados ao período atual (nunca diminuem o que já foi pago).</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -618,16 +637,16 @@ export default function AdminAssinaturasPage() {
       <Dialog open={!!vitalicioDialog} onOpenChange={(open) => { if (!open) setVitalicioDialog(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-600" /> Acesso Vitalicio</DialogTitle>
-            <DialogDescription>Conceder acesso vitalicio para <strong>{vitalicioDialog?.usuario_nome}</strong>?</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-600" /> Acesso Vitalício</DialogTitle>
+            <DialogDescription>Conceder acesso vitalício para <strong>{vitalicioDialog?.usuario_nome}</strong>?</DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            O usuario tera acesso ilimitado ao plano PRO para sempre.
+            O usuário tera acesso ilimitado ao plano PRO para sempre.
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setVitalicioDialog(null)}>Cancelar</Button>
             <Button onClick={handleAcessoVitalicio} disabled={processando} className="bg-amber-600 hover:bg-amber-700">
-              {processando ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Concedendo...</> : <><Crown className="mr-2 h-4 w-4" /> Conceder Vitalicio</>}
+              {processando ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Concedendo...</> : <><Crown className="mr-2 h-4 w-4" /> Conceder Vitalício</>}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -664,7 +683,7 @@ export default function AdminAssinaturasPage() {
       <Dialog open={!!extendDialog} onOpenChange={(open) => { if (!open) setExtendDialog(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Estender Periodo</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Estender Período</DialogTitle>
             <DialogDescription>Adicionar dias ao acesso de <strong>{extendDialog?.usuario_nome}</strong></DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -672,9 +691,22 @@ export default function AdminAssinaturasPage() {
               <label className="text-sm font-medium">Dias para adicionar</label>
               <Input type="number" min="1" value={diasExtensao} onChange={(e) => setDiasExtensao(parseInt(e.target.value) || 30)} />
             </div>
-            {extendDialog?.fim_periodo && (
+            {extendDialog && (
               <p className="text-sm text-muted-foreground">
-                Novo fim: <strong>{formatarData(new Date(new Date(extendDialog.fim_periodo).getTime() + diasExtensao * 86400000).toISOString())}</strong>
+                Novo fim:{" "}
+                <strong>
+                  {formatarData(
+                    new Date(
+                      Math.max(
+                        extendDialog.fim_periodo ? new Date(extendDialog.fim_periodo).getTime() : 0,
+                        Date.now()
+                      ) + diasExtensao * 86400000
+                    ).toISOString()
+                  )}
+                </strong>
+                {extendDialog.fim_periodo && new Date(extendDialog.fim_periodo).getTime() < Date.now() && (
+                  <span className="block text-xs">Como já venceu, conta a partir de hoje.</span>
+                )}
               </p>
             )}
           </div>

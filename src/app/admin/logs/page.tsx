@@ -176,7 +176,7 @@ export default function AdminLogsPage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Nivel", "Mensagem", "Usuario", "Rota", "Status Code", "Tempo (ms)", "Data"];
+    const headers = ["Nivel", "Mensagem", "Usuário", "Rota", "Status Code", "Tempo (ms)", "Data"];
     const rows = logsFiltrados.map((log) => [
       log.nivel,
       `"${log.mensagem.replace(/"/g, '""')}"`,
@@ -214,7 +214,7 @@ export default function AdminLogsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Logs do Sistema</h1>
           <p className="text-muted-foreground">Visualize e gerencie os logs do sistema</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={autoRefresh ? "default" : "outline"}
             size="sm"
@@ -315,7 +315,7 @@ export default function AdminLogsPage() {
             <TableRow>
               <TableHead className="w-20">Nivel</TableHead>
               <TableHead>Mensagem</TableHead>
-              <TableHead>Usuario</TableHead>
+              <TableHead>Usuário</TableHead>
               <TableHead>Rota</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Tempo</TableHead>
@@ -458,7 +458,7 @@ export default function AdminLogsPage() {
                       <p className="mt-1 text-sm">{formatarTempo(log.tempo_resposta_ms)}</p>
                     </div>
                     <div className="rounded-md bg-background p-3">
-                      <p className="text-xs font-medium text-muted-foreground">Usuario</p>
+                      <p className="text-xs font-medium text-muted-foreground">Usuário</p>
                       <p className="mt-1 text-sm">{log.usuario_email || "-"}</p>
                     </div>
                     <div className="rounded-md bg-background p-3">
@@ -499,7 +499,7 @@ export default function AdminLogsPage() {
           <DialogHeader>
             <DialogTitle>Limpar Logs Antigos</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir logs antigos? Esta acao nao pode ser desfeita.
+              Tem certeza que deseja excluir logs antigos? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

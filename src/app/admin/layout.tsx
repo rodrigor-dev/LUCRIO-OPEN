@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main Area */}
       <div
-        className={`flex flex-1 flex-col transition-all duration-300 ${
+        className={`flex min-w-0 flex-1 flex-col transition-all duration-300 ${
           sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-[250px]"
         }`}
       >
@@ -100,7 +100,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           id="main-content"
           role="main"
           aria-label="Conteudo administrativo"
-          className="flex-1 p-4 pb-24 lg:p-6 lg:pb-6"
+          className="min-w-0 flex-1 p-4 pb-24 lg:p-6 lg:pb-6"
         >
           {children}
         </main>

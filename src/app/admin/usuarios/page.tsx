@@ -71,6 +71,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -180,6 +181,7 @@ export default function AdminUsuariosPage() {
   const [usuarioDetail, setUsuarioDetail] = useState<UsuarioAdmin | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<UsuarioAdmin | null>(null);
+  const [confirmacaoExclusao, setConfirmacaoExclusao] = useState("");
   const [editDialog, setEditDialog] = useState<UsuarioAdmin | null>(null);
   const [editForm, setEditForm] = useState({ nome: "", email: "", telefone: "" });
   const [salvando, setSalvando] = useState(false);
@@ -260,10 +262,10 @@ export default function AdminUsuariosPage() {
     try {
       if (usuario.is_bloqueado) {
         await desbloquearUsuario(usuario.id);
-        toast.success("Usuario desbloqueado com sucesso");
+        toast.success("Usuário desbloqueado com sucesso");
       } else {
         await bloquearUsuario(usuario.id);
-        toast.success("Usuario bloqueado com sucesso");
+        toast.success("Usuário bloqueado com sucesso");
       }
       await carregarDados();
       if (usuarioDetail?.id === usuario.id) {
@@ -279,10 +281,10 @@ export default function AdminUsuariosPage() {
     try {
       if (usuario.is_suspendido) {
         await reativarUsuario(usuario.id);
-        toast.success("Usuario reativado com sucesso");
+        toast.success("Usuário reativado com sucesso");
       } else {
         await suspenderUsuario(usuario.id);
-        toast.success("Usuario suspenso com sucesso");
+        toast.success("Usuário suspenso com sucesso");
       }
       await carregarDados();
       if (usuarioDetail?.id === usuario.id) {
@@ -299,13 +301,14 @@ export default function AdminUsuariosPage() {
     setSalvando(true);
     try {
       await excluirUsuario(deleteDialog.id);
-      toast.success("Usuario excluido com sucesso");
+      toast.success("Usuário excluído com sucesso");
       setDeleteDialog(null);
+      setConfirmacaoExclusao("");
       setSheetOpen(false);
       setUsuarioDetail(null);
       await carregarDados();
-    } catch {
-      toast.error("Erro ao excluir usuario");
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : "Erro ao excluir usuário");
     } finally {
       setSalvando(false);
     }
@@ -316,7 +319,7 @@ export default function AdminUsuariosPage() {
     setSalvando(true);
     try {
       await liberarAcesso(acessoDialog.id, acessoDias);
-      toast.success(`Acesso concedido por ${acessoDias} dias`);
+      toast.success(`${acessoDias} dia(s) de acesso adicionados`);
       setAcessoDialog(null);
       await carregarDados();
       if (usuarioDetail?.id === acessoDialog.id) {
@@ -393,7 +396,7 @@ export default function AdminUsuariosPage() {
     setSalvando(true);
     try {
       await atualizarUsuario(editDialog.id, editForm);
-      toast.success("Usuario atualizado com sucesso");
+      toast.success("Usuário atualizado com sucesso");
       setEditDialog(null);
       await carregarDados();
       if (usuarioDetail?.id === editDialog.id) {
@@ -407,165 +410,8 @@ export default function AdminUsuariosPage() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Usuarios</h1>
-        <p className="text-muted-foreground">
-          Gerencie todos os usuarios do sistema
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou email..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os Status</SelectItem>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
-              <SelectItem value="bloqueado">Bloqueado</SelectItem>
-              <SelectItem value="suspenso">Suspenso</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filtroPlano} onValueChange={setFiltroPlano}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Plano" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os Planos</SelectItem>
-              {planos.map((plano) => (
-                <SelectItem key={plano.id} value={plano.id}>
-                  {plano.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selecionados.size > 0 && (
-            <Badge variant="secondary">{selecionados.size} selecionados</Badge>
-          )}
-        </div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="overflow-x-auto rounded-lg border"
-      >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={
-                    usuariosPagina.length > 0 &&
-                    selecionados.size === usuariosPagina.length
-                  }
-                  onCheckedChange={toggleSelectAll}
-                />
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  Usuario
-                  <ArrowUpDown className="h-3 w-3" />
-                </div>
-              </TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Plano</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ultimo Login</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {carregando ? (
-              <TableSkeleton />
-            ) : usuariosPagina.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-40 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <Users className="h-10 w-10 text-muted-foreground/40" />
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum usuario encontrado
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              <AnimatePresence>
-                {usuariosPagina.map((usuario, idx) => {
-                  const status = getStatus(usuario);
-                  return (
-                    <motion.tr
-                      key={usuario.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.03 }}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => openDetail(usuario)}
-                    >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selecionados.has(usuario.id)}
-                          onCheckedChange={() => toggleSelect(usuario.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={usuario.avatar_url || undefined} />
-                            <AvatarFallback className="text-xs">
-                              {getInitials(usuario.nome)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{usuario.nome}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {usuario.email}
-                      </TableCell>
-                      <TableCell>
-                        {usuario.plano_nome ? (
-                          <div>
-                            <Badge variant="secondary">{usuario.plano_nome}</Badge>
-                            <p className="mt-1 text-[11px] text-muted-foreground">
-                              {usuario.assinatura_status === "trial" &&
-                                usuario.assinatura_trial_termina &&
-                                `Teste ate ${formatarDataHora(usuario.assinatura_trial_termina)}`}
-                              {usuario.assinatura_status === "ativo" &&
-                                usuario.assinatura_fim_periodo &&
-                                `Renova em ${formatarDataHora(usuario.assinatura_fim_periodo)}`}
-                              {usuario.assinatura_status === "cancelado" &&
-                                usuario.assinatura_fim_periodo &&
-                                `Acesso ate ${formatarDataHora(usuario.assinatura_fim_periodo)}`}
-                              {usuario.assinatura_status === "atrasado" && "Pagamento atrasado"}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            Sem plano
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(status)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {usuario.ultimo_login_em
-                          ? formatarDataHora(usuario.ultimo_login_em)
-                          : "Nunca"}
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
+  const renderAcoes = (usuario: UsuarioAdmin) => (
+    <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
@@ -626,6 +472,219 @@ export default function AdminUsuariosPage() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+  );
+
+  const renderPlano = (usuario: UsuarioAdmin) => (
+    <>
+                        {usuario.plano_nome ? (
+                          <div>
+                            <Badge variant="secondary">{usuario.plano_nome}</Badge>
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              {usuario.assinatura_status === "trial" &&
+                                usuario.assinatura_trial_termina &&
+                                `Teste até ${formatarDataHora(usuario.assinatura_trial_termina)}`}
+                              {usuario.assinatura_status === "ativo" &&
+                                usuario.assinatura_fim_periodo &&
+                                (new Date(usuario.assinatura_fim_periodo).getTime() < Date.now()
+                                  ? `Venceu em ${formatarDataHora(usuario.assinatura_fim_periodo)}`
+                                  : new Date(usuario.assinatura_fim_periodo).getFullYear() > 2090
+                                    ? "Acesso vitalício"
+                                    : `Renova em ${formatarDataHora(usuario.assinatura_fim_periodo)}`)}
+                              {usuario.assinatura_status === "cancelado" &&
+                                usuario.assinatura_fim_periodo &&
+                                `Acesso até ${formatarDataHora(usuario.assinatura_fim_periodo)}`}
+                              {usuario.assinatura_status === "atrasado" && "Pagamento atrasado"}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Sem plano
+                          </span>
+                        )}
+    </>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Usuários</h1>
+        <p className="text-muted-foreground">
+          Gerencie todos os usuários do sistema
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome ou email..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Status</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="bloqueado">Bloqueado</SelectItem>
+              <SelectItem value="suspenso">Suspenso</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filtroPlano} onValueChange={setFiltroPlano}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Plano" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Planos</SelectItem>
+              {planos.map((plano) => (
+                <SelectItem key={plano.id} value={plano.id}>
+                  {plano.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selecionados.size > 0 && (
+            <Badge variant="secondary">{selecionados.size} selecionados</Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Celular: cartões (a tabela não cabe na tela) */}
+      <div className="space-y-3 md:hidden">
+        {carregando ? (
+          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-lg" />)
+        ) : usuariosPagina.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-lg border py-10">
+            <Users className="h-10 w-10 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">Nenhum usuário encontrado</p>
+          </div>
+        ) : (
+          usuariosPagina.map((usuario) => (
+            <div
+              key={usuario.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => openDetail(usuario)}
+              onKeyDown={(e) => { if (e.key === "Enter") openDetail(usuario); }}
+              className="rounded-lg border bg-card p-3 active:bg-muted/50"
+            >
+              <div className="flex items-start gap-3">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={usuario.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">{getInitials(usuario.nome)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{usuario.nome}</p>
+                  <p className="truncate text-xs text-muted-foreground">{usuario.email}</p>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>{renderAcoes(usuario)}</div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">{renderPlano(usuario)}</div>
+                {getStatusBadge(getStatus(usuario))}
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Último login: {usuario.ultimo_login_em ? formatarDataHora(usuario.ultimo_login_em) : "nunca"}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="hidden overflow-x-auto rounded-lg border md:block"
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={
+                    usuariosPagina.length > 0 &&
+                    selecionados.size === usuariosPagina.length
+                  }
+                  onCheckedChange={toggleSelectAll}
+                />
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  Usuário
+                  <ArrowUpDown className="h-3 w-3" />
+                </div>
+              </TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Plano</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Último Login</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {carregando ? (
+              <TableSkeleton />
+            ) : usuariosPagina.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-40 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <Users className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum usuário encontrado
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              <AnimatePresence>
+                {usuariosPagina.map((usuario, idx) => {
+                  const status = getStatus(usuario);
+                  return (
+                    <motion.tr
+                      key={usuario.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => openDetail(usuario)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selecionados.has(usuario.id)}
+                          onCheckedChange={() => toggleSelect(usuario.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={usuario.avatar_url || undefined} />
+                            <AvatarFallback className="text-xs">
+                              {getInitials(usuario.nome)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{usuario.nome}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {usuario.email}
+                      </TableCell>
+                      <TableCell>
+                        {renderPlano(usuario)}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(status)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {usuario.ultimo_login_em
+                          ? formatarDataHora(usuario.ultimo_login_em)
+                          : "Nunca"}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {renderAcoes(usuario)}
                       </TableCell>
                     </motion.tr>
                   );
@@ -691,9 +750,9 @@ export default function AdminUsuariosPage() {
       }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Detalhes do Usuario</SheetTitle>
+            <SheetTitle>Detalhes do Usuário</SheetTitle>
             <SheetDescription>
-              Informacoes completas e acoes disponiveis
+              Informações completas e ações disponiveis
             </SheetDescription>
           </SheetHeader>
           {usuarioDetail && (
@@ -743,7 +802,7 @@ export default function AdminUsuariosPage() {
                         <p>Teste termina: <strong>{formatarDataHora(String(assinaturaInfo.trial_termina))}</strong></p>
                       )}
                       {!!assinaturaInfo.fim_periodo && (
-                        <p>Valido ate: <strong>{formatarDataHora(String(assinaturaInfo.fim_periodo))}</strong></p>
+                        <p>Válido até: <strong>{formatarDataHora(String(assinaturaInfo.fim_periodo))}</strong></p>
                       )}
                     </div>
                   </div>
@@ -757,14 +816,14 @@ export default function AdminUsuariosPage() {
               <Separator />
 
               <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Acesso e Permissoes</h4>
+                <h4 className="font-semibold text-sm">Acesso e Permissões</h4>
                 <div className="rounded-lg border divide-y">
                   <div className="flex items-center justify-between p-3 text-sm">
                     <span className="text-muted-foreground">Telefone</span>
-                    <span>{usuarioDetail.telefone || "Nao informado"}</span>
+                    <span>{usuarioDetail.telefone || "Não informado"}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 text-sm">
-                    <span className="text-muted-foreground">Ultimo Login</span>
+                    <span className="text-muted-foreground">Último Login</span>
                     <span>
                       {usuarioDetail.ultimo_login_em
                         ? formatarDataHora(usuarioDetail.ultimo_login_em)
@@ -774,7 +833,7 @@ export default function AdminUsuariosPage() {
                   <div className="flex items-center justify-between p-3 text-sm">
                     <span className="text-muted-foreground">Admin</span>
                     <Badge variant={usuarioDetail.is_admin ? "default" : "secondary"}>
-                      {usuarioDetail.is_admin ? "Sim" : "Nao"}
+                      {usuarioDetail.is_admin ? "Sim" : "Não"}
                     </Badge>
                   </div>
                 </div>
@@ -801,7 +860,7 @@ export default function AdminUsuariosPage() {
                     onClick={() => setVitalicioDialog(usuarioDetail)}
                   >
                     <Crown className="mr-2 h-3.5 w-3.5" />
-                    Acesso Vitalicio
+                    Acesso Vitalício
                   </Button>
                   <Button
                     variant="outline"
@@ -825,7 +884,7 @@ export default function AdminUsuariosPage() {
               <Separator />
 
               <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Outras Acoes</h4>
+                <h4 className="font-semibold text-sm">Outras Ações</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
@@ -895,9 +954,9 @@ export default function AdminUsuariosPage() {
       <Dialog open={!!editDialog} onOpenChange={(open) => { if (!open) setEditDialog(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
-              Atualize as informacoes do usuario
+              Atualize as informações do usuário
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -934,20 +993,43 @@ export default function AdminUsuariosPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteDialog} onOpenChange={(open) => { if (!open) setDeleteDialog(null); }}>
+      <Dialog
+        open={!!deleteDialog}
+        onOpenChange={(open) => { if (!open) { setDeleteDialog(null); setConfirmacaoExclusao(""); } }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Excluir Usuario</DialogTitle>
+            <DialogTitle>Excluir usuário</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir <strong>{deleteDialog?.nome}</strong>?
-              Esta acao nao pode ser desfeita.
+              Isso apaga a conta de <strong>{deleteDialog?.nome}</strong>: o login e{" "}
+              <strong>todos os dados</strong> (negócio, clientes, receitas, despesas, assinatura e
+              tickets). Não dá para desfazer.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="confirmar-exclusao" className="text-sm">
+              Para confirmar, digite o e-mail <strong>{deleteDialog?.email}</strong>
+            </Label>
+            <Input
+              id="confirmar-exclusao"
+              value={confirmacaoExclusao}
+              onChange={(e) => setConfirmacaoExclusao(e.target.value)}
+              autoComplete="off"
+              placeholder={deleteDialog?.email}
+            />
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+            <Button variant="outline" onClick={() => { setDeleteDialog(null); setConfirmacaoExclusao(""); }}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleExcluir} disabled={salvando}>
+            <Button
+              variant="destructive"
+              onClick={handleExcluir}
+              disabled={
+                salvando ||
+                confirmacaoExclusao.trim().toLowerCase() !== (deleteDialog?.email || "").toLowerCase()
+              }
+            >
               {salvando ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Excluindo...</>
               ) : "Excluir"}
@@ -964,7 +1046,7 @@ export default function AdminUsuariosPage() {
               Conceder Acesso
             </DialogTitle>
             <DialogDescription>
-              Conceder acesso ao sistema para <strong>{acessoDialog?.nome}</strong>
+              Adicionar dias de acesso para <strong>{acessoDialog?.nome}</strong>. Os dias são somados ao período atual (nunca diminuem o que já foi pago)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1014,15 +1096,15 @@ export default function AdminUsuariosPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-amber-600" />
-              Acesso Vitalicio
+              Acesso Vitalício
             </DialogTitle>
             <DialogDescription>
-              Conceder acesso vitalicio para <strong>{vitalicioDialog?.nome}</strong>?
-              Esta acao da acesso permanente ao sistema sem necessidade de pagamento.
+              Conceder acesso vitalício para <strong>{vitalicioDialog?.nome}</strong>?
+              Esta ação da acesso permanente ao sistema sem necessidade de pagamento.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <p>O usuario tera acesso ilimitado ao plano PRO para sempre.</p>
+            <p>O usuário tera acesso ilimitado ao plano PRO para sempre.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setVitalicioDialog(null)}>
@@ -1032,7 +1114,7 @@ export default function AdminUsuariosPage() {
               {salvando ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Concedendo...</>
               ) : (
-                <><Crown className="mr-2 h-4 w-4" /> Conceder Vitalicio</>
+                <><Crown className="mr-2 h-4 w-4" /> Conceder Vitalício</>
               )}
             </Button>
           </DialogFooter>
