@@ -27,8 +27,12 @@ export default function SubscriptionGuard({ children, excludePaths, isAdmin }: S
     return null;
   }
 
+  // Sem dados (falha de rede no primeiro carregamento) → não bloqueia;
+  // a assinatura é consultada de novo ao voltar para a aba.
+  const semDados = sub.status === undefined;
+
   const shouldBlock =
-    !isAdmin && !isExcluded && (
+    !isAdmin && !isExcluded && !semDados && (
       sub.is_expired ||
       (sub.is_trial && (sub.days_remaining ?? 0) <= 0) ||
       (!sub.is_valid && !sub.is_trial)

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import {
+  primeiroDiaDoMesISO,
   ultimoDiaDoMesISO,
   vencimentoNoMesAtual,
   proximaDataRecorrencia,
@@ -7,6 +8,7 @@ import {
   lerISO,
 } from "@/lib/recorrencia-datas";
 import type { Recorrencia } from "@/types/database";
+import { STATUS_COM_ACESSO, assinaturaLiberaAcesso } from "@/lib/assinatura-acesso";
 
 const supabase = createClient();
 
@@ -89,10 +91,11 @@ type ClienteFixo = {
 };
 
 /**
- * Gera as receitas de todas as recorrências ativas do negócio até o fim do
- * mês atual. Assim, no começo de cada mês TODOS os clientes fixos já
- * aparecem em Receitas (como "pendente", com o vencimento certo) — antes,
- * só apareciam os clientes cujo dia de vencimento já tinha passado.
+ * Gera as receitas do mês atual de todas as recorrências ativas do negócio.
+ * No começo de cada mês TODOS os clientes fixos já aparecem em Receitas
+ * (como "pendente", com o vencimento certo). Meses que já passaram não são
+ * gerados. O servidor faz o mesmo todo dia (migration 028), então isto é
+ * só para a tela já abrir atualizada.
  *
  * Também se "autocorrige": cliente fixo ativo que ficou sem recorrência
  * (cadastro antigo, erro de rede na hora de salvar etc.) ganha a recorrência
@@ -118,7 +121,37 @@ export async function gerarReceitasRecorrentes(negocioId: string): Promise<numbe
   }
 }
 
+/**
+ * Conta bloqueada (sem pagar) não gera mensalidades — regra do sistema.
+ * Mesma regra da tela e do banco (public.usuario_tem_acesso).
+ */
+async function usuarioTemAcesso(): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const [{ data: usuario }, { data: assinatura, error }] = await Promise.all([
+    supabase.from("usuarios").select("is_admin").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("assinaturas")
+      .select("status, fim_periodo, metodo_pagamento_id, cancelar_ao_fim_periodo")
+      .eq("usuario_id", user.id)
+      .in("status", [...STATUS_COM_ACESSO])
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (usuario?.is_admin) return true;
+  if (error) throw error;
+  return assinaturaLiberaAcesso(assinatura);
+}
+
 async function _gerarReceitasRecorrentesInterno(negocioId: string): Promise<number> {
+  if (!(await usuarioTemAcesso())) return 0;
+
+  const inicioMes = primeiroDiaDoMesISO();
   const limite = ultimoDiaDoMesISO();
 
   const { data: recorrencias, error } = await supabase
@@ -127,6 +160,8 @@ async function _gerarReceitasRecorrentesInterno(negocioId: string): Promise<numb
     .eq("negocio_id", negocioId)
     .eq("tipo", "receita")
     .eq("is_ativa", true)
+    // Mensalidade sem cliente = cliente foi excluído: não gera mais.
+    .not("cliente_id", "is", null)
     .not("proximo_gerar_em", "is", null)
     .lte("proximo_gerar_em", limite);
 
@@ -141,8 +176,14 @@ async function _gerarReceitasRecorrentesInterno(negocioId: string): Promise<numb
     let ciclos = 0;
     let falhou = false;
 
-    // Gera todos os ciclos pendentes (ex.: usuário ficou 3 meses sem abrir
-    // o sistema → gera os 3 meses, não só um por acesso).
+    // Meses que já passaram não são gerados (regra do sistema): se o
+    // usuário ficou sem usar ou bloqueado, ele ajusta manualmente.
+    let pulos = 0;
+    while (data < inicioMes && pulos < 1000) {
+      data = proximaDataRecorrencia(data, rec.recorrencia, rec.dia_vencimento);
+      pulos++;
+    }
+
     while (data <= limite && ciclos < MAX_CICLOS_POR_EXECUCAO) {
       const { error: insertError } = await supabase.from("receitas").insert({
         negocio_id: rec.negocio_id,

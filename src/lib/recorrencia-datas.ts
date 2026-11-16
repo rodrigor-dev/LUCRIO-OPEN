@@ -75,6 +75,10 @@ export function hojeISO(agora: Date = new Date()): string {
   return montarISO(agora.getFullYear(), agora.getMonth() + 1, agora.getDate());
 }
 
+export function primeiroDiaDoMesISO(agora: Date = new Date()): string {
+  return montarISO(agora.getFullYear(), agora.getMonth() + 1, 1);
+}
+
 export function ultimoDiaDoMesISO(agora: Date = new Date()): string {
   const ano = agora.getFullYear();
   const mes = agora.getMonth() + 1;
