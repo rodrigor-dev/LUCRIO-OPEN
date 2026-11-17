@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { applyPlugin } from "jspdf-autotable";
+import { imagemParaPDF } from "@/lib/imagem";
 
 // A partir da v5, o jspdf-autotable só se conecta automaticamente ao jsPDF
 // se existir uma variável global `window.jsPDF` — o que não é o caso aqui,
@@ -27,26 +28,56 @@ interface PDFData {
   condicoes_gerais?: string;
   observacoes?: string;
   logoUrl?: string;
+  /** Dados da empresa (Configurações > Negócio) */
+  empresaDocumento?: string;
+  empresaTelefone?: string;
+  empresaEmail?: string;
+  empresaEndereco?: string;
 }
 
+// Fonte com acentos (Liberation Sans, licença livre). Os arquivos são baixados
+// uma vez e reaproveitados; cada PDF novo precisa registrar a fonte de novo.
+const FONTES = [
+  { arquivo: "LiberationSans-Regular.ttf", estilo: "normal" },
+  { arquivo: "LiberationSans-Bold.ttf", estilo: "bold" },
+] as const;
+let fontesBase64: Record<string, string> | null = null;
 let fontLoaded = false;
 
-async function loadFont(doc: jsPDF) {
-  if (fontLoaded) return;
-  try {
-    const res = await fetch("/fonts/LiberationSans-Regular.ttf");
-    const buffer = await res.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
+async function baixarFontes(): Promise<Record<string, string> | null> {
+  if (fontesBase64) return fontesBase64;
+  const resultado: Record<string, string> = {};
+  for (const f of FONTES) {
+    const res = await fetch(`/fonts/${f.arquivo}`);
+    if (!res.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    // Confere se é mesmo uma fonte TrueType (evita quebrar o PDF)
+    const ehTTF = bytes.length > 4 && bytes[0] === 0 && bytes[1] === 1 && bytes[2] === 0 && bytes[3] === 0;
+    if (!ehTTF) return null;
     let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const bloco = 0x8000;
+    for (let i = 0; i < bytes.length; i += bloco) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + bloco)));
     }
-    const base64 = btoa(binary);
-    doc.addFileToVFS("LiberationSans-Regular.ttf", base64);
-    doc.addFont("LiberationSans-Regular.ttf", "Liberation", "normal");
+    resultado[f.arquivo] = btoa(binary);
+  }
+  fontesBase64 = resultado;
+  return resultado;
+}
+
+async function loadFont(doc: jsPDF) {
+  fontLoaded = false;
+  try {
+    const fontes = await baixarFontes();
+    if (!fontes) return;
+    for (const f of FONTES) {
+      doc.addFileToVFS(f.arquivo, fontes[f.arquivo]);
+      doc.addFont(f.arquivo, "Liberation", f.estilo);
+    }
     fontLoaded = true;
   } catch (e) {
     console.error("Erro ao carregar fonte para PDF:", e);
+    fontLoaded = false;
   }
 }
 
@@ -56,22 +87,24 @@ export async function gerarPDFOrcamento(data: PDFData, acao: "baixar" | "imprimi
 
   let logoHeight = 0;
   if (data.logoUrl) {
-    try {
-      const logoRes = await fetch(data.logoUrl);
-      const logoBlob = await logoRes.blob();
-      const logoBase64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(logoBlob);
-      });
-      doc.addImage(logoBase64, "PNG", 14, 10, 25, 25);
-      logoHeight = 30;
-    } catch (e) {
-      console.error("Erro ao carregar logo para PDF:", e);
+    // Converte para PNG (aceita JPG, PNG e WebP) e mantém a proporção da logo
+    const logo = await imagemParaPDF(data.logoUrl);
+    if (logo) {
+      try {
+        const maxL = 40;
+        const maxA = 25;
+        const escala = Math.min(maxL / logo.largura, maxA / logo.altura);
+        const largura = logo.largura * escala;
+        const altura = logo.altura * escala;
+        doc.addImage(logo.dataUrl, "PNG", 14, 10 + (maxA - altura) / 2, largura, altura);
+        logoHeight = 30;
+      } catch (e) {
+        console.error("Erro ao inserir logo no PDF:", e);
+      }
     }
   }
 
-  const fontName = fontLoaded ? "Liberation" : "times";
+  const fontName = fontLoaded ? "Liberation" : "helvetica";
 
   // Header
   doc.setFontSize(20);
@@ -85,17 +118,39 @@ export async function gerarPDFOrcamento(data: PDFData, acao: "baixar" | "imprimi
   doc.text(`Validade: ${data.validade}`, 105, 40 + logoHeight, { align: "center" });
 
   // Company
+  let y = 55 + logoHeight;
   doc.setFontSize(11);
   doc.setFont(fontName, "bold");
-  doc.text("EMPRESA:", 14, 55 + logoHeight);
+  doc.text("EMPRESA:", 14, y);
   doc.setFont(fontName, "normal");
-  doc.text(data.empresa || "Não informado", 14, 61 + logoHeight);
+  y += 6;
+  doc.text(data.empresa || "Não informado", 14, y);
+
+  const detalhesEmpresa: string[] = [];
+  if (data.empresaDocumento) {
+    const digitos = data.empresaDocumento.replace(/\D/g, "");
+    detalhesEmpresa.push(`${digitos.length === 14 ? "CNPJ" : "CPF"}: ${data.empresaDocumento}`);
+  }
+  const contato = [data.empresaTelefone, data.empresaEmail].filter(Boolean).join("  |  ");
+  if (contato) detalhesEmpresa.push(contato);
+  if (data.empresaEndereco) detalhesEmpresa.push(...doc.splitTextToSize(data.empresaEndereco, 180));
+  if (detalhesEmpresa.length) {
+    doc.setFontSize(9);
+    for (const linha of detalhesEmpresa) {
+      y += 5;
+      doc.text(linha, 14, y);
+    }
+    doc.setFontSize(11);
+  }
 
   // Client
+  y += 12;
   doc.setFont(fontName, "bold");
-  doc.text("CLIENTE:", 14, 73 + logoHeight);
+  doc.text("CLIENTE:", 14, y);
   doc.setFont(fontName, "normal");
-  doc.text(data.cliente || "Não informado", 14, 79 + logoHeight);
+  y += 6;
+  doc.text(data.cliente || "Não informado", 14, y);
+  const inicioTabela = y + 9;
 
   // Items table
   const tableBody = data.itens.map((item, i) => [
@@ -107,12 +162,12 @@ export async function gerarPDFOrcamento(data: PDFData, acao: "baixar" | "imprimi
   ]);
 
   (doc as any).autoTable({
-    startY: 88 + logoHeight,
+    startY: inicioTabela,
     head: [["#", "Descrição", "Qtd", "Valor Unit.", "Total"]],
     body: tableBody,
     theme: "grid",
     headStyles: { fillColor: [16, 185, 129] },
-    styles: { fontSize: 9 },
+    styles: { fontSize: 9, font: fontName },
     columnStyles: {
       0: { cellWidth: 10 },
       2: { cellWidth: 15, halign: "center" },

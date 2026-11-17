@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda, dateToLocalISO } from "@/utils";
 import { gerarPDFOrcamento } from "@/utils/pdf";
+import { enderecoEmLinha } from "@/lib/dados-empresa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -167,6 +168,7 @@ export default function PropostasPage() {
   const [pdfEmpresa, setPdfEmpresa] = useState("");
   const [pdfCliente, setPdfCliente] = useState("");
   const [negocioLogo, setNegocioLogo] = useState<string | null>(null);
+  const [dadosEmpresa, setDadosEmpresa] = useState({ nome: "", documento: "", telefone: "", email: "", endereco: "" });
   const [form, setForm] = useState<FormState>(emptyForm);
   const [itens, setItens] = useState<ItemProposta[]>([
     { descricao: "", quantidade: 1, valor_unitario: 0, total: 0 },
@@ -182,6 +184,14 @@ export default function PropostasPage() {
     carregarDados();
   }, [supabase]);
 
+  // Ao abrir o PDF, já preenche o nome da empresa cadastrado nas Configurações
+  useEffect(() => {
+    if (pdfDialogAberto && !pdfEmpresa && dadosEmpresa.nome) {
+      setPdfEmpresa(dadosEmpresa.nome);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfDialogAberto, dadosEmpresa.nome]);
+
   async function carregarDados() {
     try {
       setCarregando(true);
@@ -195,7 +205,7 @@ export default function PropostasPage() {
 
       const { data: negocio } = await supabase
         .from("negocios")
-        .select("id")
+        .select("id, nome, cnpj_cpf, telefone, email, endereco, logo_url")
         .eq("usuario_id", user.id)
         .single();
 
@@ -204,6 +214,13 @@ export default function PropostasPage() {
       }
 
       setNegocioLogo((negocio as Record<string, unknown>).logo_url as string || null);
+      setDadosEmpresa({
+        nome: negocio.nome || "",
+        documento: negocio.cnpj_cpf || "",
+        telefone: negocio.telefone || "",
+        email: negocio.email || "",
+        endereco: enderecoEmLinha(negocio.endereco),
+      });
 
       const [propostasRes, clientesRes] = await Promise.all([
         supabase
@@ -1296,6 +1313,10 @@ export default function PropostasPage() {
                   condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
                   observacoes: propostaPdf.observacoes || undefined,
                   logoUrl: negocioLogo || undefined,
+                  empresaDocumento: dadosEmpresa.documento || undefined,
+                  empresaTelefone: dadosEmpresa.telefone || undefined,
+                  empresaEmail: dadosEmpresa.email || undefined,
+                  empresaEndereco: dadosEmpresa.endereco || undefined,
                 }, "imprimir");
                 setPdfDialogAberto(false);
               }}
@@ -1325,6 +1346,10 @@ export default function PropostasPage() {
                   condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
                   observacoes: propostaPdf.observacoes || undefined,
                   logoUrl: negocioLogo || undefined,
+                  empresaDocumento: dadosEmpresa.documento || undefined,
+                  empresaTelefone: dadosEmpresa.telefone || undefined,
+                  empresaEmail: dadosEmpresa.email || undefined,
+                  empresaEndereco: dadosEmpresa.endereco || undefined,
                 }, "baixar");
                 setPdfDialogAberto(false);
                 toast.success("PDF gerado com sucesso!");

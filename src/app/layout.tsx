@@ -2,6 +2,8 @@ import { type Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import Script from "next/script";
+import { SCRIPT_CAPTURA_INSTALACAO } from "@/lib/pwa-install";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -61,6 +63,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icons/icon-180.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <Script id="captura-instalacao" strategy="beforeInteractive">
+          {SCRIPT_CAPTURA_INSTALACAO}
+        </Script>
       </head>
       <body className={`${inter.className} overflow-x-hidden`}>
         {children}

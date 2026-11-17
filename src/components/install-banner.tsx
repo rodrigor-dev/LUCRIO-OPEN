@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { appJaInstalado, limparAvisoInstalacao, marcarAppInstalado, obterAvisoInstalacao } from "@/lib/pwa-install";
 
 interface deferredPrompt extends Event {
   prompt: () => Promise<void>;
@@ -21,8 +22,7 @@ export default function InstallBanner() {
   const [mostrarIOS, setMostrarIOS] = useState(false);
 
   useEffect(() => {
-    const jaInstalado = window.matchMedia("(display-mode: standalone)").matches;
-    if (jaInstalado) return;
+    if (appJaInstalado()) return;
 
     const bannerVisto = localStorage.getItem("faturion_install_banner");
     if (bannerVisto) return;
@@ -38,6 +38,13 @@ export default function InstallBanner() {
       (window as unknown as Record<string, unknown>).deferredInstallPrompt = e;
       setMostrarBanner(true);
     };
+
+    // O aviso do navegador pode ter chegado antes deste componente montar
+    const avisoGuardado = obterAvisoInstalacao();
+    if (avisoGuardado) {
+      setDeferredPrompt(avisoGuardado as deferredPrompt);
+      setMostrarBanner(true);
+    }
 
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -58,9 +65,11 @@ export default function InstallBanner() {
     if (outcome === "accepted") {
       setMostrarBanner(false);
       localStorage.setItem("faturion_install_banner", "dismissed");
+      marcarAppInstalado();
     }
 
     setDeferredPrompt(null);
+    limparAvisoInstalacao();
   }
 
   if (mostrarIOS) {
