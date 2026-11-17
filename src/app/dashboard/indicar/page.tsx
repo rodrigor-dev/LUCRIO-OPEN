@@ -40,6 +40,8 @@ export default function IndicarPage() {
   const [copiado, setCopiado] = useState(false);
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
   const [jaUsouCodigo, setJaUsouCodigo] = useState<boolean | null>(null);
+  // Código de amigo só pode ser usado nos primeiros 7 dias de conta
+  const [dentroDoPrazoCodigo, setDentroDoPrazoCodigo] = useState(false);
   const [codigoParaAplicar, setCodigoParaAplicar] = useState("");
   const [aplicandoCodigo, setAplicandoCodigo] = useState(false);
 
@@ -50,6 +52,8 @@ export default function IndicarPage() {
       const user = await authService.getAuthUser();
       if (!user) return;
       setUsuarioId(user.id);
+      const criadoEm = user.created_at ? new Date(user.created_at).getTime() : 0;
+      setDentroDoPrazoCodigo(!!criadoEm && Date.now() - criadoEm < 7 * 24 * 60 * 60 * 1000);
       const [dados, jaUsou] = await Promise.all([
         obterStatsIndicacoes(user.id),
         jaFoiIndicado(user.id),
@@ -83,7 +87,7 @@ export default function IndicarPage() {
         toast.error(resultado.erro || "Não foi possível aplicar esse código.");
         return;
       }
-      toast.success("Código aplicado! Seus dias extras já foram liberados.");
+      toast.success("Código aplicado! Você ganhou 7 dias grátis.");
       setJaUsouCodigo(true);
       setCodigoParaAplicar("");
     } catch (e) {
@@ -137,26 +141,29 @@ export default function IndicarPage() {
     );
   }
 
-  const progresso = stats ? Math.min(stats.total_convertidas / 3, 1) : 0;
-  const proximaRecompensa = stats ? 3 - (stats.total_convertidas % 3) : 3;
+  // A cada 3 amigos cadastrados com o código, quem indicou ganha 15 dias
+  const totalIndicados = stats?.total_indicacoes || 0;
+  const noCicloAtual = totalIndicados % 3;
+  const progresso = noCicloAtual / 3;
+  const proximaRecompensa = 3 - noCicloAtual;
 
   return (
     <div className="space-y-6 pb-24 md:pb-6">
       <div>
         <h1 className="text-2xl font-bold">Indique e Ganhe</h1>
         <p className="text-muted-foreground">
-          Convide amigos e ganhe dias extras de teste
+          Convide amigos: a cada 3 que se cadastrarem, você ganha 15 dias grátis
         </p>
       </div>
 
       {/* Aplicar código de um amigo (para quem já tem conta e não usou no cadastro) */}
-      {jaUsouCodigo === false && (
+      {jaUsouCodigo === false && dentroDoPrazoCodigo && (
         <motion.div {...fadeInUp} transition={{ delay: 0.05 }}>
           <Card>
             <CardContent className="p-4">
               <p className="mb-1 font-medium">Recebeu um código de indicação?</p>
               <p className="mb-3 text-sm text-muted-foreground">
-                Se um amigo te passou um código, digite aqui embaixo pra ganhar seus dias extras de teste grátis.
+                Se um amigo te passou um código, digite aqui para ganhar 7 dias grátis. Vale só nos primeiros 7 dias da sua conta.
               </p>
               <div className="flex gap-2">
                 <Input
@@ -250,7 +257,7 @@ export default function IndicarPage() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Progresso</h3>
               <Badge variant="secondary">
-                {stats?.total_convertidas || 0} de 3 conversões
+                {noCicloAtual} de 3 amigos
               </Badge>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
@@ -263,7 +270,7 @@ export default function IndicarPage() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {proximaRecompensa > 0
-                ? `Faltam ${proximaRecompensa} indicações para ganhar dias extras de teste`
+                ? `Falta${proximaRecompensa > 1 ? "m" : ""} ${proximaRecompensa} amigo${proximaRecompensa > 1 ? "s" : ""} para você ganhar mais 15 dias grátis`
                 : "Parabéns! Você já desbloqueou todas as recompensas!"}
             </p>
           </CardContent>
@@ -283,8 +290,8 @@ export default function IndicarPage() {
           <Card>
             <CardContent className="p-4 text-center">
               <Check className="mx-auto mb-2 h-5 w-5 text-green-500" />
-              <p className="text-2xl font-bold">{stats?.total_convertidas || 0}</p>
-              <p className="text-xs text-muted-foreground">Convertidos</p>
+              <p className="text-2xl font-bold">{proximaRecompensa}</p>
+              <p className="text-xs text-muted-foreground">Faltam p/ bônus</p>
             </CardContent>
           </Card>
           <Card>
@@ -395,7 +402,7 @@ export default function IndicarPage() {
                 <div>
                   <p className="font-medium">Amigo se cadastra</p>
                   <p className="text-sm text-muted-foreground">
-                    Ele ganha 7 dias extras de teste ao usar seu código
+                    Ele ganha 7 dias grátis ao se cadastrar com seu código
                   </p>
                 </div>
               </div>
@@ -406,7 +413,7 @@ export default function IndicarPage() {
                 <div>
                   <p className="font-medium">Você ganha dias extras</p>
                   <p className="text-sm text-muted-foreground">
-                    A cada 3 amigos que se cadastra, você ganha 15 dias de teste
+                    A cada 3 amigos que se cadastrarem, você ganha 15 dias grátis no seu plano
                   </p>
                 </div>
               </div>
