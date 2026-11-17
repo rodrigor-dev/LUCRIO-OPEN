@@ -17,6 +17,7 @@ import {
   ToggleLeft,
   ToggleRight,
   X,
+  ScrollText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -207,6 +208,15 @@ export default function AdminLogsPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
   };
 
+
+  const abrirDetalheLog = (id: string) => {
+    const abrir = expandedRow !== id;
+    setExpandedRow(abrir ? id : null);
+    if (abrir) {
+      setTimeout(() => document.getElementById("detalhe-log")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -263,8 +273,9 @@ export default function AdminLogsPage() {
             className="pl-9"
           />
         </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
         <Select value={filtroNivel} onValueChange={setFiltroNivel}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="col-span-2 w-full sm:col-span-1 sm:w-[140px]">
             <SelectValue placeholder="Nivel" />
           </SelectTrigger>
           <SelectContent>
@@ -278,16 +289,19 @@ export default function AdminLogsPage() {
           type="date"
           value={dataInicio}
           onChange={(e) => setDataInicio(e.target.value)}
-          className="w-[160px]"
+          className="w-full sm:w-[160px]"
+          aria-label="Data inicial"
           placeholder="Data inicio"
         />
         <Input
           type="date"
           value={dataFim}
           onChange={(e) => setDataFim(e.target.value)}
-          className="w-[160px]"
+          className="w-full sm:w-[160px]"
           placeholder="Data fim"
+          aria-label="Data final"
         />
+        </div>
         {(busca || dataInicio || dataFim || filtroNivel !== "todos") && (
           <Button
             variant="ghost"
@@ -305,10 +319,62 @@ export default function AdminLogsPage() {
         )}
       </div>
 
+      {/* Celular: cartões (a tabela tem 8 colunas e não cabe na tela) */}
+      <div className="space-y-2 md:hidden">
+        {carregando ? (
+          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)
+        ) : logsFiltrados.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-lg border py-10 text-center">
+            <ScrollText className="h-10 w-10 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">Nenhum log encontrado</p>
+          </div>
+        ) : (
+          logsFiltrados.map((log) => {
+            const config = NIVEL_CONFIG[log.nivel] || NIVEL_CONFIG.info;
+            const aberto = expandedRow === log.id;
+            return (
+              <button
+                key={log.id}
+                type="button"
+                onClick={() => abrirDetalheLog(log.id)}
+                className={`w-full rounded-lg border bg-card p-3 text-left transition-colors active:bg-muted/50 ${aberto ? "ring-2 ring-primary/40" : ""}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline" className={`gap-1 ${config.bg} ${config.color} border`}>
+                    <config.icon className="h-3 w-3" />
+                    {config.label}
+                  </Badge>
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {formatarDataHora(log.criado_em)}
+                  </span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm font-medium">{log.mensagem}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                  {log.metodo_http && (
+                    <Badge variant="secondary" className="px-1.5 text-[10px]">{log.metodo_http}</Badge>
+                  )}
+                  {log.rota && <span className="max-w-[55%] truncate">{log.rota}</span>}
+                  {log.status_code ? (
+                    <Badge
+                      variant={log.status_code >= 500 ? "destructive" : log.status_code >= 400 ? "outline" : "secondary"}
+                      className="px-1.5 text-[10px]"
+                    >
+                      {log.status_code}
+                    </Badge>
+                  ) : null}
+                  {log.usuario_email && <span className="w-full truncate">{log.usuario_email}</span>}
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-x-auto rounded-lg border"
+        className="hidden overflow-x-auto rounded-lg border md:block"
       >
         <Table>
           <TableHeader>
@@ -348,7 +414,7 @@ export default function AdminLogsPage() {
                       animate="visible"
                       transition={{ delay: idx * 0.02 }}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => setExpandedRow(isExpanded ? null : log.id)}
+                      onClick={() => abrirDetalheLog(log.id)}
                     >
                       <TableCell>
                         <Badge
@@ -419,7 +485,8 @@ export default function AdminLogsPage() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden rounded-lg border bg-muted/30"
+                id="detalhe-log"
+                className="scroll-mt-20 overflow-hidden rounded-lg border bg-muted/30"
               >
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
