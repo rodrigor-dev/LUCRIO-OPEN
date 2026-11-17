@@ -9,6 +9,19 @@ import type { Usuario, Negocio, Assinatura } from "@/types/database";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { abrirTutorialBoasVindas } from "@/components/tutorial-boas-vindas";
+import InstalarApp from "@/components/instalar-app";
+import { prepararLogo } from "@/lib/imagem";
+import {
+  apenasDigitos,
+  buscarCEP,
+  erroDocumento,
+  erroEmail,
+  erroTelefone,
+  mascaraCEP,
+  mascaraDocumento,
+  mascaraTelefone,
+} from "@/lib/dados-empresa";
+import { appJaInstalado, ehIOS, limparAvisoInstalacao, marcarAppInstalado, obterAvisoInstalacao } from "@/lib/pwa-install";
 import {
   User,
   Building,
@@ -32,6 +45,7 @@ import {
   ChevronDown,
   ChevronUp,
   Settings,
+  Trash2,
 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -252,8 +266,13 @@ export default function ConfiguracoesPage() {
     }
     setAbrindoCheckout(null);
   }
+  const [appInstalado, setAppInstalado] = useState(false);
+  useEffect(() => {
+    setAppInstalado(appJaInstalado());
+  }, []);
   const [enviandoAvatar, setEnviandoAvatar] = useState(false);
   const [enviandoLogo, setEnviandoLogo] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
@@ -333,8 +352,8 @@ export default function ConfiguracoesPage() {
         if (negocioData) {
           setNegocioForm({
             nome: negocioData.nome || "",
-            cnpj_cpf: negocioData.cnpj_cpf || "",
-            telefone: negocioData.telefone || "",
+            cnpj_cpf: negocioData.cnpj_cpf ? mascaraDocumento(negocioData.cnpj_cpf) : "",
+            telefone: negocioData.telefone ? mascaraTelefone(negocioData.telefone) : "",
             email: negocioData.email || "",
             endereco: {
               rua: negocioData.endereco?.rua || "",
@@ -378,29 +397,94 @@ export default function ConfiguracoesPage() {
   }
 
   async function salvarDadosNegocio() {
-    if (!negocio) return;
-    setSalvandoNegocio(true);
+    if (!usuario) return;
 
-    const { error } = await supabase
-      .from("negocios")
-      .update({
-        nome: negocioForm.nome,
-        cnpj_cpf: negocioForm.cnpj_cpf || null,
-        telefone: negocioForm.telefone || null,
-        email: negocioForm.email || null,
-        endereco: negocioForm.endereco,
-      })
-      .eq("id", negocio.id);
-
-    if (error) {
-      console.error("[configuracoes] erro ao salvar negócio:", error);
-      toast.error(`Erro ao salvar dados do negócio: ${error.message}`);
-    } else {
-      setNegocio({ ...negocio, ...negocioForm });
-      toast.success("Dados do negócio salvos com sucesso");
+    const nome = negocioForm.nome.trim();
+    if (!nome) {
+      toast.error("Informe o nome da empresa (ou o seu nome, se for autônomo).");
+      return;
+    }
+    const problema =
+      erroDocumento(negocioForm.cnpj_cpf) || erroTelefone(negocioForm.telefone) || erroEmail(negocioForm.email);
+    if (problema) {
+      toast.error(problema);
+      return;
     }
 
-    setSalvandoNegocio(false);
+    setSalvandoNegocio(true);
+    const dados = {
+      nome,
+      cnpj_cpf: negocioForm.cnpj_cpf.trim() || null,
+      telefone: negocioForm.telefone.trim() || null,
+      email: negocioForm.email.trim() || null,
+      endereco: {
+        ...negocioForm.endereco,
+        estado: negocioForm.endereco.estado.trim().toUpperCase(),
+      },
+    };
+
+    try {
+      // Confirma que a linha foi gravada (se nada voltar, não salvou)
+      const consulta = negocio
+        ? supabase.from("negocios").update(dados).eq("id", negocio.id).select("*").maybeSingle()
+        : supabase.from("negocios").insert({ ...dados, usuario_id: usuario.id }).select("*").maybeSingle();
+      const { data, error } = await consulta;
+
+      if (error || !data) {
+        console.error("[configuracoes] erro ao salvar negócio:", error);
+        toast.error(`Não foi possível salvar os dados${error?.message ? `: ${error.message}` : ". Tente novamente."}`);
+        return;
+      }
+
+      setNegocio(data as Negocio);
+      setNegocioForm((f) => ({ ...f, nome, endereco: dados.endereco }));
+      toast.success("Dados da empresa salvos! Eles já aparecem nos seus orçamentos.");
+    } catch (err) {
+      console.error("[configuracoes] erro inesperado ao salvar negócio:", err);
+      toast.error("Erro de conexão ao salvar. Tente novamente.");
+    } finally {
+      setSalvandoNegocio(false);
+    }
+  }
+
+  async function preencherPorCEP(cep: string) {
+    if (apenasDigitos(cep).length !== 8) return;
+    setBuscandoCep(true);
+    const achado = await buscarCEP(cep);
+    setBuscandoCep(false);
+    if (!achado) {
+      toast.info("CEP não encontrado. Preencha o endereço manualmente.");
+      return;
+    }
+    // Só completa o que estiver vazio, sem apagar o que a pessoa digitou
+    setNegocioForm((f) => ({
+      ...f,
+      endereco: {
+        ...f.endereco,
+        rua: f.endereco.rua || achado.rua,
+        bairro: f.endereco.bairro || achado.bairro,
+        cidade: f.endereco.cidade || achado.cidade,
+        estado: f.endereco.estado || achado.estado,
+      },
+    }));
+  }
+
+  async function removerLogo() {
+    if (!negocio) return;
+    setEnviandoLogo(true);
+    const { data, error } = await supabase
+      .from("negocios")
+      .update({ logo_url: null })
+      .eq("id", negocio.id)
+      .select("id")
+      .maybeSingle();
+    setEnviandoLogo(false);
+    if (error || !data) {
+      toast.error("Não foi possível remover a logo.");
+      return;
+    }
+    setNegocio({ ...negocio, logo_url: undefined });
+    toast.success("Logo removida.");
   }
 
   function getInitials(name: string) {
@@ -484,38 +568,44 @@ export default function ConfiguracoesPage() {
     const file = event.target.files?.[0];
     if (!file || !negocio || !usuario) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Selecione uma imagem");
+    if (!file.type.startsWith("image/") && !/\.(png|jpe?g|webp|heic|heif)$/i.test(file.name)) {
+      toast.error("Selecione uma imagem (JPG ou PNG)");
+      event.target.value = "";
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Imagem deve ter no máximo 5MB");
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx. 20MB)");
+      event.target.value = "";
       return;
     }
 
     setEnviandoLogo(true);
     try {
-      const extensao = file.name.split(".").pop() || "png";
+      // Reduz a imagem no próprio celular antes de enviar
+      const { blob, extensao, tipo } = await prepararLogo(file);
       const caminho = `${usuario.id}/logo.${extensao}`;
 
       const { error: uploadError } = await supabase.storage
         .from("logos")
-        .upload(caminho, file, { upsert: true });
+        .upload(caminho, blob, { upsert: true, contentType: tipo, cacheControl: "3600" });
 
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("logos").getPublicUrl(caminho);
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-      const { error: dbError } = await supabase
+      const { data: salvo, error: dbError } = await supabase
         .from("negocios")
         .update({ logo_url: publicUrl })
-        .eq("id", negocio.id);
+        .eq("id", negocio.id)
+        .select("id")
+        .maybeSingle();
 
       if (dbError) throw dbError;
+      if (!salvo) throw new Error("não foi possível gravar a logo");
 
       setNegocio({ ...negocio, logo_url: publicUrl });
-      toast.success("Logo atualizada!");
+      toast.success("Logo atualizada! Ela já aparece nos seus orçamentos.");
     } catch (err) {
       console.error("[Configuracoes] Erro ao enviar logo:", err);
       const mensagem = err instanceof Error ? err.message : "Erro desconhecido";
@@ -662,6 +752,8 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
         </motion.div>
+
+        <InstalarApp />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto">
@@ -817,39 +909,58 @@ export default function ConfiguracoesPage() {
                 >
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg">Dados do Negócio</CardTitle>
-                      <CardDescription>Informações do seu estabelecimento</CardDescription>
+                      <CardTitle className="text-lg">Dados da Empresa</CardTitle>
+                      <CardDescription>
+                        Esses dados e a logo aparecem nos orçamentos que você gerar. Se você é autônomo, use seu nome e CPF.
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-5">
                       <div className="flex items-center gap-4">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/25 bg-muted/50">
-                          {negocio?.logo_url ? (
-                            <img src={negocio.logo_url} alt="Logo" className="h-14 w-14 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => logoInputRef.current?.click()}
+                          disabled={enviandoLogo}
+                          aria-label="Escolher logo"
+                          className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/25 bg-white"
+                        >
+                          {enviandoLogo ? (
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                          ) : negocio?.logo_url ? (
+                            <img src={negocio.logo_url} alt="Logo" className="h-full w-full object-contain p-1" />
                           ) : (
-                            <Building className="h-6 w-6 text-muted-foreground/50" />
+                            <Building className="h-7 w-7 text-muted-foreground/50" />
                           )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Logo do Negócio</p>
-                          <p className="text-xs text-muted-foreground">PNG ou JPG (máx. 5MB)</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => logoInputRef.current?.click()}
-                            disabled={enviandoLogo}
-                          >
-                            {enviandoLogo ? (
-                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                            ) : (
+                        </button>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">Logo ou foto</p>
+                          <p className="text-xs text-muted-foreground">JPG ou PNG. Ajustamos o tamanho automaticamente.</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => logoInputRef.current?.click()}
+                              disabled={enviandoLogo}
+                            >
                               <Camera className="mr-2 h-3.5 w-3.5" />
+                              {enviandoLogo ? "Enviando..." : negocio?.logo_url ? "Trocar" : "Escolher imagem"}
+                            </Button>
+                            {negocio?.logo_url && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={removerLogo}
+                                disabled={enviandoLogo}
+                              >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                Remover
+                              </Button>
                             )}
-                            {enviandoLogo ? "Enviando..." : "Escolher arquivo"}
-                          </Button>
+                          </div>
                           <input
                             ref={logoInputRef}
                             type="file"
-                            accept="image/png,image/jpeg,image/webp"
+                            accept="image/*"
                             className="hidden"
                             onChange={enviarLogo}
                           />
@@ -860,12 +971,13 @@ export default function ConfiguracoesPage() {
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor="nome-negocio">Nome do Negócio</Label>
+                          <Label htmlFor="nome-negocio">Nome da empresa ou seu nome</Label>
                           <Input
                             id="nome-negocio"
                             value={negocioForm.nome}
                             onChange={(e) => setNegocioForm({ ...negocioForm, nome: e.target.value })}
                             placeholder="Minha Empresa LTDA"
+                            autoComplete="organization"
                           />
                         </div>
                         <div className="space-y-2">
@@ -873,26 +985,36 @@ export default function ConfiguracoesPage() {
                           <Input
                             id="cnpj-cpf"
                             value={negocioForm.cnpj_cpf}
-                            onChange={(e) => setNegocioForm({ ...negocioForm, cnpj_cpf: e.target.value })}
-                            placeholder="00.000.000/0001-00"
+                            onChange={(e) => setNegocioForm({ ...negocioForm, cnpj_cpf: mascaraDocumento(e.target.value) })}
+                            placeholder="CPF ou CNPJ (só números)"
+                            inputMode="numeric"
+                            aria-invalid={!!erroDocumento(negocioForm.cnpj_cpf) && apenasDigitos(negocioForm.cnpj_cpf).length >= 11}
                           />
+                          {apenasDigitos(negocioForm.cnpj_cpf).length >= 11 && erroDocumento(negocioForm.cnpj_cpf) && (
+                            <p className="text-xs text-destructive">{erroDocumento(negocioForm.cnpj_cpf)}</p>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="telefone-negocio">Telefone</Label>
                           <Input
                             id="telefone-negocio"
                             value={negocioForm.telefone}
-                            onChange={(e) => setNegocioForm({ ...negocioForm, telefone: e.target.value })}
+                            onChange={(e) => setNegocioForm({ ...negocioForm, telefone: mascaraTelefone(e.target.value) })}
                             placeholder="(00) 00000-0000"
+                            inputMode="tel"
+                            autoComplete="tel"
                           />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="email-negocio">E-mail</Label>
                           <Input
                             id="email-negocio"
+                            type="email"
                             value={negocioForm.email}
                             onChange={(e) => setNegocioForm({ ...negocioForm, email: e.target.value })}
                             placeholder="contato@negocio.com"
+                            inputMode="email"
+                            autoComplete="email"
                           />
                         </div>
                       </div>
@@ -987,7 +1109,8 @@ export default function ConfiguracoesPage() {
                                 })
                               }
                               placeholder="SP"
-                              className="max-w-[80px]"
+                              maxLength={2}
+                              className="max-w-[80px] uppercase"
                             />
                           </div>
                           <div className="space-y-2">
@@ -995,27 +1118,33 @@ export default function ConfiguracoesPage() {
                             <Input
                               id="cep"
                               value={negocioForm.endereco.cep}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const cep = mascaraCEP(e.target.value);
                                 setNegocioForm({
                                   ...negocioForm,
-                                  endereco: { ...negocioForm.endereco, cep: e.target.value },
-                                })
-                              }
+                                  endereco: { ...negocioForm.endereco, cep },
+                                });
+                                if (apenasDigitos(cep).length === 8) preencherPorCEP(cep);
+                              }}
                               placeholder="00000-000"
+                              inputMode="numeric"
                               className="max-w-[140px]"
                             />
+                            <p className="text-xs text-muted-foreground">
+                              {buscandoCep ? "Buscando endereço..." : "Digite o CEP para preencher o endereço."}
+                            </p>
                           </div>
                         </div>
                       </div>
 
                       <div className="flex justify-end">
-                        <Button onClick={salvarDadosNegocio} disabled={salvandoNegocio}>
+                        <Button onClick={salvarDadosNegocio} disabled={salvandoNegocio} className="h-11 w-full sm:w-auto">
                           {salvandoNegocio ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <Save className="mr-2 h-4 w-4" />
                           )}
-                          Salvar
+                          Salvar dados da empresa
                         </Button>
                       </div>
                     </CardContent>
@@ -1383,16 +1512,24 @@ export default function ConfiguracoesPage() {
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </button>
 
+                      {!appInstalado && (
                       <button
-                        onClick={() => {
-                          const installPrompt = (window as unknown as { deferredInstallPrompt?: { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> } }).deferredInstallPrompt;
-                          if (installPrompt) {
-                            installPrompt.prompt();
-                            installPrompt.userChoice.then((choice) => {
-                              if (choice.outcome === "accepted") {
-                                toast.success("App instalado com sucesso!");
-                              }
-                            });
+                        onClick={async () => {
+                          const aviso = obterAvisoInstalacao();
+                          if (aviso) {
+                            await aviso.prompt();
+                            const escolha = await aviso.userChoice;
+                            limparAvisoInstalacao();
+                            if (escolha.outcome === "accepted") {
+                              marcarAppInstalado();
+                              setAppInstalado(true);
+                              toast.success("App instalado com sucesso!");
+                            }
+                          } else if (ehIOS()) {
+                            toast.info(
+                              "No Safari, toque em Compartilhar e depois em 'Adicionar à Tela de Início'",
+                              { duration: 8000 }
+                            );
                           } else {
                             toast.info(
                               "Para instalar, acesse o menu do navegador e selecione 'Adicionar à tela inicial'"
@@ -1412,6 +1549,7 @@ export default function ConfiguracoesPage() {
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </button>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatarMoeda, dateToLocalISO } from "@/utils";
 import { gerarPDFOrcamento } from "@/utils/pdf";
+import { enderecoEmLinha } from "@/lib/dados-empresa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -167,6 +169,54 @@ export default function PropostasPage() {
   const [pdfEmpresa, setPdfEmpresa] = useState("");
   const [pdfCliente, setPdfCliente] = useState("");
   const [negocioLogo, setNegocioLogo] = useState<string | null>(null);
+  const [dadosEmpresa, setDadosEmpresa] = useState({ nome: "", documento: "", telefone: "", email: "", endereco: "" });
+  // Chave "Usar meus dados cadastrados" (desligada = igual era antes: nome digitado à mão)
+  const [usarDadosCadastrados, setUsarDadosCadastrados] = useState(false);
+  useEffect(() => {
+    try {
+      setUsarDadosCadastrados(localStorage.getItem("faturion_pdf_usar_dados") === "1");
+    } catch {
+      /* sem armazenamento: começa desligada */
+    }
+  }, []);
+
+  function alternarDadosCadastrados(ligar: boolean) {
+    setUsarDadosCadastrados(ligar);
+    try {
+      localStorage.setItem("faturion_pdf_usar_dados", ligar ? "1" : "0");
+    } catch {
+      /* ignora */
+    }
+    if (ligar && !pdfEmpresa.trim()) setPdfEmpresa(dadosEmpresa.nome);
+    if (!ligar && pdfEmpresa === dadosEmpresa.nome) setPdfEmpresa("");
+  }
+
+  function resumoDadosCadastrados() {
+    const itens = [
+      dadosEmpresa.nome && "nome",
+      negocioLogo && "logo",
+      dadosEmpresa.documento && "CPF/CNPJ",
+      (dadosEmpresa.telefone || dadosEmpresa.email) && "contato",
+      dadosEmpresa.endereco && "endereço",
+    ].filter(Boolean) as string[];
+    if (itens.length <= 1 && !negocioLogo && !dadosEmpresa.documento) {
+      return "Coloca o nome da empresa. Cadastre logo, CPF/CNPJ e endereço em Configurações > Negócio.";
+    }
+    const lista = itens.length > 1 ? `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}` : itens[0];
+    return `Coloca no orçamento: ${lista}. Desligado, só vai o nome que você digitar.`;
+  }
+
+  // Logo e dados da empresa só vão para o PDF com a chave ligada
+  function dadosDoPdf() {
+    if (!usarDadosCadastrados) return {};
+    return {
+      logoUrl: negocioLogo || undefined,
+      empresaDocumento: dadosEmpresa.documento || undefined,
+      empresaTelefone: dadosEmpresa.telefone || undefined,
+      empresaEmail: dadosEmpresa.email || undefined,
+      empresaEndereco: dadosEmpresa.endereco || undefined,
+    };
+  }
   const [form, setForm] = useState<FormState>(emptyForm);
   const [itens, setItens] = useState<ItemProposta[]>([
     { descricao: "", quantidade: 1, valor_unitario: 0, total: 0 },
@@ -182,6 +232,14 @@ export default function PropostasPage() {
     carregarDados();
   }, [supabase]);
 
+  // Com a chave ligada, ao abrir o PDF já preenche o nome cadastrado
+  useEffect(() => {
+    if (pdfDialogAberto && usarDadosCadastrados && !pdfEmpresa && dadosEmpresa.nome) {
+      setPdfEmpresa(dadosEmpresa.nome);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfDialogAberto, dadosEmpresa.nome]);
+
   async function carregarDados() {
     try {
       setCarregando(true);
@@ -195,7 +253,7 @@ export default function PropostasPage() {
 
       const { data: negocio } = await supabase
         .from("negocios")
-        .select("id")
+        .select("id, nome, cnpj_cpf, telefone, email, endereco, logo_url")
         .eq("usuario_id", user.id)
         .single();
 
@@ -204,6 +262,13 @@ export default function PropostasPage() {
       }
 
       setNegocioLogo((negocio as Record<string, unknown>).logo_url as string || null);
+      setDadosEmpresa({
+        nome: negocio.nome || "",
+        documento: negocio.cnpj_cpf || "",
+        telefone: negocio.telefone || "",
+        email: negocio.email || "",
+        endereco: enderecoEmLinha(negocio.endereco),
+      });
 
       const [propostasRes, clientesRes] = await Promise.all([
         supabase
@@ -1259,6 +1324,21 @@ export default function PropostasPage() {
             <DialogDescription>Preencha para gerar o orçamento em PDF</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+              <div className="min-w-0">
+                <Label htmlFor="usar-dados-cadastrados" className="text-sm font-medium">
+                  Usar meus dados cadastrados
+                </Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {resumoDadosCadastrados()}
+                </p>
+              </div>
+              <Switch
+                id="usar-dados-cadastrados"
+                checked={usarDadosCadastrados}
+                onCheckedChange={alternarDadosCadastrados}
+              />
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Nome da Empresa</Label>
               <Input value={pdfEmpresa} onChange={(e) => setPdfEmpresa(e.target.value)} placeholder="Sua empresa" className="h-11" />
@@ -1295,7 +1375,7 @@ export default function PropostasPage() {
                   total: propostaPdf.total,
                   condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
                   observacoes: propostaPdf.observacoes || undefined,
-                  logoUrl: negocioLogo || undefined,
+                  ...dadosDoPdf(),
                 }, "imprimir");
                 setPdfDialogAberto(false);
               }}
@@ -1324,7 +1404,7 @@ export default function PropostasPage() {
                   total: propostaPdf.total,
                   condicoes_gerais: propostaPdf.condicoes_gerais || undefined,
                   observacoes: propostaPdf.observacoes || undefined,
-                  logoUrl: negocioLogo || undefined,
+                  ...dadosDoPdf(),
                 }, "baixar");
                 setPdfDialogAberto(false);
                 toast.success("PDF gerado com sucesso!");
