@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Loader2, User, Gift, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, User, Gift, CheckCircle2, ArrowLeft, Smartphone } from "lucide-react";
+import { erroCelular, mascaraCelular } from "@/lib/celular";
 import { criarConta, entrarComGoogle, recuperarSenha } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ function CadastroForm() {
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [celular, setCelular] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [codigoIndicacao, setCodigoIndicacao] = useState("");
@@ -57,8 +59,14 @@ function CadastroForm() {
         return;
       }
 
+      const problemaCelular = erroCelular(celular);
+      if (problemaCelular) {
+        setErro(problemaCelular);
+        return;
+      }
+
       const codigoRef = codigoIndicacao.trim().toUpperCase() || null;
-      const resultado = await criarConta(email, senha, nome, codigoRef);
+      const resultado = await criarConta(email, senha, nome, codigoRef, celular);
 
       if (resultado.erro) {
         setErro(resultado.erro);
@@ -304,6 +312,24 @@ function CadastroForm() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="seu@email.com"
+                      required
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="celular">Celular (WhatsApp)</Label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="celular"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      value={celular}
+                      onChange={(e) => setCelular(mascaraCelular(e.target.value))}
+                      placeholder="(11) 98765-4321"
                       required
                       className="pl-10"
                     />
