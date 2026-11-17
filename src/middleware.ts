@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { precisaCadastrarCelular } from "@/lib/celular";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -73,7 +74,7 @@ export async function updateSession(request: NextRequest) {
   if (user && !rotaPublica) {
     const { data: usuario } = await supabase
       .from("usuarios")
-      .select("is_bloqueado, is_suspendido")
+      .select("is_bloqueado, is_suspendido, is_admin, telefone, criado_em")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -90,6 +91,22 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.searchParams.set("error", "conta_suspensa");
+      return NextResponse.redirect(url);
+    }
+
+    // Conta nova sem celular → completar cadastro antes de usar o sistema
+    const faltaCelular = precisaCadastrarCelular(usuario);
+    if (faltaCelular && pathname.startsWith("/dashboard")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/completar-cadastro";
+      url.search = "";
+      url.searchParams.set("redirect", pathname + request.nextUrl.search);
+      return NextResponse.redirect(url);
+    }
+    if (!faltaCelular && pathname === "/completar-cadastro") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
       return NextResponse.redirect(url);
     }
   }

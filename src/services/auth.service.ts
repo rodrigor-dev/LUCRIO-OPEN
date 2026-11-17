@@ -107,13 +107,15 @@ class AuthService {
     email: string,
     senha: string,
     nome: string,
-    codigoIndicacao?: string | null
+    codigoIndicacao?: string | null,
+    telefone?: string | null
   ): Promise<{ usuario: Usuario | null; erro?: string; requiresEmailConfirmation?: boolean }> {
+    const celular = (telefone || "").replace(/\D/g, "") || null;
     const { data, error } = await this.supabase.auth.signUp({
       email,
       password: senha,
       options: {
-        data: { nome },
+        data: celular ? { nome, telefone: celular } : { nome },
         emailRedirectTo: `${window.location.origin}/auth/callback?email=${encodeURIComponent(email)}${codigoIndicacao ? `&ref=${encodeURIComponent(codigoIndicacao)}` : ""}`,
       },
     });
@@ -142,6 +144,7 @@ class AuthService {
           id: data.user.id,
           email: data.user.email!,
           nome,
+          telefone: celular,
           is_ativo: true,
           is_admin: false,
         });
@@ -153,6 +156,11 @@ class AuthService {
             return { usuario: null, erro: this.traduzirErro(insertError.message) };
           }
         }
+      }
+
+      // Perfil já existia (sem celular): grava o celular informado
+      if (existente && celular) {
+        await this.supabase.from("usuarios").update({ telefone: celular }).eq("id", data.user.id);
       }
 
       // Criar trial (com tratamento de erro)
@@ -345,8 +353,13 @@ class AuthService {
 export const authService = new AuthService();
 
 // Funções de conveniência (backward compatibility)
-export const criarConta = (email: string, senha: string, nome: string, codigoIndicacao?: string | null) =>
-  authService.criarConta(email, senha, nome, codigoIndicacao);
+export const criarConta = (
+  email: string,
+  senha: string,
+  nome: string,
+  codigoIndicacao?: string | null,
+  telefone?: string | null
+) => authService.criarConta(email, senha, nome, codigoIndicacao, telefone);
 
 export const entrarComEmail = (email: string, senha: string) =>
   authService.entrarComEmail(email, senha);

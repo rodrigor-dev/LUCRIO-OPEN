@@ -113,9 +113,16 @@ async function criarPerfilSeNecessario(
 ) {
   const { data: existente } = await supabase
     .from("usuarios")
-    .select("id")
+    .select("id, telefone")
     .eq("id", user.id)
     .maybeSingle();
+
+  // Celular informado no formulário de cadastro (fica guardado até confirmar o e-mail)
+  const celularCadastro = String(user.user_metadata?.telefone ?? "").replace(/\D/g, "") || null;
+
+  if (existente && !existente.telefone && celularCadastro) {
+    await supabase.from("usuarios").update({ telefone: celularCadastro }).eq("id", user.id);
+  }
 
   if (!existente) {
     const nome =
@@ -129,6 +136,7 @@ async function criarPerfilSeNecessario(
       email: user.email!,
       nome,
       avatar_url: (user.user_metadata?.avatar_url as string) || null,
+      telefone: celularCadastro,
     });
 
     if (insertError && insertError.code !== "23505") {
