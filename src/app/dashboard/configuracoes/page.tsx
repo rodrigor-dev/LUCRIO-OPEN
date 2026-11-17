@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { marcarCheckoutAberto, useRevalidarAssinatura } from "@/lib/revalidar-assinatura";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatarMoeda, diasRestantes } from "@/utils";
+import { formatarMoeda } from "@/utils";
 import type { Usuario, Negocio, Assinatura } from "@/types/database";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { abrirTutorialBoasVindas } from "@/components/tutorial-boas-vindas";
 import InstalarApp from "@/components/instalar-app";
+import ResumoAssinatura, { analisarAssinatura } from "@/components/resumo-assinatura";
 import { prepararLogo } from "@/lib/imagem";
 import {
   apenasDigitos,
@@ -38,8 +39,6 @@ import {
   Smartphone,
   ChevronRight,
   Loader2,
-  Crown,
-  Clock,
   AlertTriangle,
   Search,
   ChevronDown,
@@ -721,16 +720,14 @@ export default function ConfiguracoesPage() {
     }
   }
 
-  const diasTrial = assinatura?.trial_termina
-    ? diasRestantes(assinatura.trial_termina)
-    : 0;
+  const situacaoAssinatura = analisarAssinatura(assinatura);
+  // Planos aparecem para quem não tem plano pago ativo, para quem venceu e,
+  // perto do vencimento, para quem não tem renovação automática
+  const mostrarPlanos =
+    assinatura?.status !== "ativo" ||
+    !situacaoAssinatura.temAcesso ||
+    (!situacaoAssinatura.renovaAutomatico && !situacaoAssinatura.vitalicio && situacaoAssinatura.diasRestantes <= 7);
 
-  const planName =
-    assinatura?.status === "trial"
-      ? "Período de Teste"
-      : assinatura?.status === "ativo"
-      ? "Plano Pro"
-      : "Sem Plano";
 
   return (
     <div className="min-h-[100dvh] bg-background pb-24 md:pb-6">
@@ -1264,70 +1261,11 @@ export default function ConfiguracoesPage() {
                       <CardDescription>Detalhes da sua assinatura</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                          <Crown className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold">{planName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {assinatura?.status === "trial"
-                              ? "Acesso completo durante o período de teste gratuito"
-                              : assinatura?.status === "ativo"
-                              ? "Acesso completo a todas as funcionalidades"
-                              : "Assine um plano para acessar todas as funcionalidades"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {assinatura?.status === "trial" && diasTrial > 0 && (
-                        <div className="rounded-lg border bg-amber-50 dark:bg-amber-950/30 p-4">
-                          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                            <Clock className="h-4 w-4" />
-                            <p className="text-sm font-medium">
-                              Teste gratuito: <strong>{diasTrial}</strong> dias restantes
-                            </p>
-                          </div>
-                          <div className="mt-2 h-2 w-full rounded-full bg-amber-200 dark:bg-amber-800">
-                            <div
-                              className="h-full rounded-full bg-amber-500 transition-all"
-                              style={{ width: `${Math.min(100, (diasTrial / 7) * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {assinatura?.status === "trial" && diasTrial <= 0 && (
-                        <div className="rounded-lg border bg-destructive/10 p-4">
-                          <div className="flex items-center gap-2 text-destructive">
-                            <AlertTriangle className="h-4 w-4" />
-                            <p className="text-sm font-medium">
-                              Seu período de teste expirou. Assine um plano para continuar.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {assinatura && assinatura.status !== "incompleto" && (
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Início do período</p>
-                            <p className="font-medium">
-                              {new Date(assinatura.inicio_periodo).toLocaleDateString("pt-BR")}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Fim do período</p>
-                            <p className="font-medium">
-                              {new Date(assinatura.fim_periodo).toLocaleDateString("pt-BR")}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                      <ResumoAssinatura assinatura={assinatura} />
 
                       <Separator />
 
-                      {assinatura?.status === "ativo" && (
+                      {assinatura?.status === "ativo" && situacaoAssinatura.temAcesso && !situacaoAssinatura.vitalicio && (
                         <div className="flex flex-col sm:flex-row gap-3">
                           <Button
                             variant="outline"
@@ -1339,32 +1277,13 @@ export default function ConfiguracoesPage() {
                         </div>
                       )}
 
-                      {assinatura?.status === "cancelado" && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-                          <div className="flex items-start gap-3">
-                            <Clock className="h-5 w-5 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                            <div>
-                              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                                Assinatura cancelada
-                              </p>
-                              <p className="text-sm text-amber-600/80 dark:text-amber-400/70 mt-1">
-                                Seu acesso continua ativo até{" "}
-                                <strong>
-                                  {assinatura.fim_periodo
-                                    ? new Date(assinatura.fim_periodo).toLocaleDateString("pt-BR")
-                                    : "o fim do período"}
-                                </strong>
-                                . Após essa data, o acesso será bloqueado.
-                              </p>
-                              <p className="text-sm text-amber-600/80 dark:text-amber-400/70 mt-2">
-                                Para reativar, escolha um plano abaixo.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {assinatura?.status !== "ativo" && (
+                      {mostrarPlanos && (
+                        <div className="space-y-3">
+                        <p className="text-sm font-medium">
+                          {situacaoAssinatura.temAcesso && assinatura?.status !== "trial"
+                            ? "Renovar meu plano"
+                            : "Escolha seu plano"}
+                        </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <Card className="border-2 border-primary/20 hover:border-primary/50 transition-colors">
                             <CardHeader className="pb-3">
@@ -1421,6 +1340,7 @@ export default function ConfiguracoesPage() {
                               </Button>
                             </CardContent>
                           </Card>
+                        </div>
                         </div>
                       )}
                     </CardContent>
