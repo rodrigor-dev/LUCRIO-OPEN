@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -24,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 
 const routeLabels: Record<string, string> = {
   admin: "Dashboard",
-  usuarios: "Usuarios",
+  usuarios: "Usuários",
   planos: "Planos",
   assinaturas: "Assinaturas",
   cupons: "Cupons",
@@ -34,9 +35,12 @@ const routeLabels: Record<string, string> = {
   auditoria: "Auditoria",
   logs: "Logs",
   "feature-flags": "Feature Flags",
-  configuracoes: "Configuracoes",
-  atualizacoes: "Atualizacoes",
+  configuracoes: "Configurações",
+  atualizacoes: "Atualizações",
   backups: "Backups",
+  indicacoes: "Indicações",
+  campanhas: "Campanhas",
+  debug: "Diagnóstico",
 };
 
 interface AdminTopbarProps {
@@ -71,8 +75,27 @@ export default function AdminTopbar({
     return items;
   }, [pathname]);
 
+  // Tickets de suporte esperando resposta (antes era um "3" fixo)
+  const [ticketsAbertos, setTicketsAbertos] = useState(0);
+  useEffect(() => {
+    let ativo = true;
+    async function contar() {
+      const { count } = await createClient()
+        .from("suporte_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "aberto");
+      if (ativo) setTicketsAbertos(count ?? 0);
+    }
+    contar();
+    const timer = setInterval(contar, 60_000);
+    return () => {
+      ativo = false;
+      clearInterval(timer);
+    };
+  }, [pathname]);
+
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-border/50 bg-card/80 px-4 backdrop-blur-xl lg:px-6">
+    <header className="sticky top-0 z-20 flex h-14 min-w-0 items-center gap-2 sm:gap-4 border-b border-border/50 bg-card/80 px-4 backdrop-blur-xl lg:px-6">
       {/* Mobile menu button */}
       <button
         onClick={onMobileMenuToggle}
@@ -83,7 +106,7 @@ export default function AdminTopbar({
       </button>
 
       {/* Breadcrumbs */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 truncate text-sm">
         <Link
           href="/admin"
           className="text-muted-foreground transition-colors hover:text-foreground"
@@ -107,7 +130,7 @@ export default function AdminTopbar({
           ))}
       </nav>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
         {/* Search trigger */}
         <button
           onClick={() =>
@@ -122,15 +145,19 @@ export default function AdminTopbar({
         </button>
 
         {/* Notifications */}
-        <button
-          aria-label="Notificacoes"
+        <Link
+          href="/admin/suporte"
+          aria-label={`Suporte: ${ticketsAbertos} ticket(s) aberto(s)`}
+          title={`${ticketsAbertos} ticket(s) de suporte aberto(s)`}
           className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
-            3
-          </span>
-        </button>
+          {ticketsAbertos > 0 && (
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
+              {ticketsAbertos > 9 ? "9+" : ticketsAbertos}
+            </span>
+          )}
+        </Link>
 
         {/* User dropdown */}
         <DropdownMenu>
@@ -168,7 +195,7 @@ export default function AdminTopbar({
                 className="flex items-center gap-2"
               >
                 <User className="h-4 w-4" />
-                Painel do Usuario
+                Painel do Usuário
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -177,7 +204,7 @@ export default function AdminTopbar({
                 className="flex items-center gap-2"
               >
                 <Settings className="h-4 w-4" />
-                Configuracoes
+                Configurações
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

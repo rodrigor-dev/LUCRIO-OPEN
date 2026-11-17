@@ -201,7 +201,7 @@ export default function AdminDashboardPage() {
 
   const kpiCards = [
     {
-      titulo: "Total Usuarios",
+      titulo: "Total Usuários",
       valor: stats?.total_usuarios || 0,
       formato: "inteiro" as const,
       icone: Users,
@@ -217,7 +217,7 @@ export default function AdminDashboardPage() {
       corIcon: "text-emerald-600",
     },
     {
-      titulo: "Assinaturas Ativas",
+      titulo: "Assinantes pagantes",
       valor: financeiro?.total_assinaturas_ativas || 0,
       formato: "inteiro" as const,
       icone: Receipt,
@@ -244,7 +244,7 @@ export default function AdminDashboardPage() {
       corIcon: "text-cyan-600",
     },
     {
-      titulo: "Novos este Mes",
+      titulo: "Novos este Mês",
       valor: stats?.novos_mes || 0,
       formato: "inteiro" as const,
       icone: CalendarDays,
@@ -410,7 +410,7 @@ export default function AdminDashboardPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Painel Admin</h1>
         <p className="text-muted-foreground">
-          Visao geral completa do sistema FATURION
+          Visão geral completa do sistema FATURION
         </p>
       </div>
 
@@ -488,9 +488,9 @@ export default function AdminDashboardPage() {
       >
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Crescimento de Usuarios</CardTitle>
+            <CardTitle className="text-lg">Crescimento de Usuários</CardTitle>
             <CardDescription>
-              Evolucao mensal do total de usuarios
+              Evolucao mensal do total de usuários
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -534,7 +534,7 @@ export default function AdminDashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="total"
-                    name="Usuarios"
+                    name="Usuários"
                     stroke="#6366f1"
                     strokeWidth={2.5}
                     fill="url(#usuariosGrad)"
@@ -597,14 +597,14 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Distribuicao de Planos</CardTitle>
-            <CardDescription>Usuarios por tipo de plano</CardDescription>
+            <CardDescription>Usuários por tipo de plano</CardDescription>
           </CardHeader>
           <CardContent>
             {distribuicaoPlanos.every((p) => p.value === 0) ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FlaskConical className="mb-3 h-10 w-10 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">
-                  Nenhum usuario registrado ainda
+                  Nenhum usuário registrado ainda
                 </p>
               </div>
             ) : (
@@ -710,7 +710,7 @@ export default function AdminDashboardPage() {
                   Atividade Recente
                 </CardTitle>
                 <CardDescription>
-                  Ultimas acoes registradas no sistema
+                  Ultimas ações registradas no sistema
                 </CardDescription>
               </div>
               <Badge variant="secondary">{auditoria.length}</Badge>
@@ -761,7 +761,7 @@ export default function AdminDashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Acoes Rapidas</CardTitle>
+            <CardTitle className="text-lg">Ações Rapidas</CardTitle>
             <CardDescription>Operacoes comuns do painel</CardDescription>
           </CardHeader>
           <CardContent>

@@ -187,9 +187,21 @@ export interface AdminStats {
 export interface AdminFinanceiro {
   mrr: number;
   arr_estimado: number;
+  /** Assinantes pagantes com acesso hoje (mensal + anual). */
   total_assinaturas_ativas: number;
   total_cancelamentos: number;
+  /** Testes grátis ainda válidos. */
   total_trials: number;
+  pagantes_mensal?: number;
+  pagantes_anual?: number;
+  /** Admin, acesso vitalício e cortesias (não entram no MRR). */
+  cortesias?: number;
+  atrasados?: number;
+  vencidos?: number;
+  reembolsos?: number;
+  /** Pagamentos confirmados pela Cakto neste mês. */
+  receita_mes_atual?: number;
+  pagamentos_mes_atual?: number;
 }
 
 export interface UsuarioAdmin {

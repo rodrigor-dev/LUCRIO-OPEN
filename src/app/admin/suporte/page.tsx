@@ -295,7 +295,7 @@ export default function AdminSuportePage() {
                         <User className="h-3 w-3 text-blue-600" />
                       </div>
                       <span className="text-xs font-medium">
-                        {ticketSel.usuario?.nome || "Usuario"}
+                        {ticketSel.usuario?.nome || "Usuário"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatarDataHora(ticketSel.criado_em)}
@@ -336,7 +336,7 @@ export default function AdminSuportePage() {
                             ? "Suporte"
                             : msg.remetente_tipo === "sistema"
                               ? "Sistema"
-                              : ticketSel.usuario?.nome || "Usuario"}
+                              : ticketSel.usuario?.nome || "Usuário"}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {formatarDataHora(msg.criado_em)}
@@ -381,7 +381,7 @@ export default function AdminSuportePage() {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Acoes</CardTitle>
+                <CardTitle className="text-base">Ações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
@@ -473,7 +473,7 @@ export default function AdminSuportePage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Suporte</h1>
           <p className="text-muted-foreground">
-            Gerencie tickets de suporte dos usuarios
+            Gerencie tickets de suporte dos usuários
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={carregar}>
@@ -496,7 +496,7 @@ export default function AdminSuportePage() {
         value={abaAtiva}
         onValueChange={(v) => setAbaAtiva(v as StatusKey)}
       >
-        <TabsList className="flex w-full overflow-x-auto">
+        <TabsList className="flex h-auto w-full justify-start overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <TabsTrigger
               key={tab.value}

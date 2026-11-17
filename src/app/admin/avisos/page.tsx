@@ -91,12 +91,12 @@ const TIPO_CONFIG: Record<
     icon: AlertTriangle,
   },
   manutencao: {
-    label: "Manutencao",
+    label: "Manutenção",
     className: "bg-orange-100 text-orange-700 border-orange-200",
     icon: Wrench,
   },
   atualizacao: {
-    label: "Atualizacao",
+    label: "Atualização",
     className: "bg-purple-100 text-purple-700 border-purple-200",
     icon: RefreshCw,
   },
@@ -105,9 +105,9 @@ const TIPO_CONFIG: Record<
 const DESTINATARIO_CONFIG: Record<string, string> = {
   todos: "Todos os usuarios",
   plano: "Por plano",
-  usuario: "Usuarios especificos",
+  usuario: "Usuários especificos",
   novos: "Novos usuarios",
-  inativos: "Usuarios inativos",
+  inativos: "Usuários inativos",
 };
 
 const CANAL_CONFIG: Record<
@@ -318,13 +318,13 @@ export default function AdminAvisosPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Titulo</TableHead>
+                      <TableHead>Título</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Destinatario</TableHead>
                       <TableHead>Canal</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Data</TableHead>
-                      <TableHead className="text-right">Acoes</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -423,9 +423,9 @@ export default function AdminAvisosPage() {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Titulo</Label>
+              <Label>Título</Label>
               <Input
-                placeholder="Titulo do aviso"
+                placeholder="Título do aviso"
                 value={form.titulo}
                 onChange={(e) => setForm({ ...form, titulo: e.target.value })}
               />
@@ -517,7 +517,7 @@ export default function AdminAvisosPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Data Inicio (opcional)</Label>
+                <Label>Data Início (opcional)</Label>
                 <Input
                   type="date"
                   value={form.data_inicio}
@@ -579,7 +579,7 @@ export default function AdminAvisosPage() {
           <DialogHeader>
             <DialogTitle>Preview do Aviso</DialogTitle>
             <DialogDescription>
-              Assim o aviso aparecera para os usuarios
+              Assim o aviso aparecera para os usuários
             </DialogDescription>
           </DialogHeader>
 
@@ -603,7 +603,7 @@ export default function AdminAvisosPage() {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-base">
-                  {form.titulo || "Titulo do aviso"}
+                  {form.titulo || "Título do aviso"}
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
                   {form.mensagem || "Conteudo do aviso..."}

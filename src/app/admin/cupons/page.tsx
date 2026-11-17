@@ -192,7 +192,7 @@ export default function AdminCuponsPage() {
 
   const handleSalvar = async () => {
     if (!form.codigo.trim()) {
-      toast.error("Codigo e obrigatorio");
+      toast.error("Código e obrigatorio");
       return;
     }
     setSalvando(true);
@@ -246,7 +246,7 @@ export default function AdminCuponsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Cupons</h1>
           <p className="text-muted-foreground">
-            Gerencie cupons de desconto e promocoes
+            Gerencie cupons de desconto e promoções
           </p>
         </div>
         <Button onClick={abrirNovo}>
@@ -289,7 +289,7 @@ export default function AdminCuponsPage() {
         >
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Repeat className="h-4 w-4 text-blue-500" />
-            Total Utilizacoes
+            Total Utilizações
           </div>
           <p className="mt-1 text-2xl font-bold">
             {cupons.reduce((acc, c) => acc + (c.utilizacoes || 0), 0)}
@@ -303,7 +303,7 @@ export default function AdminCuponsPage() {
         >
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Gift className="h-4 w-4 text-purple-500" />
-            Com Gratis
+            Com Grátis
           </div>
           <p className="mt-1 text-2xl font-bold">
             {cupons.filter((c) => c.dias_gratis > 0 || c.meses_gratis > 0).length}
@@ -329,10 +329,10 @@ export default function AdminCuponsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Codigo</TableHead>
+              <TableHead>Código</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Valor</TableHead>
-              <TableHead>Utilizacoes</TableHead>
+              <TableHead>Utilizações</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Validade</TableHead>
               <TableHead className="w-12" />
@@ -415,7 +415,7 @@ export default function AdminCuponsPage() {
                       ) : cupom.is_vitalicio ? (
                         <span className="flex items-center gap-1">
                           <Lock className="h-3 w-3" />
-                          Vitalicio
+                          Vitalício
                         </span>
                       ) : (
                         "Sem prazo"
@@ -466,7 +466,7 @@ export default function AdminCuponsPage() {
           <div className="space-y-6 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Codigo *</label>
+                <label className="text-sm font-medium">Código *</label>
                 <Input
                   value={form.codigo}
                   onChange={(e) => setForm(f => ({ ...f, codigo: e.target.value.toUpperCase() }))}
@@ -496,11 +496,11 @@ export default function AdminCuponsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Descricao</label>
+              <label className="text-sm font-medium">Descrição</label>
               <Textarea
                 value={form.descricao}
                 onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))}
-                placeholder="Descricao do cupom..."
+                placeholder="Descrição do cupom..."
                 rows={2}
               />
             </div>
@@ -541,7 +541,7 @@ export default function AdminCuponsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Max Utilizacoes</label>
+                <label className="text-sm font-medium">Max Utilizações</label>
                 <Input
                   type="number"
                   min="0"
@@ -560,10 +560,10 @@ export default function AdminCuponsPage() {
             <Separator />
 
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold">Periodo de Validade</h4>
+              <h4 className="text-sm font-semibold">Período de Validade</h4>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Data Inicio</label>
+                  <label className="text-sm font-medium">Data Início</label>
                   <Input
                     type="date"
                     value={form.data_inicio}
@@ -584,10 +584,10 @@ export default function AdminCuponsPage() {
             <Separator />
 
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold">Periodo Gratis</h4>
+              <h4 className="text-sm font-semibold">Período Grátis</h4>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Dias Gratis</label>
+                  <label className="text-sm font-medium">Dias Grátis</label>
                   <Input
                     type="number"
                     min="0"
@@ -601,7 +601,7 @@ export default function AdminCuponsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Meses Gratis</label>
+                  <label className="text-sm font-medium">Meses Grátis</label>
                   <Input
                     type="number"
                     min="0"
@@ -620,13 +620,13 @@ export default function AdminCuponsPage() {
             <Separator />
 
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold">Configuracoes</h4>
+              <h4 className="text-sm font-semibold">Configurações</h4>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium">Apenas Novos</label>
                     <p className="text-xs text-muted-foreground">
-                      Apenas para novos usuarios
+                      Apenas para novos usuários
                     </p>
                   </div>
                   <Switch
@@ -638,7 +638,7 @@ export default function AdminCuponsPage() {
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium">Apenas Antigos</label>
                     <p className="text-xs text-muted-foreground">
-                      Apenas para usuarios existentes
+                      Apenas para usuários existentes
                     </p>
                   </div>
                   <Switch
@@ -648,7 +648,7 @@ export default function AdminCuponsPage() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <label className="text-sm font-medium">Vitalicio</label>
+                    <label className="text-sm font-medium">Vitalício</label>
                     <p className="text-xs text-muted-foreground">
                       Sem prazo de validade
                     </p>
@@ -662,7 +662,7 @@ export default function AdminCuponsPage() {
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium">Uso Unico</label>
                     <p className="text-xs text-muted-foreground">
-                      Cada usuario pode usar apenas uma vez
+                      Cada usuário pode usar apenas uma vez
                     </p>
                   </div>
                   <Switch

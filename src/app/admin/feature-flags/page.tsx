@@ -63,7 +63,7 @@ const DESTINATARIO_CONFIG: Record<
   admin: { label: "Admin", icon: Shield, color: "text-red-600" },
   teste: { label: "Teste", icon: FlaskConical, color: "text-purple-600" },
   plano: { label: "Plano", icon: CreditCard, color: "text-blue-600" },
-  usuario: { label: "Usuario", icon: UserCheck, color: "text-green-600" },
+  usuario: { label: "Usuário", icon: UserCheck, color: "text-green-600" },
 };
 
 interface FlagForm {
@@ -259,11 +259,11 @@ export default function AdminFeatureFlagsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Chave</TableHead>
-              <TableHead>Descricao</TableHead>
+              <TableHead>Descrição</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Destinatario</TableHead>
               <TableHead>Data</TableHead>
-              <TableHead className="w-24">Acoes</TableHead>
+              <TableHead className="w-24">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -388,9 +388,9 @@ export default function AdminFeatureFlagsPage() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Descricao</Label>
+              <Label>Descrição</Label>
               <Input
-                placeholder="Descricao opcional da feature flag"
+                placeholder="Descrição opcional da feature flag"
                 value={form.descricao}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, descricao: e.target.value }))
@@ -430,7 +430,7 @@ export default function AdminFeatureFlagsPage() {
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="teste">Teste</SelectItem>
                   <SelectItem value="plano">Plano</SelectItem>
-                  <SelectItem value="usuario">Usuario</SelectItem>
+                  <SelectItem value="usuario">Usuário</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -438,7 +438,7 @@ export default function AdminFeatureFlagsPage() {
               <div className="space-y-2">
                 <Label>
                   IDs do Destinatario{" "}
-                  {form.destinatario === "plano" ? "(Planos)" : "(Usuarios)"}
+                  {form.destinatario === "plano" ? "(Planos)" : "(Usuários)"}
                 </Label>
                 <Input
                   placeholder="UUID1, UUID2, UUID3..."

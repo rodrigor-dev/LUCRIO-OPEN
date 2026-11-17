@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import type {
   AdminStats,
   AdminFinanceiro,
@@ -18,13 +19,33 @@ import type {
 
 const supabase = createClient();
 
+/**
+ * Antes, erros eram só registrados no console e a tela mostrava "nada
+ * encontrado" — o admin não sabia que algo tinha falhado.
+ */
+function avisarErro(contexto: string, error: unknown) {
+  console.error(`[AdminService] ${contexto}:`, error);
+  const msg = (error as { message?: string })?.message;
+  toast.error(`Não foi possível carregar ${contexto}.`, { description: msg, id: `admin-erro-${contexto}` });
+}
+
+/**
+ * Update/delete recusado pelo banco (sem permissão) não dá erro: só não
+ * altera nada. Aqui conferimos se alguma linha foi realmente alterada.
+ */
+function exigirAlteracao(data: unknown[] | null, acao: string) {
+  if (!data || data.length === 0) {
+    throw new Error(`Não foi possível ${acao}: registro não encontrado ou sem permissão.`);
+  }
+}
+
 // ============================================================
 // DASHBOARD
 // ============================================================
 export async function obterStatsAdmin(): Promise<AdminStats> {
   const { data, error } = await supabase.rpc("get_admin_stats" as never).single();
   if (error) {
-    console.error("[AdminService] get_admin_stats error:", error);
+    avisarErro("as estatísticas", error);
     return {
       total_usuarios: 0, usuarios_ativos: 0, usuarios_inativos: 0,
       novos_hoje: 0, novos_mes: 0, total_negocios: 0,
@@ -37,7 +58,7 @@ export async function obterStatsAdmin(): Promise<AdminStats> {
 export async function obterFinanceiroAdmin(): Promise<AdminFinanceiro> {
   const { data, error } = await supabase.rpc("get_admin_financeiro" as never).single();
   if (error) {
-    console.error("[AdminService] get_admin_financeiro error:", error);
+    avisarErro("os dados financeiros", error);
     return { mrr: 0, arr_estimado: 0, total_assinaturas_ativas: 0, total_cancelamentos: 0, total_trials: 0 };
   }
   return data as AdminFinanceiro;
@@ -49,7 +70,7 @@ export async function obterFinanceiroAdmin(): Promise<AdminFinanceiro> {
 export async function listarUsuarios(_busca?: string, _filtros?: { plano?: string; status?: string }) {
   const { data, error } = await supabase.rpc("get_all_usuarios" as never);
   if (error) {
-    console.error("[AdminService] get_all_usuarios error:", error);
+    avisarErro("os usuários", error);
     return [];
   }
   let usuarios = (data || []) as UsuarioAdmin[];
@@ -109,33 +130,48 @@ export async function obterUsuario(id: string) {
 }
 
 export async function atualizarUsuario(id: string, dados: Partial<UsuarioAdmin>) {
-  const { error } = await supabase.from("usuarios").update(dados).eq("id", id);
+  const { data, error } = await supabase.from("usuarios").update(dados).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "atualizar o usuário");
 }
 
 export async function bloquearUsuario(id: string) {
-  const { error } = await supabase.from("usuarios").update({ is_bloqueado: true }).eq("id", id);
+  const { data, error } = await supabase.from("usuarios").update({ is_bloqueado: true }).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "bloquear o usuário");
 }
 
 export async function desbloquearUsuario(id: string) {
-  const { error } = await supabase.from("usuarios").update({ is_bloqueado: false }).eq("id", id);
+  const { data, error } = await supabase.from("usuarios").update({ is_bloqueado: false }).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "desbloquear o usuário");
 }
 
 export async function suspenderUsuario(id: string) {
-  const { error } = await supabase.from("usuarios").update({ is_suspendido: true }).eq("id", id);
+  const { data, error } = await supabase.from("usuarios").update({ is_suspendido: true }).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "suspender o usuário");
 }
 
 export async function reativarUsuario(id: string) {
-  const { error } = await supabase.from("usuarios").update({ is_suspendido: false, is_ativo: true }).eq("id", id);
+  const { data, error } = await supabase.from("usuarios").update({ is_suspendido: false, is_ativo: true }).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "reativar o usuário");
 }
 
+/**
+ * Exclui a conta de verdade (login + todos os dados). Antes só tentava
+ * apagar a linha de "usuarios", o banco recusava em silêncio e a tela
+ * mostrava "excluído".
+ */
 export async function excluirUsuario(id: string) {
-  const { error } = await supabase.from("usuarios").delete().eq("id", id);
-  if (error) throw error;
+  const res = await fetch("/api/admin/usuarios/excluir", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ usuarioId: id }),
+  });
+  const corpo = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(corpo.erro || "Não foi possível excluir o usuário.");
 }
 
 // ============================================================
@@ -144,7 +180,7 @@ export async function excluirUsuario(id: string) {
 export async function listarPlanos() {
   const { data, error } = await supabase.rpc("get_all_planos" as never);
   if (error) {
-    console.error("[AdminService] get_all_planos error:", error);
+    avisarErro("os planos", error);
     return [];
   }
   return (data || []) as PlanoAdmin[];
@@ -157,13 +193,15 @@ export async function criarPlano(dados: Omit<PlanoAdmin, "id" | "criado_em" | "a
 }
 
 export async function atualizarPlano(id: string, dados: Partial<PlanoAdmin>) {
-  const { error } = await supabase.from("planos").update(dados).eq("id", id);
+  const { data, error } = await supabase.from("planos").update(dados).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "atualizar o plano");
 }
 
 export async function excluirPlano(id: string) {
-  const { error } = await supabase.from("planos").delete().eq("id", id);
+  const { data, error } = await supabase.from("planos").delete().eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "excluir o plano");
 }
 
 // ============================================================
@@ -172,7 +210,7 @@ export async function excluirPlano(id: string) {
 export async function listarAssinaturas(filtros?: { status?: string }) {
   const { data, error } = await supabase.rpc("get_all_assinaturas" as never);
   if (error) {
-    console.error("[AdminService] get_all_assinaturas error:", error);
+    avisarErro("as assinaturas", error);
     return [];
   }
   let assinaturas = data || [];
@@ -183,7 +221,7 @@ export async function listarAssinaturas(filtros?: { status?: string }) {
 export async function listarUsuariosAssinaturas() {
   const { data, error } = await supabase.rpc("get_usuarios_assinaturas" as never);
   if (error) {
-    console.error("[AdminService] get_usuarios_assinaturas error:", error);
+    avisarErro("as assinaturas", error);
     return [];
   }
   return data || [];
@@ -196,16 +234,22 @@ export async function atualizarAssinatura(id: string, dados: Record<string, unkn
   } else if (dados.status === "ativo" && !dados.fim_periodo) {
     const { error } = await supabase.rpc("reativar_assinatura" as never, { p_assinatura_id: id });
     if (error) throw error;
-  } else if (dados.fim_periodo) {
-    const { error } = await supabase.rpc("estender_periodo" as never, {
-      p_assinatura_id: id,
-      p_dias: Math.ceil((new Date(dados.fim_periodo as string).getTime() - Date.now()) / 86400000),
-    });
-    if (error) throw error;
   } else {
-    const { error } = await supabase.from("assinaturas").update(dados).eq("id", id);
-    if (error) throw error;
+    throw new Error("Alteração de assinatura não suportada. Use estender, liberar ou cancelar.");
   }
+}
+
+/**
+ * Soma dias ao acesso. Se já venceu, conta a partir de hoje.
+ * (Antes a tela calculava a data e o banco somava de novo: estender 7
+ * dias de quem tinha 20 resultava em 47.)
+ */
+export async function estenderPeriodo(assinaturaId: string, dias: number) {
+  const { error } = await supabase.rpc("estender_periodo" as never, {
+    p_assinatura_id: assinaturaId,
+    p_dias: dias,
+  });
+  if (error) throw error;
 }
 
 // ============================================================
@@ -214,7 +258,7 @@ export async function atualizarAssinatura(id: string, dados: Record<string, unkn
 export async function listarCupons() {
   const { data, error } = await supabase.rpc("get_all_cupons" as never);
   if (error) {
-    console.error("[AdminService] get_all_cupons error:", error);
+    avisarErro("os cupons", error);
     return [];
   }
   return (data || []) as Cupom[];
@@ -227,13 +271,15 @@ export async function criarCupom(dados: Omit<Cupom, "id" | "criado_em" | "atuali
 }
 
 export async function atualizarCupom(id: string, dados: Partial<Cupom>) {
-  const { error } = await supabase.from("cupons").update(dados).eq("id", id);
+  const { data, error } = await supabase.from("cupons").update(dados).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "atualizar o cupom");
 }
 
 export async function excluirCupom(id: string) {
-  const { error } = await supabase.from("cupons").delete().eq("id", id);
+  const { data, error } = await supabase.from("cupons").delete().eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "excluir o cupom");
 }
 
 // ============================================================
@@ -242,7 +288,7 @@ export async function excluirCupom(id: string) {
 export async function listarAuditoria(filtros?: { usuario_id?: string; acao?: string; limit?: number }) {
   const { data, error } = await supabase.rpc("get_all_auditoria" as never, { p_limit: filtros?.limit || 100 });
   if (error) {
-    console.error("[AdminService] get_all_auditoria error:", error);
+    avisarErro("a auditoria", error);
     return [];
   }
   let auditoria = (data || []) as Auditoria[];
@@ -262,7 +308,7 @@ export async function registrarAuditoria(dados: Omit<Auditoria, "id" | "criado_e
 export async function listarLogs(filtros?: { nivel?: string; limit?: number }) {
   const { data, error } = await supabase.rpc("get_all_logs" as never, { p_limit: filtros?.limit || 200 });
   if (error) {
-    console.error("[AdminService] get_all_logs error:", error);
+    avisarErro("os logs", error);
     return [];
   }
   let logs = (data || []) as SystemLog[];
@@ -292,7 +338,7 @@ interface TicketRaw {
 export async function listarTickets(filtros?: { status?: string }): Promise<TicketSuporte[]> {
   const { data, error } = await supabase.rpc("get_all_tickets" as never);
   if (error) {
-    console.error("[AdminService] get_all_tickets error:", error);
+    avisarErro("os tickets", error);
     return [];
   }
   let tickets: TicketSuporte[] = (data || []).map((t: TicketRaw) => ({
@@ -318,15 +364,16 @@ export async function listarTickets(filtros?: { status?: string }): Promise<Tick
 export async function obterMensagensTicket(ticketId: string) {
   const { data, error } = await supabase.rpc("get_ticket_mensagens" as never, { p_ticket_id: ticketId });
   if (error) {
-    console.error("[AdminService] get_ticket_mensagens error:", error);
+    avisarErro("as mensagens do ticket", error);
     return [];
   }
   return (data || []) as import("@/types/admin").MensagemSuporte[];
 }
 
 export async function atualizarTicket(id: string, dados: Partial<TicketSuporte>) {
-  const { error } = await supabase.from("suporte_tickets").update(dados).eq("id", id);
+  const { data, error } = await supabase.from("suporte_tickets").update(dados).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "atualizar o ticket");
 }
 
 export async function enviarMensagemSuporte(ticketId: string, mensagem: string, _remetenteId?: string) {
@@ -347,7 +394,7 @@ export async function enviarMensagemSuporte(ticketId: string, mensagem: string, 
 export async function listarAvisos() {
   const { data, error } = await supabase.rpc("get_all_avisos" as never);
   if (error) {
-    console.error("[AdminService] get_all_avisos error:", error);
+    avisarErro("os avisos", error);
     return [];
   }
   return (data || []) as AvisoGlobal[];
@@ -360,13 +407,15 @@ export async function criarAviso(dados: Omit<AvisoGlobal, "id" | "criado_em" | "
 }
 
 export async function atualizarAviso(id: string, dados: Partial<AvisoGlobal>) {
-  const { error } = await supabase.from("avisos_globais").update(dados).eq("id", id);
+  const { data, error } = await supabase.from("avisos_globais").update(dados).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "atualizar o aviso");
 }
 
 export async function excluirAviso(id: string) {
-  const { error } = await supabase.from("avisos_globais").delete().eq("id", id);
+  const { data, error } = await supabase.from("avisos_globais").delete().eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "excluir o aviso");
 }
 
 // ============================================================
@@ -375,7 +424,7 @@ export async function excluirAviso(id: string) {
 export async function listarFeatureFlags() {
   const { data, error } = await supabase.rpc("get_all_feature_flags" as never);
   if (error) {
-    console.error("[AdminService] get_all_feature_flags error:", error);
+    avisarErro("as feature flags", error);
     return [];
   }
   return (data || []) as FeatureFlag[];
@@ -388,13 +437,15 @@ export async function criarFeatureFlag(dados: Omit<FeatureFlag, "id" | "criado_e
 }
 
 export async function atualizarFeatureFlag(id: string, dados: Partial<FeatureFlag>) {
-  const { error } = await supabase.from("feature_flags").update(dados).eq("id", id);
+  const { data, error } = await supabase.from("feature_flags").update(dados).eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "atualizar a feature flag");
 }
 
 export async function excluirFeatureFlag(id: string) {
-  const { error } = await supabase.from("feature_flags").delete().eq("id", id);
+  const { data, error } = await supabase.from("feature_flags").delete().eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "excluir a feature flag");
 }
 
 // ============================================================
@@ -403,7 +454,7 @@ export async function excluirFeatureFlag(id: string) {
 export async function listarConfiguracoes() {
   const { data, error } = await supabase.rpc("get_all_configuracoes" as never);
   if (error) {
-    console.error("[AdminService] get_all_configuracoes error:", error);
+    avisarErro("as configurações", error);
     return [];
   }
   return (data || []) as ConfiguracaoGlobal[];
@@ -420,7 +471,7 @@ export async function salvarConfiguracao(chave: string, valor: string) {
 export async function listarRoles() {
   const { data, error } = await supabase.rpc("get_all_roles" as never);
   if (error) {
-    console.error("[AdminService] get_all_roles error:", error);
+    avisarErro("as permissões", error);
     return [];
   }
   return (data || []) as Role[];
@@ -432,7 +483,7 @@ export async function listarRoles() {
 export async function listarBackups() {
   const { data, error } = await supabase.rpc("get_all_backups" as never);
   if (error) {
-    console.error("[AdminService] get_all_backups error:", error);
+    avisarErro("os backups", error);
     return [];
   }
   return (data || []) as Backup[];
@@ -444,7 +495,7 @@ export async function listarBackups() {
 export async function listarAtualizacoes() {
   const { data, error } = await supabase.rpc("get_all_atualizacoes" as never);
   if (error) {
-    console.error("[AdminService] get_all_atualizacoes error:", error);
+    avisarErro("as atualizações", error);
     return [];
   }
   return (data || []) as Atualizacao[];
@@ -457,8 +508,9 @@ export async function criarAtualizacao(dados: Omit<Atualizacao, "id" | "criado_e
 }
 
 export async function excluirAtualizacao(id: string) {
-  const { error } = await supabase.from("atualizacoes").delete().eq("id", id);
+  const { data, error } = await supabase.from("atualizacoes").delete().eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "excluir a atualização");
 }
 
 // ============================================================
@@ -475,8 +527,9 @@ export async function criarBackup() {
 }
 
 export async function excluirBackup(id: string) {
-  const { error } = await supabase.from("backups").delete().eq("id", id);
+  const { data, error } = await supabase.from("backups").delete().eq("id", id).select("id");
   if (error) throw error;
+  exigirAlteracao(data, "excluir o backup");
 }
 
 // ============================================================
@@ -556,10 +609,10 @@ export async function obterAssinaturaUsuario(usuarioId: string) {
     .from("assinaturas")
     .select("*, plano:planos(nome, slug, preco_mensal)")
     .eq("usuario_id", usuarioId)
-    .in("status", ["trial", "ativo", "cancelado"])
+    .in("status", ["trial", "ativo", "cancelado", "atrasado"])
     .order("criado_em", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
   if (error) return null;
   return data;
 }
@@ -569,18 +622,18 @@ export async function obterAssinaturaUsuario(usuarioId: string) {
 // ============================================================
 export async function obterCrescimentoUsuarios() {
   const { data, error } = await supabase.rpc("get_usuario_crescimento_mensal" as never);
-  if (error) return [];
+  if (error) { avisarErro("o crescimento de usuários", error); return []; }
   return (data || []) as { mes: string; total: number }[];
 }
 
 export async function obterReceitaMensal() {
   const { data, error } = await supabase.rpc("get_receita_mensal" as never);
-  if (error) return [];
+  if (error) { avisarErro("a receita mensal", error); return []; }
   return (data || []) as { mes: string; receita: number }[];
 }
 
 export async function obterDistribuicaoPlanos() {
   const { data, error } = await supabase.rpc("get_plano_distribuicao" as never);
-  if (error) return [];
+  if (error) { avisarErro("a distribuição de planos", error); return []; }
   return (data || []) as { nome: string; value: number }[];
 }
